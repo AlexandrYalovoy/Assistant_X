@@ -60,6 +60,7 @@ def cmd_run(cfg, a):
     n = register(cfg, state)
     say(f"New files: {n}; preparation: {dict(counts) or 'nothing to do'}")
     workers = cfg.workers if a.workers is None else a.workers
+    state.set_meta("started", time.time())  # the estimate of the time left counts from here (intake status)
     Batch(cfg, work, state, workers).run()
     from assistant_x.intake import metadraft
     from assistant_x.intake import quality_report
@@ -192,6 +193,8 @@ def main(argv=None):
             )
         if name in ("digest", "requeue", "brief"):
             p.add_argument("tids", nargs="*")
+        if name == "status":
+            p.add_argument("--json", action="store_true", help="the state as JSON (intake_status renders it)")
         if name == "check-meta":
             p.add_argument("--meta", help="check this file of lines instead of the meta.jsonl of the batch")
         if name == "todo":

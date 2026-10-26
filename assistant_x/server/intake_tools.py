@@ -319,6 +319,77 @@ def run(night=False, resume=False):
     )
 
 
+def progress_path():
+    """The progress file of the base recalculation (search/reindex.py writes it)."""
+    return os.path.join(jobs_dir(), "reindex.progress.json")
+
+
+def _minutes(seconds):
+    m = round(seconds / 60)
+    return "less than a minute" if m < 1 else f"about {m} min" if m < 90 else f"about {m / 60:.1f} h"
+
+
+STAGE_WORDS = {"prep": "preparation", "convert": "conversion"}
+
+
+def batch_words(data):
+    """The state of a batch (intake status --json) in words: "34 of 41 done; in work T0002 (conversion 390/1136 pages)…;
+    about 40 min left"."""
+    head = f"{data['done']} of {data['total']} files done"
+    work = []
+    for x in data["running"]:
+        if not x.get("active"):
+            continue
+        what = STAGE_WORDS.get(x["stage"], x["stage"])
+        if x.get("progress"):
+            what += f" {x['progress'][0]}/{x['progress'][1]} pages"
+        elif x.get("pages"):
+            what += f", {x['pages']} pages"
+        work.append(f"{x['tid']} ({what})")
+    waiting = sum(not x.get("active") for x in data["running"]) + len(data["queued"])
+    parts = [head]
+    if work:
+        parts.append("in work " + ", ".join(work))
+    if waiting:
+        parts.append(f"waiting {waiting}")
+    if data["errors"]:
+        parts.append(f"errors and skipped {len(data['errors'])}")
+    if data.get("eta_seconds") is not None and (work or waiting):
+        parts.append(_minutes(data["eta_seconds"]) + " left")
+    lines = ["; ".join(parts) + "."]
+    lines += [f"  {e['tid']} [{e['status']}] {e['rel']} — {e.get('why')}" for e in data["errors"][:30]]
+    return "\n".join(lines)
+
+
+def next_step(work, data, running, reindexing):
+    """What Claude does next, by the state of the batch."""
+    if running:
+        return (
+            "Next (Claude): wait (intake_status every few minutes); the drafts of the files that are done are in "
+            "meta_draft.jsonl already — their cards may be written now (intake_card, intake_save_meta)."
+        )
+    if os.path.exists(os.path.join(work, "out", "applied.json")):
+        return "Done: the batch is in the library" + ("; the base is being recalculated." if reindexing else ".")
+    rc, todo = _intake("todo")
+    left = int(todo.split()[0]) if rc == 0 and todo.split() and todo.split()[0].isdigit() else None
+    if left:
+        return f"Next (Claude): write the cards of {left} files (intake_card, then intake_save_meta)."
+    return "Next (Claude): intake_apply() — the plan for the user (every file has its line in meta.jsonl)."
+
+
+def reindex_words(job):
+    """The step of the base recalculation from its progress file."""
+    p = None
+    from assistant_x.search import reindex as rx
+
+    p = rx.read_progress(progress_path())
+    if not p:
+        return ""
+    stage = {"build_index": "the search base by words", "embed": "the meaning vectors"}.get(p.get("stage"), p.get("stage"))
+    n = f": {p['done']} of {p['total']}" if p.get("total") else ""
+    return f"Step: {stage}{n}."
+
+
 def status():
     out = []
     for kind, what in (("run", "Intake"), ("reindex", "Base recalculation")):
@@ -326,8 +397,13 @@ def status():
         if not job:
             continue
         alive = _alive(job)
-        tail = _tail(kind, 15 if alive else 25)
-        out.append(f"## {what}: {state_text(kind, job)} (started {_ago(job)} ago)\n{tail}")
+        tail = _tail(kind, 8 if alive else 25)
+        head = f"## {what}: {state_text(kind, job)} (started {_ago(job)} ago)"
+        if kind == "reindex":
+            step = reindex_words(job) if alive else ""
+            out.append(head + (f"\n{step}" if step else "") + f"\n{tail}")
+        else:
+            out.append(head + (f"\n{tail}" if not alive else ""))
         if kind == "reindex" and not alive and "--cpu" in tail:
             out.append(CPU_QUESTION)
     from assistant_x.server import base_tools
@@ -338,10 +414,19 @@ def status():
     gap = vector_note()
     if gap and not _alive(_job("reindex")):
         out.append("## Search base\n" + gap)
-    rc, text = _intake("status")
-    out.append("## Batch\n" + (text if rc == 0 else "no batches yet"))
+    rc, text = _intake("status", "--json")
+    data = None
+    if rc == 0:
+        try:
+            data = json.loads(text.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            data = None
+    out.append("## Batch\n" + (batch_words(data) if data else text if rc == 0 else "no batches yet"))
     work = _last_work()
-    if work and not _alive(_job("run")):
+    running = _alive(_job("run"))
+    if work and data:
+        out.append(next_step(work, data, running, _alive(_job("reindex"))))
+    if work and not running:
         for name in ("summary.md", "intake_quality.md"):
             p = os.path.join(work, name)
             if os.path.exists(p):
@@ -647,15 +732,11 @@ def reindex(cpu=False):
     start on the processor by itself: the answer carries its estimate and the question for the user."""
     if _alive(_job("reindex")):
         return f"A base recalculation is already running ({_ago(_job('reindex'))}): intake_status."
-    script = (
-        "import sys\n"
-        "from assistant_x.core import proc\n"
-        "py = sys.executable\n"
-        "rc = proc.call([py, '-m', 'assistant_x.search.build_index'])\n"
-        "if rc: sys.exit(rc)\n"
-        "sys.exit(proc.call([py, '-m', 'assistant_x.search.embed'] + sys.argv[1:]))\n"
-    )
-    started, text = _start("reindex", [sys.executable, "-c", script] + (["--cpu"] if cpu else []))
+    prog = progress_path()
+    if os.path.exists(prog):
+        os.remove(prog)
+    cmd = [sys.executable, "-m", "assistant_x.search.reindex"] + (["--cpu"] if cpu else [])
+    started, text = _start("reindex", cmd, AX_PROGRESS=prog)
     if started:
         est = embed_estimate(cpu)
         return (

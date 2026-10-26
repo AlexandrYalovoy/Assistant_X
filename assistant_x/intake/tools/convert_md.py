@@ -149,6 +149,18 @@ def run(code, path, shift, pages, force_ocr, out, use_ocr=True, scans=()):
     return code, len(pages)
 
 
+def progress_path(cache, code):
+    """<cache>/<code>.progress.json: the pages of a document converted so far (intake status shows them)."""
+    return os.path.join(cache, f"{code}.progress.json")
+
+
+def progress(cache, code, done, total):
+    try:
+        write_json({"done": done, "total": total, "updated": time.time()}, progress_path(cache, code))
+    except OSError:
+        pass  # a progress line is a help only
+
+
 def main(argv):
     jobs, cache = json.load(open(argv[0], encoding="utf-8")), argv[1]
     workers = int(argv[2]) if len(argv) > 2 else 4
@@ -179,6 +191,8 @@ def main(argv):
                     )
     total, done, failed, t0 = sum(len(t[3]) for t in tasks), 0, 0, time.time()
     print(f"pages to convert: {total}", flush=True)
+    for code in jobs:
+        progress(cache, code, 0, total)
     if workers > 0:
         close_all()  # the pool processes open the documents themselves
 
@@ -188,6 +202,7 @@ def main(argv):
             code, k = get()
             done += k
             print(f"{done}/{total} pages, {time.time() - t0:.0f} s ({code})", flush=True)
+            progress(cache, code, done, total)
         except MemoryError:
             raise  # the worker is past its memory cap: intake.py restarts it
         except Exception as e:

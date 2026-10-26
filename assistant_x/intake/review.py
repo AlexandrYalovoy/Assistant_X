@@ -88,9 +88,68 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
     return text
 
 
+def status_data(work, state, started=None, now=None):
+    """The state of a batch for the status: done / in work (tid, stage, pages done of the conversion) / waiting /
+    errors, and an estimate of the time left from the pages done so far (None until it can be told)."""
+    import time
+
+    now = now or time.time()
+    rows = state.all()
+    final = ("done", "dup", "error", "skipped", "applied")
+    done = [r for r in rows if r["status"] in final]
+    running = []
+    for r in rows:
+        if r["status"] != "running":
+            continue
+        p = {}
+        try:
+            p = json.loads((Path(work) / "cache" / f"{r['tid']}.progress.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+        item = {"tid": r["tid"], "rel": r["rel"], "stage": r.get("stage") or "prep", "active": bool(r.get("active"))}
+        if r.get("stage") == "convert" and p.get("total"):
+            item["progress"] = [int(p.get("done") or 0), int(p["total"])]
+        if r.get("pages"):
+            item["pages"] = r["pages"]
+        running.append(item)
+    queued = [r["tid"] for r in rows if r["status"] == "queued"]
+    errors = [
+        {"tid": r["tid"], "rel": r["rel"], "status": r["status"], "why": r.get("why")}
+        for r in rows
+        if r["status"] in ("error", "skipped")
+    ]
+    # the time left: the pages done so far over the time spent, for the pages still to do (a file not prepared yet
+    # counts as the mean pages of the known ones)
+    eta = None
+    pages_of = [r.get("pages") or 0 for r in rows]
+    known = [p for p in pages_of if p]
+    mean = sum(known) / len(known) if known else 0
+    did = sum(r.get("pages") or 0 for r in done if r["status"] != "skipped")
+    did += sum((x.get("progress") or [0])[0] for x in running)
+    left = sum((r.get("pages") or mean) for r in rows if r["status"] in ("queued", "running")) - sum(
+        (x.get("progress") or [0])[0] for x in running
+    )
+    if started and did and now > started:
+        eta = round(left / (did / (now - started))) if left > 0 else 0
+    return {
+        "work": str(work),
+        "total": len(rows),
+        "done": len(done),
+        "counts": state.counts(),
+        "running": running,
+        "queued": queued,
+        "errors": errors,
+        "eta_seconds": eta,
+    }
+
+
 def cmd_status(cfg, a):
     work = work_dir(cfg, a.work)
     state = State(work / "state.sqlite")
+    if getattr(a, "json", False):
+        started = state.get_meta("started", None)
+        say(json.dumps(status_data(work, state, started), ensure_ascii=False))
+        return 0
     say(f"{work}: {state.counts()}")
     for r in state.all("error", "skipped"):
         say(f"  {r['tid']} [{r['status']}] {win(r['rel'])} — {r.get('why')}")

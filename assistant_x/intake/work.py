@@ -600,6 +600,7 @@ def convert(job: Job) -> Convert:
     if (tmp / f"{tid}{PAGES_SUFFIX}").exists():  # what is known of every page goes with the text
         os.replace(tmp / f"{tid}{PAGES_SUFFIX}", w / "md" / f"{tid}{PAGES_SUFFIX}")
     finish_text(w, tid)
+    mark_pages(w, tid, "dpi_reduced", dpi_reduced(log))
     md = out.read_text(encoding="utf-8") if out.exists() else ""
     from assistant_x.core.common import letter_shares  # the share of the letters of every language pack
 
@@ -622,6 +623,42 @@ def convert(job: Job) -> Convert:
         fp = dupcheck.fingerprint("\n".join(PAGE_MARK_RX.split(md)[1:31]))
         res.update(fp=sorted(fp), phrases=len(fp))
     return res
+
+
+# pymupdf4llm prints it when a page is too large to be read at the resolution asked: the page of the "OCR on
+# page.number=N" line before it (0-based) is the one read at a lower resolution
+DPI_RX = re.compile(r"OCR on page\.number=(\d+)|Page too large for dpi=\d+")
+
+
+def dpi_reduced(log):
+    """The pages (1-based) the log of a file says OCR read at a reduced resolution; approximate when the chunks of a
+    document were read in parallel (their lines interleave)."""
+    try:
+        text = Path(log).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    pages, last = set(), None
+    for m in DPI_RX.finditer(text):
+        if m.group(1) is not None:
+            last = int(m.group(1)) + 1
+        elif last is not None:
+            pages.add(last)
+    return sorted(pages)
+
+
+def mark_pages(w, tid, flag, pages):
+    """Add a flag to pages of <tid>.pages.json (core/formats.PAGE_FLAGS)."""
+    from assistant_x.core.formats import read_pages_info, read_outline, write_pages_info
+
+    side = w / "md" / f"{tid}{PAGES_SUFFIX}"
+    info = read_pages_info(side) if pages else None
+    if not info:
+        return
+    for p in pages:
+        if p in info:
+            flags = [f for f in (info[p].get("flags") or []) if f != flag]
+            info[p]["flags"] = flags + [flag]
+    write_pages_info(side, info, read_outline(side))
 
 
 def finish_text(w, tid):

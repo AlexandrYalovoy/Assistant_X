@@ -16,7 +16,7 @@ Usage: assistant-x embed [--config assistant_x.toml] [--batch 64] [--codes L-000
 import argparse, os, time
 import numpy as np
 from assistant_x.core import gpu_guard
-from assistant_x.search import models, vector_cache
+from assistant_x.search import models, reindex, vector_cache
 from assistant_x.core.common import (
     load_config,
     connect,
@@ -205,6 +205,7 @@ def main():
             row += len(part)
             done = i + len(part)
             print(f"  {done}/{len(misses)}  {done / max(time.time() - t0, 1e-3):.0f} fragments/s", flush=True)
+            reindex.write_progress("embed", done, len(misses))
     if seeded:
         con.execute("INSERT OR REPLACE INTO meta VALUES('vector_cache_seeded', ?)", (fp,))
     con.commit()

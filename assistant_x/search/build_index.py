@@ -24,7 +24,7 @@ from pathlib import Path
 
 from assistant_x.core import card as C
 from assistant_x.core import config as settings
-from assistant_x.search import bookmap, catalog
+from assistant_x.search import bookmap, catalog, reindex
 from assistant_x.core.common import (
     load_config,
     connect,
@@ -368,7 +368,8 @@ def main():
     # card-only edits (title, quality, issues) re-chunk no text but must still wake a running search server
     rows_sql = f"SELECT {', '.join(DOC_COLUMNS)} FROM docs"
     before = set(con.execute(rows_sql).fetchall())
-    for info in docs:
+    for n_done, info in enumerate(docs, 1):
+        reindex.write_progress("build_index", n_done, len(docs))  # intake_status shows the step and how far it is
         code, main = info["code"], info["parent"] or info["code"]
         old_text, old_card = known.get(code, (None, None))
         tf, raw, sha, pages, page_info = read_text(cfg["texts_dir"], code)

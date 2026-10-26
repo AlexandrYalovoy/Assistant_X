@@ -25,3 +25,15 @@ def hog(mb):
 
 def boom():
     raise ValueError("broke inside the task")
+
+
+def noisy(job):
+    """Writes as a tool does: a print, the descriptor itself, a child process that inherits the output."""
+    import sys
+
+    from assistant_x.core import proc
+
+    print("from python", flush=True)
+    os.write(2, b"from the descriptor\n")
+    proc.run([sys.executable, "-c", "print('from a child')"], timeout=60)
+    return {"status": "ok"}

@@ -37,6 +37,7 @@ def load_fp(work, tid):
 
 
 STAGES = {"prep": "preparation", "convert": "conversion to Markdown"}
+POLL = 10  # seconds the batch waits for a task before it looks at which tasks a worker holds
 
 
 def lost_why(stage, e):
@@ -273,6 +274,7 @@ class Batch:
             for r in self.state.all("done"):
                 self.mine[r["tid"]] = load_fp(self.work, r["tid"])
             inflight, total, t0 = {}, len(queue), time.time()
+            active, shown = set(), (None, 0.0)  # the tids a worker holds; the counter last printed and when
             tasks, waiting, retried = {}, [], {}  # future -> (fn, args, memory); thick ones waiting their turn; R3 repeats
             say(
                 f"Files in work: {total}, processes {max(self.workers, 1)}, OCR {'yes' if self.base['ocr'] else 'NO'}, "
@@ -284,6 +286,8 @@ class Batch:
                 kw = {"memory_mb": memory} if isinstance(self.ex, intake_pool.Persistent) else {}
                 f = self.ex.submit(fn, *args, **kw)
                 inflight[f], tasks[f] = (stage, tid), (fn, args, memory)
+                self.state.update(tid, stage=stage, active=False)
+                active.discard(tid)  # a new task of the file: in work again once a worker takes it
 
             def retry(stage, tid, fn, args, mem, why):
                 """Once more with the double memory cap, in a fresh worker; the tools of the job get it too."""
@@ -309,7 +313,8 @@ class Batch:
                     send("prep", tid, intake_work.prep, self.job(row))
                 if not inflight:
                     continue
-                done, _ = wait(list(inflight), return_when=FIRST_COMPLETED)
+                done, _ = wait(list(inflight), timeout=POLL, return_when=FIRST_COMPLETED)
+                self.mark_active(inflight, active)
                 broken = False
                 for f in done:
                     stage, tid = inflight.pop(f)
@@ -354,12 +359,23 @@ class Batch:
                     tasks.clear()
                     self.ex.shutdown(wait=False, cancel_futures=True)
                     self.ex = self.pool()
-                ready = total - len(queue) - len(inflight)
-                say(f"  {ready}/{total} files, {time.time() - t0:.0f} s")
+                ready = total - len(queue) - len(inflight) - len(waiting)
+                if ready != shown[0] or time.time() - shown[1] >= 60:  # on change, else once a minute
+                    say(f"  {ready}/{total} files, {time.time() - t0:.0f} s")
+                    shown = (ready, time.time())
         finally:
             self.ex.shutdown(wait=True, cancel_futures=True)
             self.state.reset_running()
         self.batch_pairs()
+
+    def mark_active(self, inflight, active):
+        """The files a worker holds now (their task started) apart from those waiting in the queue of the pool: the
+        status counts the first as in work (audit 6, M-010)."""
+        now = {tid for f, (_, tid) in inflight.items() if f.running() or f.done()}
+        for tid in now - active:
+            self.state.update(tid, active=True, started=time.time())
+        active.intersection_update({tid for _, tid in inflight.values()})
+        active |= now
 
     def failed(self, stage, tid, e):
         """The error dict of a stage that raised: the text of the exception (never its repr), its traceback in the

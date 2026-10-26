@@ -14,7 +14,7 @@ Each worker is in a Windows Job Object of its own, made by this process: memory 
 A task past its time (timeout(fn, args) seconds) kills the worker. Lost.why: "timeout" | "memory" | "crash";
 the slot then starts a new worker for the next task, the other workers go on. Elsewhere psutil watches the memory."""
 
-import gc, multiprocessing, os, queue, threading, time
+import contextlib, gc, multiprocessing, os, queue, sys, threading, time
 from concurrent.futures import Future
 
 from assistant_x.intake.limits import Job
@@ -59,6 +59,61 @@ def describe(e):
     return (str(e).strip() or kind)[:500], kind, "".join(traceback.format_exception(e))[-20000:]
 
 
+def _task_log(args):
+    """log/<tid>.log of the file a task works on (its job is the first argument), or None."""
+    job = args[0] if args and isinstance(args[0], dict) else None
+    if not job or not job.get("work") or not job.get("tid"):
+        return None
+    return os.path.join(job["work"], "log", f"{job['tid']}.log")
+
+
+def _set_std(fd):
+    """Windows: the standard handle of fd 1 or 2 follows the descriptor, so the processes a tool starts (the chunk
+    pool of convert_md, Tesseract) write into the same file."""
+    if os.name != "nt":
+        return
+    import ctypes, msvcrt
+
+    ctypes.windll.kernel32.SetStdHandle(-11 if fd == 1 else -12, msvcrt.get_osfhandle(fd))
+
+
+@contextlib.contextmanager
+def task_output(args):
+    """While a task runs, the descriptors 1 and 2 of the worker (the prints of pymupdf4llm and MuPDF, the processes
+    the tools start) point at the log of its file: run.log keeps the lines of the batch only (audit 6, M-006)."""
+    path = _task_log(args)
+    try:
+        if not path:
+            raise OSError
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        f = open(path, "ab")
+        saved = (os.dup(1), os.dup(2))
+    except OSError:
+        yield
+        return
+    for s in (sys.stdout, sys.stderr):
+        try:
+            s.flush()
+        except (AttributeError, OSError, ValueError):
+            pass
+    try:
+        for fd in (1, 2):
+            os.dup2(f.fileno(), fd)
+            _set_std(fd)
+        yield
+    finally:
+        for s in (sys.stdout, sys.stderr):
+            try:
+                s.flush()
+            except (AttributeError, OSError, ValueError):
+                pass
+        for fd, old in zip((1, 2), saved):
+            os.dup2(old, fd)
+            _set_std(fd)
+            os.close(old)
+        f.close()
+
+
 def serve(conn, env, threads):
     """Loop of a worker process: (fn, args) in, ("ok" | "exc", value, recycle) out; None ends it.
     threads: kept for the callers; the threads of the math libraries and ONNX come from AX_ONNX_THREADS of env
@@ -92,7 +147,8 @@ def serve(conn, env, threads):
         n += 1
         recycle = n >= RECYCLE
         try:
-            out = ("ok", fn(*args))
+            with task_output(args):
+                out = ("ok", fn(*args))
         except MemoryError:
             why = f"{fn.__name__}: the memory cap of the worker was exceeded"
             out, recycle = (("ok", {"status": "error", "why": why, "retry": "memory"}), True)

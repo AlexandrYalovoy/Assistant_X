@@ -859,6 +859,8 @@ def page_note(score, flags):
         out.append(f"recognition score {score:.0f} of 100 on this page: check words and figures with page_image")
     if "complex_table" in (flags or "").split(","):
         out.append("complex table on this page — check numbers with page_image")
+    if "dpi_reduced" in (flags or "").split(","):
+        out.append("recognized at a reduced resolution (a very large page) — check small print with page_image")
     return "; ".join(out)
 
 
