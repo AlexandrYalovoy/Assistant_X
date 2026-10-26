@@ -9,8 +9,10 @@ to install, the intake works without: DOC/DOCX are skipped with a note, scans wi
 with a note.
 Usage: python -m assistant_x.setup.setup_intake [--dry-run] [--no-install]"""
 
-import argparse, os, shutil, subprocess, sys, tempfile
+import argparse, os, shutil, sys, tempfile
 from pathlib import Path
+
+from assistant_x.core import proc
 
 from assistant_x.core import lang, workspace
 from assistant_x.intake import config as intake_cfg
@@ -27,11 +29,11 @@ def say(msg=""):
 
 def sh(cmd, timeout=1800):
     try:
-        p = subprocess.run(
+        p = proc.run(
             [str(c) for c in cmd], capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace"
         )
         return p.returncode, (p.stdout + p.stderr).strip()
-    except (OSError, subprocess.TimeoutExpired) as e:
+    except (OSError, proc.TimeoutExpired) as e:
         return 1, str(e)
 
 

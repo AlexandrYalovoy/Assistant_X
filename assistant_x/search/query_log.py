@@ -5,7 +5,9 @@ where Claude rephrased for long, which calls were slow. Writes debug/query_log_<
 Usage: python -m assistant_x.search.query_log [calls.log ...] [--weak 0.5] [--no-open]
 Without arguments it takes the journal of this PC; journals of other PCs can be given."""
 
-import argparse, datetime, json, math, os, re, statistics, subprocess
+import argparse, datetime, json, math, os, re, statistics
+
+from assistant_x.core import proc
 
 from assistant_x.core import debuglog
 
@@ -209,7 +211,7 @@ def main():
     )
     if debuglog.may_open() and not a.no_open:
         try:
-            subprocess.Popen(["explorer", f"/select,{path}"])
+            proc.popen(["explorer", f"/select,{path}"])
         except OSError:
             pass
 

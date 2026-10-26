@@ -6,8 +6,10 @@ Compares the first N pages (default 30) of the candidate with every index/texts/
 Robust to file names, re-saves, a different scan or OCR, and Markdown vs plain text.
 Fingerprints of library texts are cached in .assistant_x/fingerprints/<code>.fp and rebuilt when the text changes."""
 
-import sys, os, re, glob, hashlib, subprocess, tempfile
+import sys, os, re, glob, hashlib, tempfile
 from array import array
+
+from assistant_x.core import proc
 
 from assistant_x.core import lang, workspace
 from assistant_x.core.formats import PAGE_WORDS
@@ -98,14 +100,14 @@ def ocr(page):
             ),
             None,
         )
-        return subprocess.run(
+        return proc.run(
             [TESSERACT, png, "-", *(["--tessdata-dir", data] if data else []), "-l", lang.tesseract(), "--psm", "3"],
             capture_output=True,
             text=True,
             timeout=300,
             env=env,
         ).stdout
-    except subprocess.TimeoutExpired:
+    except proc.TimeoutExpired:
         return ""
     finally:
         os.unlink(png)

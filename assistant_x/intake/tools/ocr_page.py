@@ -23,7 +23,9 @@ is the only one tried on the rest. prerecognise() reads the pages of a chunk in 
 images): exec_ocr takes such a reading when the image of the page is the same, else it runs Tesseract on the page.
 """
 
-import os, re, shutil, subprocess, tempfile, time
+import os, re, shutil, tempfile, time
+
+from assistant_x.core import proc
 
 from assistant_x.core import lang
 from assistant_x.intake.tools import ocr_score
@@ -106,7 +108,7 @@ def _run(args, timeout=600):
     # CREATE_NO_WINDOW and the priority class of assistant_x.toml (AX_PRIORITY, balance.py); the CPUs come from the worker's job
     prio = {"below_normal": 0x4000, "idle": 0x40}.get(os.environ.get("AX_PRIORITY", ""), 0)
     kw = {"creationflags": 0x08000000 | prio} if os.name == "nt" else {}
-    return subprocess.run([tesseract_exe(), *args], capture_output=True, timeout=timeout, env=env, **kw)
+    return proc.run([tesseract_exe(), *args], capture_output=True, timeout=timeout, env=env, **kw)
 
 
 def parse_tsv(text):

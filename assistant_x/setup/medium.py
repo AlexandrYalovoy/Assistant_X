@@ -75,22 +75,24 @@ DJVU = "3.5.29"  # the DjVuLibre of collect_programs (its Windows build 3.5.29 +
 def bundled(programs):
     """{program: version} of the copyleft programs in a programs folder: 7-Zip as its 7z.exe reports it, DjVuLibre
     as collect_programs bundles it."""
-    import re, subprocess
+    import re
+
+    from assistant_x.core import proc
 
     out = {}
     exe = os.path.join(programs, "7-Zip", "7z.exe")
     if os.path.isfile(exe):
         try:
-            p = subprocess.run(
+            p = proc.run(
                 [exe],
                 capture_output=True,
                 text=True,
                 errors="replace",
                 timeout=60,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                creationflags=proc.NO_WINDOW,
             )
             m = re.search(r"7-Zip (?:\(a\) )?(\d+\.\d+)", p.stdout or "")
-        except (OSError, subprocess.TimeoutExpired):
+        except (OSError, proc.TimeoutExpired):
             m = None
         if not m:
             raise SystemExit(f"{exe} does not tell its version: its source archive cannot be chosen")

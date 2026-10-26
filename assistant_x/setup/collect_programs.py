@@ -13,8 +13,10 @@ VERSIONS.txt says what each program is, its license and where its source is; SHA
 file of the folder, so a medium can be checked later (also of the programs copied from this PC, which no download
 pins)."""
 
-import argparse, os, re, shutil, subprocess, sys, tempfile
+import argparse, os, re, shutil, sys, tempfile
 from pathlib import Path
+
+from assistant_x.core import proc
 
 from assistant_x.intake import config as intake_cfg
 from assistant_x.setup import downloads, medium as M
@@ -43,17 +45,17 @@ def versions(dst):
 
     def out(cmd):
         try:
-            p = subprocess.run(
+            p = proc.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
                 timeout=120,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                creationflags=proc.NO_WINDOW,
             )
             return ((p.stdout or "") + (p.stderr or "")).strip().splitlines()[0]
-        except (OSError, IndexError, subprocess.TimeoutExpired) as e:
+        except (OSError, IndexError, proc.TimeoutExpired) as e:
             return f"did not start: {e}"
 
     tess, lo, sz = (
@@ -129,12 +131,12 @@ def tesseract_setup(tmp, given, dst):
         sys.exit(f"{exe}: sha256 is not {TESS_SHA256} (TESS_SHA256 — the installer of {TESS_VERSION})")
     out = tmp / "Tesseract-OCR"
     sz = next((p for p in (SZ / "7z.exe", dst / "7-Zip" / "7z.exe") if p.is_file()), SZ / "7z.exe")
-    p = subprocess.run(
+    p = proc.run(
         [str(sz), "x", "-y", f"-o{out}", str(exe)],
         capture_output=True,
         text=True,
         errors="replace",
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        creationflags=proc.NO_WINDOW,
     )
     if p.returncode:
         sys.exit(f"7-Zip did not unpack {exe}:\n{p.stdout}{p.stderr}")
@@ -227,12 +229,12 @@ def djvu_setup(tmp, dst):
     fetch(DJVU_URL, DJVU_SHA256, exe)
     out = tmp / "DjVuLibre"
     sz = next((p for p in (SZ / "7z.exe", dst / "7-Zip" / "7z.exe") if p.is_file()), SZ / "7z.exe")
-    p = subprocess.run(
+    p = proc.run(
         [str(sz), "x", "-y", f"-o{out}", str(exe)],
         capture_output=True,
         text=True,
         errors="replace",
-        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        creationflags=proc.NO_WINDOW,
     )
     if p.returncode:
         sys.exit(f"7-Zip did not unpack {exe}:\n{p.stdout}{p.stderr}")

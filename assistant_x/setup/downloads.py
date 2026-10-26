@@ -12,7 +12,9 @@
 
 Standard library only (setup_intake and the installer use it)."""
 
-import hashlib, os, subprocess, urllib.request
+import hashlib, os, urllib.request
+
+from assistant_x.core import proc
 
 # languages: rus from tessdata (LSTM + legacy), eng and osd from tessdata_fast; unchanged since Tesseract 5.4
 TESSDATA = {
@@ -67,15 +69,15 @@ def signed_by(path, publisher):
         "Write-Output ($s.Status.ToString() + '|' + $s.SignerCertificate.Subject)"
     )
     try:
-        p = subprocess.run(
+        p = proc.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd],
             capture_output=True,
             text=True,
             timeout=120,
             env=dict(os.environ, AX_SIGNED_FILE=str(path)),
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            creationflags=proc.NO_WINDOW,
         )
-    except (OSError, subprocess.TimeoutExpired) as e:
+    except (OSError, proc.TimeoutExpired) as e:
         return f"the signature could not be checked ({e})"
     status, _, subject = (p.stdout or "").strip().partition("|")
     if status != "Valid" or publisher not in subject:

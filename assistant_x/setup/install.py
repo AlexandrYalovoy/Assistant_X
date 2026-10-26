@@ -27,7 +27,9 @@ Usage: python -m assistant_x.setup.install [--workspace DIR] [--profile NAME] [-
   --base PACKAGE install a base package right after (assistant-x base install --confirm; with codes that collide a
                  reference package keeps its codes, a default one needs --keep own|package)"""
 
-import argparse, datetime, glob, json, os, platform, shutil, subprocess, sys, tempfile
+import argparse, datetime, glob, json, os, platform, shutil, sys, tempfile
+
+from assistant_x.core import proc
 
 from assistant_x.core import debuglog, env, workspace  # standard library only, like this file
 from assistant_x.setup import constraints as K, medium as M
@@ -132,11 +134,9 @@ def venv_python(d):
 def check(py, code="import sys", timeout=120):
     """(ok, output) of running code in that interpreter."""
     try:
-        p = subprocess.run(
-            [py, "-c", code], capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace"
-        )
+        p = proc.run([py, "-c", code], capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
         return p.returncode == 0, (p.stdout + p.stderr).strip()
-    except (OSError, subprocess.TimeoutExpired) as e:
+    except (OSError, proc.TimeoutExpired) as e:
         return False, str(e)
 
 
@@ -152,7 +152,7 @@ def run(cmd, dry, **kw):
     say("   > " + " ".join(f'"{c}"' if " " in c else c for c in cmd))
     if dry:
         return 0
-    return subprocess.run(cmd, **kw).returncode
+    return proc.run(cmd, **kw).returncode
 
 
 # ---------------------------------------------------------------- steps
@@ -198,7 +198,7 @@ def nvidia():
     if not exe or not os.path.exists(exe):
         return None
     try:
-        p = subprocess.run(
+        p = proc.run(
             [exe, "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
@@ -208,7 +208,7 @@ def nvidia():
         )
         name, driver, mem = [x.strip() for x in p.stdout.splitlines()[0].rsplit(",", 2)]
         return {"name": name, "driver": driver, "vram_gb": float(mem) / 1024}
-    except (OSError, subprocess.TimeoutExpired, IndexError, ValueError):
+    except (OSError, proc.TimeoutExpired, IndexError, ValueError):
         return None
 
 
@@ -217,7 +217,7 @@ def video_cards():
     if os.name != "nt":
         return []
     try:
-        out = subprocess.run(
+        out = proc.run(
             ["powershell", "-NoProfile", "-Command", "(Get-CimInstance Win32_VideoController).Name"],
             capture_output=True,
             text=True,
@@ -225,7 +225,7 @@ def video_cards():
             encoding="utf-8",
             errors="replace",
         ).stdout
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, proc.TimeoutExpired):
         return []
     return [l.strip() for l in out.splitlines() if l.strip()]
 
@@ -662,9 +662,9 @@ def check_intake(py, dry):
         return []
     os.makedirs(P.INBOX, exist_ok=True)  # not in a trial run: it changes nothing
     try:
-        p = subprocess.run([py, "-c", code], capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
+        p = proc.run([py, "-c", code], capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         found = json.loads(p.stdout.strip().splitlines()[-1])
-    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+    except (OSError, proc.TimeoutExpired, ValueError, IndexError):
         return [f"Intake: the settings cannot be read ({(p.stdout + p.stderr)[-500:] if 'p' in locals() else 'no answer'})"]
     problems = []
     for key, what, without in (
@@ -688,7 +688,7 @@ def check_intake(py, dry):
         with open(src, "w", encoding="utf-8") as f:
             f.write("Checking the conversion to PDF.\n")
         try:
-            subprocess.run(
+            proc.run(
                 [
                     found["soffice"],
                     f"-env:UserInstallation=file:///{tmp.replace(os.sep, '/')}/lo",
@@ -702,7 +702,7 @@ def check_intake(py, dry):
                 capture_output=True,
                 timeout=300,
             )
-        except (OSError, subprocess.TimeoutExpired):
+        except (OSError, proc.TimeoutExpired):
             pass
         ok = os.path.exists(os.path.join(tmp, "check.pdf"))
         say(f"   trial conversion to PDF: {'done' if ok else 'FAILED'}")
@@ -721,7 +721,7 @@ def check_intake(py, dry):
         )
     )
     if weak and found["profile"] == "auto":
-        subprocess.run(
+        proc.run(
             [py, "-c", "from assistant_x.intake import config as intake_cfg; intake_cfg.save({'profile': 'weak'})"],
             capture_output=True,
             timeout=120,
@@ -825,7 +825,7 @@ def claude_running():
     if os.name != "nt":
         return False
     try:
-        out = subprocess.run(
+        out = proc.run(
             [
                 "powershell",
                 "-NoProfile",
@@ -838,7 +838,7 @@ def claude_running():
             encoding="utf-8",
             errors="replace",
         ).stdout
-    except (OSError, subprocess.TimeoutExpired):
+    except (OSError, proc.TimeoutExpired):
         return False
     return is_desktop([l.strip() for l in out.splitlines()])
 
@@ -925,10 +925,10 @@ def register_code(py, dry):
         say("   Claude Code is not installed, skipping.")
         return
     try:
-        got = subprocess.run(
+        got = proc.run(
             [exe, "mcp", "get", SERVER], capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace"
         )
-    except (OSError, subprocess.TimeoutExpired) as e:
+    except (OSError, proc.TimeoutExpired) as e:
         say(f"   could not ask Claude Code: {e}")
         return
     if got.returncode == 0 and py in got.stdout and SERVE[1] in got.stdout and P.ROOT in got.stdout:
@@ -961,7 +961,7 @@ def self_check(py, dry):
     if dry:
         say("   (skipped with --dry-run)")
         return []
-    p = subprocess.run(
+    p = proc.run(
         [py, "-m", "assistant_x.setup.debug_report", "--quick", "--no-open"],
         capture_output=True,
         text=True,

@@ -27,8 +27,10 @@ The exclusive file lock: exclusive(path) holds a byte lock for the life of the p
 the models).
 """
 
-import contextlib, datetime, json, os, subprocess, sys, time
+import contextlib, datetime, json, os, sys, time
 from pathlib import Path
+
+from assistant_x.core import proc
 
 from assistant_x.core import env, workspace
 
@@ -298,7 +300,7 @@ def main(argv=None):
     try:
         with heavy_task(task, wait=wait):
             try:
-                return subprocess.call(cmd)
+                return proc.call(cmd)
             except OSError as e:  # no such program, not executable: said in one line, the code of a shell
                 print(f"cannot start {cmd[0]}: {e.strerror or e}", file=sys.stderr)
                 return 127

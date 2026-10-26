@@ -11,7 +11,9 @@ assistant_x.toml [search]: gpu_min_free_gb (5), gpu_wait_minutes (60). The decis
 the machine lock (core/lock.py). The estimates of the time use the speeds measured on this PC (speed.json in its
 folder: record_speed, measured, estimate), the constant of the caller only until one is measured."""
 
-import datetime, json, os, shutil, subprocess, sys, time
+import datetime, json, os, shutil, sys, time
+
+from assistant_x.core import proc
 
 BUSY = 3
 POLL = 30  # seconds between the checks of --wait
@@ -32,14 +34,14 @@ def _smi(*query):
     if not exe:
         return None
     try:
-        r = subprocess.run(
+        r = proc.run(
             [exe, *query, "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
             timeout=20,
             creationflags=0x08000000 if os.name == "nt" else 0,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, proc.SubprocessError):
         return None
     return [ln.strip() for ln in r.stdout.splitlines() if ln.strip()] if r.returncode == 0 else None
 

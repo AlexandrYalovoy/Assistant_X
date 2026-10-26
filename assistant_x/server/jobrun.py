@@ -9,9 +9,10 @@ stopped before the end (its process gone, no code written).
 The server starts this wrapper detached from itself (its own process group, out of the job object of the client where
 Windows allows it), so closing Claude does not end an install or a recalculation half-way."""
 
-import json, os, subprocess, sys, time
+import json, os, sys, time
 
-NO_WINDOW = 0x08000000 if os.name == "nt" else 0
+from assistant_x.core import proc
+
 JOB_ID = "AX_JOB_ID"  # the id of the job (its record in <kind>.json): the exit code is of that job only
 
 
@@ -30,10 +31,8 @@ def main(argv=None):
     log, exit_path, cmd = argv[0], argv[1], argv[3:]
     with open(log, "a", encoding="utf-8") as out:
         try:
-            # the wrapper has no console of its own (detached): the command gets a hidden one, never a window
-            code = subprocess.call(
-                cmd, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, creationflags=NO_WINDOW
-            )
+            # the wrapper runs in the hidden console of its start (intake_tools._popen); the command never gets a window
+            code = proc.call(cmd, stdout=out, stderr=proc.STDOUT, stdin=proc.DEVNULL, hidden=True)
         except OSError as e:
             out.write(f"the job could not start: {e}\n")
             code = 127

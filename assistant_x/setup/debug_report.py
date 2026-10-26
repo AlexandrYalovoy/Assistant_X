@@ -5,7 +5,9 @@ Claude Desktop connection, self-test of every search layer and the failure journ
 Every section is collected on its own, so the report is written even when half of the installation is broken.
 Usage: assistant-x debug-report [--quick] [--no-open]   (--quick: skip loading the embedding models)"""
 
-import argparse, datetime, glob, hashlib, json, locale, os, platform, shutil, subprocess, sys, time, traceback
+import argparse, datetime, glob, hashlib, json, locale, os, platform, shutil, sys, time, traceback
+
+from assistant_x.core import proc
 
 PACKAGE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # assistant_x
 from assistant_x.core import debuglog
@@ -68,7 +70,7 @@ def table(rows, head=("Parameter", "Value")):
 
 def sh(cmd, timeout=20):
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
+        p = proc.run(cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
         return (p.stdout or p.stderr).strip()
     except Exception as e:
         return f"failed: {type(e).__name__}: {e}"
@@ -624,7 +626,7 @@ def main():
     print(f"\nDone: {path}\nPass this file on for a look.")
     if debuglog.may_open() and not a.no_open:
         try:
-            subprocess.Popen(["explorer", f"/select,{path}"])
+            proc.popen(["explorer", f"/select,{path}"])
         except OSError:
             pass
 

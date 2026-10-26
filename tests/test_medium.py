@@ -217,13 +217,13 @@ def test_a_medium_made_again_keeps_its_programs(tmp_path, monkeypatch):
     monkeypatch.setattr(M, "build_python", lambda: "python")
     monkeypatch.setattr(M, "WHEELS", str(tmp_path / "out" / "packages" / "wheels"))
     (tmp_path / "out" / "programs" / "7-Zip").mkdir(parents=True)
-    ran, real = [], M.subprocess.run
+    ran, real = [], M.proc.run
 
     def run(*a, **k):  # git ls-files runs; collect_programs would be recorded
         ran.append(a)
         return real(*a, **k) if "git" in str(a[0][:1]) else None
 
-    monkeypatch.setattr(M.subprocess, "run", run)
+    monkeypatch.setattr(M.proc, "run", run)
     M.medium(str(tmp_path / "out"), no_models=True, programs=True)
     collected = [a for a in ran if "collect_programs" in str(a)]
     assert all("--versions" in a[0] for a in collected) and (tmp_path / "out" / "programs" / "7-Zip").is_dir()

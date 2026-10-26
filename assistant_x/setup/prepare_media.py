@@ -27,8 +27,10 @@ Usage: python -m assistant_x.setup.prepare_media [--out MEDIUM [--models DIR | -
        python -m assistant_x.setup.prepare_media --check MEDIUM   the medium against this code, changing nothing
                                                  (also run at the end of --out)"""
 
-import argparse, fnmatch, json, os, platform, re, shutil, subprocess, sys, urllib.error, urllib.request
+import argparse, fnmatch, json, os, platform, re, shutil, sys, urllib.error, urllib.request
 from importlib import metadata
+
+from assistant_x.core import proc
 
 from assistant_x.core import workspace
 from assistant_x.setup import downloads, medium as ML
@@ -63,7 +65,7 @@ def norm(name):
 def pip(*args, python=None):
     cmd = [python or sys.executable, "-m", "pip", "--disable-pip-version-check", *args]
     print("  >", " ".join(cmd[3:]), flush=True)
-    if subprocess.run(cmd).returncode:
+    if proc.run(cmd).returncode:
         raise SystemExit("pip ended with an error (see above). Check the internet connection and run again.")
 
 
@@ -199,7 +201,7 @@ def build_python():
     of an environment can put its own old build tools before those of the isolated build), else this one."""
     base = getattr(sys, "_base_executable", None) or ""
     if base and os.path.normcase(os.path.abspath(base)) != os.path.normcase(os.path.abspath(sys.executable)):
-        if subprocess.run([base, "-m", "pip", "--version"], capture_output=True).returncode == 0:
+        if proc.run([base, "-m", "pip", "--version"], capture_output=True).returncode == 0:
             return base
     return sys.executable
 
@@ -208,11 +210,11 @@ def app_files(code):
     """The files of the program for a medium: the ones under Git (the tests aside), else every file but the
     environment, the build folders and the private notes."""
     try:
-        out = subprocess.run(["git", "-C", code, "ls-files"], capture_output=True, text=True, check=True).stdout.split("\n")
+        out = proc.run(["git", "-C", code, "ls-files"], capture_output=True, text=True, check=True).stdout.split("\n")
         files = [f for f in out if f and not f.startswith(APP_SKIP)]
         if files:
             return files
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, proc.CalledProcessError):
         pass
     files = []
     for dp, dns, fns in os.walk(code):
@@ -399,11 +401,9 @@ def medium(out, models=None, download=False, no_models=False, programs=False, ba
         dst = os.path.join(out, ML.PROGRAMS_DIR)
         if os.path.isdir(dst):  # collect_programs never writes over a folder: a medium made again keeps its programs
             print(f"  {dst}: there already, left as it is (delete it to collect the programs again)")
-            subprocess.run(
-                [sys.executable, "-m", "assistant_x.setup.collect_programs", "--dst", dst, "--versions"], check=True
-            )
+            proc.run([sys.executable, "-m", "assistant_x.setup.collect_programs", "--dst", dst, "--versions"], check=True)
         else:
-            subprocess.run([sys.executable, "-m", "assistant_x.setup.collect_programs", "--dst", dst], check=True)
+            proc.run([sys.executable, "-m", "assistant_x.setup.collect_programs", "--dst", dst], check=True)
         if sources:
             print("\n7a. The source code of DjVuLibre and 7-Zip (GPL, LGPL)")
             program_sources(dst)

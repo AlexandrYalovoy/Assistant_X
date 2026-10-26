@@ -8,8 +8,10 @@ zip and tar: Python; 7z and rar: 7-Zip (7z.exe), else py7zr for 7z if installed.
 Usage: python -m assistant_x.intake.tools.unpack <archive> [--dest DIR] [--max-gb 5] [--max-depth 3] [--sevenzip 7z.exe]
 Prints a JSON report: dest, files, bytes, nested, left (archives not unpacked: too deep, broken), error."""
 
-import json, os, re, shutil, subprocess, sys, tarfile, unicodedata, zipfile
+import json, os, re, shutil, sys, tarfile, unicodedata, zipfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
+
+from assistant_x.core import proc
 
 from assistant_x.core.config import INTAKE
 from assistant_x.core.formats import extensions
@@ -147,7 +149,7 @@ def _gz(archive, dest, budget):
 
 
 def _7z_list(sevenzip, archive):
-    p = subprocess.run(
+    p = proc.run(
         [sevenzip, "l", "-slt", "-ba", "-p-", "-sccUTF-8", str(archive)],
         capture_output=True,
         timeout=600,
@@ -197,7 +199,7 @@ def _7z(archive, dest, budget, sevenzip, timeout):
     if total > budget:
         raise Refused(f"the archive holds {total / GB:.1f} GB, the limit is {budget / GB:.1f} GB", "size")
     dest.mkdir(parents=True, exist_ok=True)
-    p = subprocess.run(
+    p = proc.run(
         [sevenzip, "x", "-y", "-p-", "-snl-", f"-o{dest}", str(archive)],
         capture_output=True,
         timeout=timeout,
@@ -244,7 +246,7 @@ def unpack_one(archive, dest, budget, sevenzip=None, timeout=TIMEOUT):
         if dest.exists():
             _inside(dest)
         return n
-    except (Refused, zipfile.BadZipFile, tarfile.TarError, OSError, EOFError, subprocess.TimeoutExpired) as e:
+    except (Refused, zipfile.BadZipFile, tarfile.TarError, OSError, EOFError, proc.TimeoutExpired) as e:
         if fresh and dest.exists():
             _remove_tree(dest)
         raise e if isinstance(e, Refused) else Refused(f"the archive is damaged: {e}")

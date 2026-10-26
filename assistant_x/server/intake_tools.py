@@ -7,7 +7,9 @@ themselves (core/lock.py, journal heavy.log): busy — code 3 and who holds it. 
 embeddings are not computed on the processor silently: embed.py (gpu_guard) answers with a time estimate, and the
 command returns a question for the user to Claude; "yes" — intake_reindex(cpu=True)."""
 
-import collections, datetime, json, os, re, secrets, subprocess, sys, time
+import collections, datetime, json, os, re, secrets, sys, time
+
+from assistant_x.core import proc
 
 from assistant_x.core import workspace
 from assistant_x.intake.config import SERVICE  # the service folders of inbox: one list
@@ -42,12 +44,6 @@ def jobs_dir():
 
 
 BUSY = 3  # machine_lock.BUSY, gpu_guard.BUSY: not started, the output says why
-NO_WINDOW = 0x08000000 if os.name == "nt" else 0
-BELOW_NORMAL = 0x00004000 if os.name == "nt" else 0
-# a background job outlives the server: no console of the server, a process group of its own, and out of the job
-# object of the client (Claude closes the server with its whole job) where the job object allows it
-DETACHED = 0x00000008 | 0x00000200 if os.name == "nt" else 0  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
-BREAKAWAY = 0x01000000 if os.name == "nt" else 0  # CREATE_BREAKAWAY_FROM_JOB
 TAIL = 40
 QUICK = 8  # seconds _start waits: a job that ends by then (lock busy, nothing to do) answers at once
 
@@ -66,7 +62,7 @@ def _env(**extra):
 def _intake(*args, timeout=600):
     """(code, output) of the intake command args, waited for."""
     try:
-        p = subprocess.run(
+        p = proc.run(
             [*INTAKE, *args],
             capture_output=True,
             text=True,
@@ -75,10 +71,10 @@ def _intake(*args, timeout=600):
             timeout=timeout,
             env=_env(),
             cwd=_cwd(),
-            creationflags=NO_WINDOW,
+            hidden=True,
         )
         return p.returncode, (p.stdout + p.stderr).strip()
-    except subprocess.TimeoutExpired:
+    except proc.TimeoutExpired:
         return 1, f"intake {' '.join(args)}: longer than {timeout} s"
 
 
@@ -152,14 +148,14 @@ def in_my_job(pid):
 
 
 def _popen(cmd, env):
-    """The wrapper started detached from the server; (process, out of the client's job object)."""
-    opts = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=_cwd(), env=env)
-    if os.name != "nt":
-        return subprocess.Popen(cmd, start_new_session=True, **opts), True
-    try:
-        p = subprocess.Popen(cmd, creationflags=DETACHED | BREAKAWAY | BELOW_NORMAL, **opts)
-    except PermissionError:  # the job object of the client forbids a breakaway: the job ends if the client ends it
-        return subprocess.Popen(cmd, creationflags=DETACHED | BELOW_NORMAL, **opts), False
+    """The wrapper started detached from the server; (process, out of the client's job object). A background job
+    outlives the server: a hidden console of its own that every descendant inherits (never a window, M-008), a process
+    group of its own, and out of the job object of the client (Claude closes the server with its whole job) where the
+    job object allows it (core/proc.popen)."""
+    opts = dict(stdin=proc.DEVNULL, stdout=proc.DEVNULL, stderr=proc.DEVNULL, cwd=_cwd(), env=env)
+    p = proc.popen(cmd, detach=True, creationflags=proc.BELOW_NORMAL, **opts)
+    if os.name != "nt" or not p.broke_away:
+        return p, p.broke_away
     return p, not in_my_job(p.pid)  # a breakaway can succeed and leave it in the job (nested job objects): asked
 
 
@@ -176,8 +172,10 @@ def _start(kind, cmd, **env):
     from assistant_x.server import jobrun
 
     ident = secrets.token_hex(8)
+    # the base interpreter of the venv starts the wrapper: no redirector process in between (core/proc.python)
     p, apart = _popen(
-        [sys.executable, "-m", "assistant_x.server.jobrun", log, done, "--", *cmd], _env(**env, **{jobrun.JOB_ID: ident})
+        [proc.python(), "-m", "assistant_x.server.jobrun", log, done, "--", *cmd],
+        proc.python_env(_env(**env, **{jobrun.JOB_ID: ident})),
     )
     import psutil
 
@@ -193,7 +191,7 @@ def _start(kind, cmd, **env):
         json.dump(job, f, ensure_ascii=False)
     try:
         rc = p.wait(timeout=QUICK)
-    except subprocess.TimeoutExpired:
+    except proc.TimeoutExpired:
         return True, ""
     return False, f"Ended at once (code {rc}):\n{_tail(kind)}"
 
@@ -514,11 +512,12 @@ def reindex(cpu=False):
     if _alive(_job("reindex")):
         return f"A base recalculation is already running ({_ago(_job('reindex'))}): intake_status."
     script = (
-        "import subprocess, sys\n"
+        "import sys\n"
+        "from assistant_x.core import proc\n"
         "py = sys.executable\n"
-        "rc = subprocess.call([py, '-m', 'assistant_x.search.build_index'])\n"
+        "rc = proc.call([py, '-m', 'assistant_x.search.build_index'])\n"
         "if rc: sys.exit(rc)\n"
-        "sys.exit(subprocess.call([py, '-m', 'assistant_x.search.embed'] + sys.argv[1:]))\n"
+        "sys.exit(proc.call([py, '-m', 'assistant_x.search.embed'] + sys.argv[1:]))\n"
     )
     started, text = _start("reindex", [sys.executable, "-c", script] + (["--cpu"] if cpu else []))
     if started:
