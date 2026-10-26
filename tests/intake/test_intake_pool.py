@@ -95,7 +95,17 @@ def test_task_exception_returned(pool):
     ex = pool()
     with pytest.raises(intake_pool.TaskError) as e:
         ex.submit(pool_tasks.boom).result(timeout=120)
-    assert repr(e.value) == "ValueError('broke inside the task')"
+    assert str(e.value) == repr(e.value) == "broke inside the task"  # the text, never a repr of the object
+    assert e.value.kind == "ValueError" and "Traceback" in e.value.trace and "pool_tasks.py" in e.value.trace
+
+
+def test_describe_never_a_repr():
+    class Swig(Exception):
+        def __repr__(self):
+            return "<proxy of <Swig Object at 0x0000>>"
+
+    assert intake_pool.describe(Swig())[:2] == ("Swig", "Swig")  # no text: the name of the type
+    assert intake_pool.describe(Swig("cannot allocate"))[0] == "cannot allocate"
 
 
 # ---------- stages as functions ----------
@@ -132,13 +142,14 @@ def test_stage_exception_is_error_of_file(tmp_path, monkeypatch):
 
     monkeypatch.setattr(hidden, "main", broken)
     res = intake_work.prep(job(tmp_path, pdf))
-    assert res["status"] == "error" and res["why"].startswith("the hidden text check: RuntimeError('the check fell over')")
+    assert res["status"] == "error" and res["why"].startswith("the hidden text check: the check fell over")
     monkeypatch.undo()
     res = intake_work.prep(job(tmp_path, pdf))
     assert res["status"] == "prepped"
     monkeypatch.setattr(assemble_md, "main", broken)
     res = intake_work.convert(job(tmp_path, pdf, pdf=res["pdf"]))
-    assert res["status"] == "error" and res["why"].startswith("assembling the Markdown: RuntimeError")
+    assert res["status"] == "error" and res["why"].startswith("assembling the Markdown: the check fell over")
+    assert "RuntimeError: the check fell over" in (tmp_path / "work" / "log" / "T0001.log").read_text(encoding="utf-8")
     assert not (tmp_path / "work" / "md" / "T0001.md").exists()
 
 
@@ -239,6 +250,90 @@ def test_batch_lost_worker(project, monkeypatch, lost, status, why):
     if why:
         assert rows["text.pdf"]["why"].startswith(why)
     assert rows["Сканы/scan.pdf"]["status"] == "done"  # the other files went on
+
+
+class FailPool(FakePool):
+    """Runs tasks at once; the prep of text.pdf first gets the given failures (an exception, or an error dict)."""
+
+    def __init__(self, fails, seen=None):
+        super().__init__([])
+        self.fails, self.seen = list(fails), seen if seen is not None else []
+
+    def submit(self, fn, *a):
+        if fn.__name__ == "prep" and a[0]["rel"] == "text.pdf":
+            self.seen.append(a[0]["memory_mb"])
+            if self.fails:
+                f, fail = Future(), self.fails.pop(0)
+                if isinstance(fail, dict):
+                    f.set_result(dict(fail))
+                else:
+                    f.set_exception(fail)
+                return f
+        return super().submit(fn, *a)
+
+
+def _mupdf_alloc():
+    return intake_pool.TaskError("FzErrorSystem", "FzErrorSystem", "Traceback (most recent call last):\n  mupdf\n")
+
+
+def _batch(cfg, monkeypatch, tmp_path, fails, seen=None):
+    from assistant_x.core import debuglog
+
+    monkeypatch.setattr(debuglog, "ERRORS", str(tmp_path / "failures.log"))
+    monkeypatch.setenv("AX_FP_CACHE", str(cfg.fingerprints))
+    monkeypatch.setattr(intake.Batch, "pool", lambda self: FailPool(fails, seen))
+    assert intake.main(["--config", str(cfg.path), "run"]) == 0
+    work = sorted(cfg.work.glob("20??-??-??"))[-1]
+    return work, {r["rel"]: r for r in State(work / "state.sqlite").all()}
+
+
+def test_mupdf_allocation_failure_retried_once(project, monkeypatch, tmp_path):
+    """MuPDF's FzErrorSystem (a failed allocation) is a memory failure: once more with the double cap (M-019)."""
+    root, cfg = project
+    seen = []
+    work, rows = _batch(cfg, monkeypatch, tmp_path, [_mupdf_alloc()], seen)
+    assert rows["text.pdf"]["status"] == "done" and rows["text.pdf"]["memory_retry"]
+    assert seen[1] == rows["text.pdf"]["memory_retry"] > seen[0]  # the tools of the job get the double cap too
+
+
+def test_stage_exception_logged_with_its_traceback(project, monkeypatch, tmp_path):
+    root, cfg = project
+    work, rows = _batch(cfg, monkeypatch, tmp_path, [_mupdf_alloc(), _mupdf_alloc()])
+    row = rows["text.pdf"]
+    assert row["status"] == "error" and "Swig" not in row["why"]
+    assert row["why"].startswith("preparation: FzErrorSystem") and f"log/{row['tid']}.log" in row["why"]
+    assert "mupdf" in (work / "log" / f"{row['tid']}.log").read_text(encoding="utf-8")
+    failures = (tmp_path / "failures.log").read_text(encoding="utf-8")
+    assert f"intake {row['tid']} prep" in failures and "Traceback" in failures
+
+
+def test_plain_exception_not_retried(project, monkeypatch, tmp_path):
+    root, cfg = project
+    work, rows = _batch(cfg, monkeypatch, tmp_path, [ValueError()])
+    assert rows["text.pdf"]["status"] == "error" and rows["text.pdf"]["why"].startswith("preparation: ValueError")
+    assert not rows["text.pdf"].get("memory_retry")
+
+
+def test_tool_memory_error_dict_retried(project, monkeypatch, tmp_path):
+    """LibreOffice (or another tool) past its cap returns an error dict asking for a retry: the same path (M-013)."""
+    root, cfg = project
+    fail = intake_work._fail("memory", "LibreOffice")
+    assert fail["retry"] == "memory"
+    work, rows = _batch(cfg, monkeypatch, tmp_path, [fail])
+    assert rows["text.pdf"]["status"] == "done" and rows["text.pdf"]["memory_retry"]
+
+
+def test_tool_memory_error_dict_final_after_one_retry(project, monkeypatch, tmp_path):
+    root, cfg = project
+    fail = intake_work._fail("memory", "LibreOffice")
+    work, rows = _batch(cfg, monkeypatch, tmp_path, [fail, fail])
+    row = rows["text.pdf"]
+    assert row["status"] == "error" and row["why"] == "LibreOffice: memory cap exceeded" and "retry" not in row
+
+
+def test_soffice_env_without_python_variables():
+    env = {"PATH": "x", "PYTHONUTF8": "1", "PYTHONHOME": "h", "pythonpath": "p", "__PYVENV_LAUNCHER__": "v", "AX_X": "1"}
+    assert intake_work.soffice_env(env) == {"PATH": "x", "AX_X": "1"}
 
 
 class OrderPool(FakePool):

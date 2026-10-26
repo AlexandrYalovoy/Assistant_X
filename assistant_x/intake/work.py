@@ -118,7 +118,11 @@ def _tool(name, *args, job, log, timeout, mem=None):
         except MemoryError:
             raise  # past the memory cap of the worker: intake_pool reports it and restarts the worker
         except Exception as e:  # noqa: BLE001 — a tool that raises is an error of the file, as a crashed process would be
-            return {"status": "error", "why": f"{KIND[name]}: {e!r}"[:300] + f" (see log/{Path(log).stem}.log)"}, "code"
+            _trace(log, e)
+            err = {"status": "error", "why": f"{KIND[name]}: {error_text(e)}"[:300] + f" (see log/{Path(log).stem}.log)"}
+            if memory_like(e):
+                err["retry"] = "memory"
+            return err, "code"
     else:
         cmd = [*tool_cmd(name), *map(str, args)]
         rc, why = run(cmd, timeout=timeout, memory_mb=mem if mem is not None else job["memory_mb"], log=log, env=job["env"])
@@ -189,7 +193,51 @@ def _tail(log, start, lines=3):
 
 
 def _fail(why, kind):
-    return {"status": "error", "why": f"{kind}: {'time exceeded' if why == 'timeout' else 'memory cap exceeded'}"}
+    """The error dict of a tool stopped by its limit; past the memory cap it asks for one more try with a double cap
+    (process.Batch: the same path as a worker killed for memory)."""
+    err = {"status": "error", "why": f"{kind}: {'time exceeded' if why == 'timeout' else 'memory cap exceeded'}"}
+    if why == "memory":
+        err["retry"] = "memory"
+    return err
+
+
+# MuPDF reports a failed allocation as FzErrorSystem (its "system" error class): a memory failure, not a broken file
+MEMORY_ERRORS = ("MemoryError", "FzErrorSystem")
+
+
+def error_text(e):
+    """The text of an exception for a file's reason: str(e), else the name of its type (never a repr: the repr of a
+    MuPDF error is the address of a SWIG proxy)."""
+    return str(e).strip() or type(e).__name__
+
+
+def memory_like(e):
+    """True for an exception that is worth one more try with more memory."""
+    from assistant_x.intake.pool import TaskError
+
+    kind = e.kind if isinstance(e, TaskError) else type(e).__name__
+    text = str(e).lower()
+    return kind in MEMORY_ERRORS or "out of memory" in text or "malloc" in text
+
+
+def _trace(log, e):
+    """The traceback of an exception appended to the file's log."""
+    import traceback
+
+    try:
+        with open(log, "a", encoding="utf-8", errors="replace") as f:
+            f.write("".join(traceback.format_exception(e)))
+    except OSError:
+        pass
+
+
+def soffice_env(env):
+    """The environment of LibreOffice: without the PYTHON* variables of our tools and of the host, and without the
+    venv launcher variable — its bundled Python takes them for its own and fails to start ("Could not find platform
+    independent libraries")."""
+    return {
+        k: v for k, v in (env or os.environ).items() if not k.upper().startswith("PYTHON") and k != "__PYVENV_LAUNCHER__"
+    }
 
 
 def _cells(a, b, origin, size):
@@ -279,7 +327,7 @@ def soffice(job, src, outdir, fmt, log):
         timeout=job["timeouts"]["soffice"],
         memory_mb=job["memory_mb"],
         log=log,
-        env=job["env"],
+        env=soffice_env(job["env"]),
     )
     if why:
         return _fail(why, "LibreOffice")
@@ -434,8 +482,12 @@ def prep(job: Job) -> Prep:
         }
     try:
         n = pymupdf.open(pdf).page_count
-    except Exception as e:
-        return {"status": "error", "why": f"the PDF does not open: {e!r}"[:300]}
+    except Exception as e:  # noqa: BLE001 — a PDF that does not open is an error of the file
+        _trace(log, e)
+        err = {"status": "error", "why": f"the PDF does not open: {error_text(e)}"[:300]}
+        if memory_like(e):
+            err["retry"] = "memory"
+        return err
     res: Prep = {"status": "prepped", "pages": n, "hidden": 0, "hidden_pages": []}
     if not job.get("imgocr"):  # the bookmarks of the PDF or the heading styles of a DOCX: the first source of the outline
         from assistant_x.intake.tools import outline

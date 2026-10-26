@@ -71,6 +71,13 @@ def log_error(where, exc=None, args=None):
     _append(errors_path(), f"=== {_now()} | {where} | pid {os.getpid()}\narguments: {_short(args or {})}\n{tb}\n", 2_000_000)
 
 
+def log_text(where, trace, args=None):
+    """A failure whose traceback is text already (it came from a worker process)."""
+    _append(
+        errors_path(), f"=== {_now()} | {where} | pid {os.getpid()}\narguments: {_short(args or {})}\n{trace}\n", 2_000_000
+    )
+
+
 _local = threading.local()
 
 

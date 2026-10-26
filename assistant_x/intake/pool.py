@@ -36,10 +36,27 @@ class Lost(Exception):
 
 
 class TaskError(Exception):
-    """An exception the task raised in the worker; repr() is the text of the original."""
+    """An exception the task raised in the worker: its text (str(e), else the name of its type), the name of its type
+    and its traceback; repr() is the text."""
+
+    def __init__(self, text, kind="", trace=""):
+        super().__init__(text, kind, trace)
+        self.text, self.kind, self.trace = text, kind, trace
+
+    def __str__(self):
+        return self.text
 
     def __repr__(self):
-        return self.args[0]
+        return self.text
+
+
+def describe(e):
+    """(text, type name, traceback) of an exception: str(e) or its type name — never a repr (the repr of a MuPDF
+    error is the address of a SWIG proxy)."""
+    import traceback
+
+    kind = type(e).__name__
+    return (str(e).strip() or kind)[:500], kind, "".join(traceback.format_exception(e))[-20000:]
 
 
 def serve(conn, env, threads):
@@ -77,12 +94,10 @@ def serve(conn, env, threads):
         try:
             out = ("ok", fn(*args))
         except MemoryError:
-            out, recycle = (
-                ("ok", {"status": "error", "why": f"{fn.__name__}: the memory cap of the worker was exceeded"}),
-                True,
-            )
+            why = f"{fn.__name__}: the memory cap of the worker was exceeded"
+            out, recycle = (("ok", {"status": "error", "why": why, "retry": "memory"}), True)
         except BaseException as e:  # noqa: BLE001 — returned to the main process like a pool would
-            out = ("exc", repr(e)[:500])
+            out = ("exc", describe(e))
         pymupdf.TOOLS.store_shrink(100)  # MuPDF cache of this document
         gc.collect()
         try:
@@ -306,7 +321,7 @@ class Persistent:
             if kind == "ok":
                 f.set_result(value)
             else:
-                f.set_exception(TaskError(value))
+                f.set_exception(TaskError(*value) if isinstance(value, tuple) else TaskError(str(value)))
         w = self.workers[k]
         if w is not None:
             w.resume()

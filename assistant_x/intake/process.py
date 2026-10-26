@@ -285,6 +285,17 @@ class Batch:
                 f = self.ex.submit(fn, *args, **kw)
                 inflight[f], tasks[f] = (stage, tid), (fn, args, memory)
 
+            def retry(stage, tid, fn, args, mem, why):
+                """Once more with the double memory cap, in a fresh worker; the tools of the job get it too."""
+                retried[tid] = min(2 * (mem or self.cfg.worker_memory_mb), self.memory_ceiling())
+                say(f"  {tid}: {STAGES.get(stage, stage)} — {why}, once more with a cap of {retried[tid]} MB")
+                self.state.update(tid, memory_retry=retried[tid])
+                heavy.add(tid)  # a thick one: alone from now on
+                args = tuple(
+                    {**a, "memory_mb": retried[tid]} if isinstance(a, dict) and "memory_mb" in a else a for a in args
+                )
+                send(stage, tid, fn, *args, memory=retried[tid])
+
             while queue or inflight or waiting:
                 if waiting and not any(t in heavy for _, t in inflight.values()):
                     stage, tid, fn, args = waiting.pop(0)  # a document past THICK pages, one at a time
@@ -319,18 +330,15 @@ class Batch:
                             queue.append(tid)
                             continue
                         if e.why == "memory" and fn0 and tid not in retried:  # once more, double cap, a fresh worker
-                            retried[tid] = min(2 * (mem0 or self.cfg.worker_memory_mb), self.memory_ceiling())
-                            say(
-                                f"  {tid}: {STAGES.get(stage, stage)} — memory cap exceeded ({mem0} MB), "
-                                f"once more with a cap of {retried[tid]} MB"
-                            )
-                            self.state.update(tid, memory_retry=retried[tid])
-                            heavy.add(tid)  # a thick one: alone from now on
-                            send(stage, tid, fn0, *args0, memory=retried[tid])
+                            retry(stage, tid, fn0, args0, mem0, f"memory cap exceeded ({mem0} MB)")
                             continue
                         res = {"status": "error", "why": lost_why(stage, e)}
                     except Exception as e:  # noqa: BLE001 — one file must not stop the batch
-                        res = {"status": "error", "why": (f"{stage}: {e!r}")[:300]}
+                        res = self.failed(stage, tid, e)
+                    if isinstance(res, dict) and res.get("status") == "error" and res.pop("retry", None) == "memory":
+                        if fn0 and tid not in retried:  # a tool past its cap, a MuPDF allocation failure: as above
+                            retry(stage, tid, fn0, args0, mem0, res.get("why") or "memory")
+                            continue
                     nxt = self.handle(stage, tid, res)
                     if nxt:
                         if (self.state.get(tid).get("pages") or 0) > THICK:
@@ -352,6 +360,34 @@ class Batch:
             self.ex.shutdown(wait=True, cancel_futures=True)
             self.state.reset_running()
         self.batch_pairs()
+
+    def failed(self, stage, tid, e):
+        """The error dict of a stage that raised: the text of the exception (never its repr), its traceback in the
+        file's log and in debug/failures.log; a memory failure (MemoryError, MuPDF's FzErrorSystem) asks for one more
+        try with the double cap."""
+        from assistant_x.core import debuglog
+        from assistant_x.intake import work as intake_work
+
+        trace = e.trace if isinstance(e, intake_pool.TaskError) and e.trace else None
+        if trace is None:
+            import traceback
+
+            trace = "".join(traceback.format_exception(e))
+        log = self.work / "log" / f"{tid}.log"
+        try:
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with open(log, "a", encoding="utf-8", errors="replace") as f:
+                f.write(f"{STAGES.get(stage, stage)} failed:\n{trace}\n")
+        except OSError:
+            pass
+        debuglog.log_text(f"intake {tid} {stage}", trace)
+        res = {
+            "status": "error",
+            "why": f"{STAGES.get(stage, stage)}: {intake_work.error_text(e)} (see log/{tid}.log)"[:300],
+        }
+        if intake_work.memory_like(e):
+            res["retry"] = "memory"
+        return res
 
     def memory_for(self, tid):
         """Memory cap of the worker for a task of this file: by the pages known after prep — up to 300 the cap of
