@@ -16,7 +16,16 @@ from pathlib import Path
 
 from assistant_x.core import card as C
 from assistant_x.intake import meta_schema
-from assistant_x.core.formats import EVENT_DONE, EVENT_DUP, EVENT_REJECTED, EVENT_DELETE, PAGES_SUFFIX, file_kind, pages_path
+from assistant_x.core.formats import (
+    EVENT_DONE,
+    EVENT_DUP,
+    EVENT_REJECTED,
+    EVENT_DELETE,
+    PAGES_SUFFIX,
+    file_kind,
+    natural_key,
+    pages_path,
+)
 
 DOC_EXT = ("doc", "docx", "rtf", "odt")
 SLIDE_EXT = ("ppt", "pptx", "pps", "ppsx", "odp")
@@ -68,6 +77,13 @@ def file_format(r):
     if r.get("ocr_score") is not None:
         out["ocr_score"] = round(min(max(float(r["ocr_score"]) / 100, 0.0), 1.0), 3)
     return out
+
+
+def part_order(m, rel, tid):
+    """Sort key of a part: its "order" of meta.jsonl when given, else its file name with the numbers as numbers
+    ("Chapter 2" before "Chapter 10"), else its tid."""
+    order = m.get("order")
+    return (order is None, order if isinstance(order, int) else 0, natural_key(rel), tid)
 
 
 def file_facts(r):
@@ -251,7 +267,7 @@ def build(cfg, work, date=None, personal=False):
         yr = str(m["year"]) if m.get("year") and m.get("doc_type") != "standard" else ""  # a standard: in its designation
         au, en = clean(m.get("au", ""), 40), clean(m["en"], 55)
         stem = "_".join(x for x in (code, au, en, yr) if x)
-        pl = sorted(parts.get(t, []))
+        pl = sorted(parts.get(t, []), key=lambda p: part_order(meta[p], by[p]["rel"], p))
         if pl:
             items = [(t, f"{code}-01_{en}")] + [
                 (p, f"{code}-{i + 2:02d}_{clean(meta[p].get('what', 'Part'), 50)}") for i, p in enumerate(pl)

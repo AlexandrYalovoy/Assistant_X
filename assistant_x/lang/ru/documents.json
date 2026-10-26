@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names.",
+  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names; the words before a designation that cite another document, not the document's own (designation_cite_words).",
   "designations": [
     "ГОСТ\\s+Р\\s+ИСО\\s*/?\\s*(?:МЭК\\s+)?\\d[\\d.\\-–]*",
     "ГОСТ\\s+Р\\s+(?:МЭК\\s+|ЕН\\s+)?\\d[\\d.\\-–]*",
@@ -27,6 +27,22 @@
   ],
   "not_standards": [
     "ТУ"
+  ],
+  "designation_cite_words": [
+    "в соответствии с",
+    "в соответствии со",
+    "согласно",
+    "по",
+    "см\\.",
+    "требовани\\w*",
+    "указанн\\w*",
+    "приведенн\\w*",
+    "установленн\\w*",
+    "соответстви\\w*",
+    "взамен",
+    "ссылк\\w*",
+    "на основании",
+    "изложенн\\w*"
   ],
   "publish_places": [
     "М\\.",
@@ -86,7 +102,18 @@
     "рецензент",
     "под редакцией",
     "под ред",
-    "все права"
+    "все права",
+    "редакционный совет",
+    "редакционная коллегия",
+    "редколлегия",
+    "авторы?\\b",
+    "научный редактор",
+    "ответственный редактор",
+    "главный редактор",
+    "рекомендовано",
+    "допущено",
+    "isbn",
+    "составител"
   ],
   "standard_head": [
     "^(межгосударственный|национальный|государственный)?\\s*стандарт"

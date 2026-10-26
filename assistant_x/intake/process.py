@@ -196,7 +196,7 @@ class Batch:
             return pages, None
         if pages is None:
             pages = len(split_pages(text)) or None
-        out = pages, metadraft.designation(metadraft.plain("\n".join(metadraft.pages_of(text))))
+        out = pages, metadraft.own_designation(metadraft.pages_of(text))
         if key in self.lib:
             self.lib_editions[key] = out
         return out
@@ -486,7 +486,18 @@ class Batch:
             self.state.update(tid, **upd)
         self.mine[tid] = cand
         self.state.update(tid, status="done", why=row.get("why") if row.get("imgocr") else None)
+        self.draft(tid)
         return None
+
+    def draft(self, tid):
+        """The card draft of a done file at once (meta_draft.jsonl, appended): Claude can write the cards of the files
+        that are ready while the big scans still run; the pass at the end of the batch writes the file anew."""
+        from assistant_x.intake import metadraft
+
+        try:
+            metadraft.write_drafts(self.work, self.state, tids=[tid], index=self.cfg.index, profile=self.cfg, append=True)
+        except Exception as e:  # noqa: BLE001 — a draft is a help: it never stops the batch
+            say(f"  {tid}: the card draft was not written now ({type(e).__name__}: {e}); it comes at the end")
 
 
 def register(cfg, state):

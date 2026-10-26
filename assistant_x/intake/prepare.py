@@ -12,6 +12,7 @@ from assistant_x.core import journal
 
 from assistant_x.intake.tools import unpack
 from assistant_x.core.formats import file_kind
+from assistant_x.core.formats import natural_key
 from assistant_x.intake.batch import SKIP_FILES, say, today, win
 
 
@@ -24,8 +25,8 @@ def walk(inbox):
     for dp, dns, fns in os.walk(top):
         if os.path.normcase(os.path.abspath(dp)) == os.path.normcase(os.path.abspath(top)):
             dns[:] = [d for d in dns if d not in intake_cfg.SERVICE]
-        dns.sort()
-        for f in sorted(fns):
+        dns.sort(key=natural_key)  # "Chapter 2" before "Chapter 10": the tids follow the order of a book
+        for f in sorted(fns, key=natural_key):
             p = os.path.join(dp, f)
             rel = os.path.relpath(p, top).replace("\\", "/")
             if f.lower() in SKIP_FILES:

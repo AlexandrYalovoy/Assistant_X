@@ -12,7 +12,8 @@ A line is one of:
              "replaces": "N-00001" | "other_version": "N-00001" (a new version: versions.py),
              "issues": [{"what", "need", "priority"}] (what is wrong with the source),
              "quality_ok": true (the problems the quality report found are not issues)}
-  part      {"tid": "T0002", "part": "T0001", "what": "Scan"}  — file of a multi-file document
+  part      {"tid": "T0002", "part": "T0001", "what": "Scan", "order": 2}  — file of a multi-file document; "order"
+            (optional) places it among the parts, else they go by file name ("Chapter 2" before "Chapter 10")
   duplicate {"tid": "T0003", "dupof": "T0001" | "L-00012", "why": "…"}
   dropped   {"tid": "T0004", "drop": "administrative pages only"}  — to inbox\\_rejected
 The `doc` fields are checked by core/card.py as the card will be: the card languages (English and the document
@@ -42,6 +43,7 @@ CONTROL = {
     "quality_ok",
     "part",
     "what",
+    "order",
     "dupof",
     "why",
     "drop",
@@ -155,6 +157,8 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
                 e(f"part refers to {m['part']}, which is not in meta.jsonl")
             elif not p.get("sec"):
                 e(f"part refers to {m['part']}, which is not a document (no sec)")
+            if "order" in m and not (isinstance(m["order"], int) and not isinstance(m["order"], bool) and m["order"] >= 1):
+                e(f"order={m['order']!r}: the place of the part among the parts of its document, a whole number from 1")
         elif kinds[0] == "dupof":
             d = m["dupof"]
             if not (C.is_code(d) or d in meta or (tids is not None and d in tids)):

@@ -122,6 +122,11 @@ def file_ext(name):
     return max(known, key=len) if known else (n.rsplit(".", 1)[-1] if "." in n else "")
 
 
+def natural_key(name):
+    """Sort key of a file or folder name with its numbers as numbers: "Chapter 2" before "Chapter 10"."""
+    return [int(x) if x.isdigit() else x.casefold() for x in re.split(r"(\d+)", str(name))]
+
+
 def file_kind(name):
     """The kind of a file by its name (FILE_KINDS), or "" for an extension the table does not know."""
     return EXTENSIONS.get(file_ext(name), "")

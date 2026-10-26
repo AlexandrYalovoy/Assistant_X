@@ -1,5 +1,5 @@
 {
-  "_comment": "English documents: designations of standards, places of publication and publishers, words that are no title, the head and the end of the title page of a standard, the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing; the designations, publishers and title words of a field are in its profile. Empty on purpose: national_standard (no English standard has the title page in capitals that gost_title reads), not_standards, company_forms (an English company form follows the name), title_words_en, title_phrases, title_letters, translit and designation_latin (an English title and designation are Latin already).",
+  "_comment": "English documents: designations of standards, places of publication and publishers, words that are no title, the head and the end of the title page of a standard, the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing; the designations, publishers and title words of a field are in its profile. Empty on purpose: national_standard (no English standard has the title page in capitals that gost_title reads), not_standards, company_forms (an English company form follows the name), title_words_en, title_phrases, title_letters, translit and designation_latin (an English title and designation are Latin already); the words before a designation that cite another document, not the document's own (designation_cite_words).",
   "designations": [
     "ISO\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
     "IEC\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
@@ -29,7 +29,13 @@
     "©",
     "copyright",
     "printed",
-    "contents"
+    "contents",
+    "editorial board",
+    "authors?\\b",
+    "edited by",
+    "editor\\b",
+    "recommended by",
+    "approved by"
   ],
   "doc_type_words": {
     "datasheet": [
@@ -136,6 +142,20 @@
   },
   "national_standard": [],
   "not_standards": [],
+  "designation_cite_words": [
+    "according to",
+    "in accordance with",
+    "see",
+    "per",
+    "as per",
+    "refer to",
+    "referred to in",
+    "specified in",
+    "requirements of",
+    "replaces",
+    "based on",
+    "described in"
+  ],
   "publisher_words": [
     "published by",
     "publisher"
