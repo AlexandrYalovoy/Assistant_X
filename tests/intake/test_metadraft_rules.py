@@ -100,6 +100,8 @@ def test_noisy_contents_left_out():
 def test_heading_ok():
     assert metadraft.heading_ok("5.3 Сепараторы")
     assert metadraft.heading_ok("Осушка природного газа")
+    assert metadraft.heading_ok("Введение")  # one word of a contents page
+    assert not metadraft.heading_ok("Глава 3")  # a chapter without its title
     assert not metadraft.heading_ok("img_3.png")
     assert not metadraft.heading_ok("2005")
     assert not metadraft.heading_ok("Москва, 2005")

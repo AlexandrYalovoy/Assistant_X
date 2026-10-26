@@ -370,20 +370,27 @@ def _chapter_titles(toc, pages):
 
 
 def heading_ok(title):
-    """A title of a guessed contents: two words at least (a numbered one, one word of four letters), no picture name,
-    no formula, no number that is not a section number, no service line ("Moscow, 2005", the imprint)."""
+    """A title of a guessed contents: two words at least, or one word of four letters with a section number, or one
+    capitalised word of five letters ("Introduction"); no picture name, no formula, no number that is not a section
+    number, no "Chapter 3" without its title, no service line ("Moscow, 2005", the imprint)."""
     from assistant_x.core import textmap
 
     t = title.strip()
-    if not t or NOT_HEADING.search(t) or "=" in t or SKIP_TITLE.match(t):
+    # a service line of a title page; one word alone is a section ("Introduction", "Preface")
+    if not t or NOT_HEADING.search(t) or "=" in t or (SKIP_TITLE.match(t) and len(t.split()) > 1):
+        return False
+    c = textmap.CHAPTER_RX.match(t)
+    if c and not WORDS2_RX.search(t[c.end() :]):
         return False
     m = textmap.NUM_HEAD_RX.match(t)
     if t[:1].isdigit() and not m:
         return False
     words = WORDS2_RX.findall(t[m.end() :] if m else t)
-    return len(words) >= 2 or bool(m and any(len(w) >= 4 for w in words))
+    one = len(words) == 1 and (len(words[0]) >= 4 if m else len(words[0]) >= 5 and words[0][0].isupper())
+    return len(words) >= 2 or one
 
 
+TOC_MIN = 2  # a guessed contents of one entry tells nothing
 TOC_KEEP = 0.5  # a guessed contents that loses more than half of its entries to heading_ok is noise: left out
 
 
@@ -391,7 +398,7 @@ def contents(pages, given=None):
     """(toc [{level, pdf_from, title}], tables [{label, pdf_page}]) of a text. The outline the file gives itself (PDF
     bookmarks, DOCX styles) as it is; else the entries of its contents page with their pages, else core/textmap.build
     (numbered headings, numbered lines, plain headings). A guessed contents is checked entry by entry (heading_ok) and
-    left out when it is noise — fewer than 3 entries, all on one page, most entries dropped: an empty contents is
+    left out when it is noise — fewer than 2 entries, all on one page, most entries dropped: an empty contents is
     better than a wrong one. Titles in the language of the text."""
     from assistant_x.core import textmap
 
@@ -408,7 +415,7 @@ def contents(pages, given=None):
     if guessed and toc:
         toc = _chapter_titles(toc, pages)
         kept = [t for t in toc if heading_ok(t["title"])]
-        noisy = len(kept) < textmap.MIN_HEADS or len({t["pdf_from"] for t in kept}) == 1 or len(kept) < TOC_KEEP * len(toc)
+        noisy = len(kept) < TOC_MIN or len({t["pdf_from"] for t in kept}) == 1 or len(kept) < TOC_KEEP * len(toc)
         toc = [] if noisy else kept
     tables = [
         {"label": f"Table {num}", "pdf_page": page}
