@@ -2,6 +2,49 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## Unreleased (0.2)
+
+What the first real intake run (42 files, 8 644 pages) showed, fixed.
+
+### Intake from Claude
+
+- No console window: every program is started through `core/proc.py` (CREATE_NO_WINDOW where a window could appear, a
+  hidden console for a detached job); a test fails on a direct `subprocess` call elsewhere.
+- The status in words: files done, in work with their stage and pages, waiting, errors, the time left, and the next
+  step; the output of the parsers goes to the log of each file, not to the log of the batch. The base recalculation
+  shows its step and progress.
+- A stage that fails logs its traceback (the file's log and `failures.log`) and says why in words; a memory failure
+  (a tool past its cap, a failed MuPDF allocation) is tried once more with the double cap. LibreOffice runs without
+  `PYTHON*` variables.
+- The card drafts appear as soon as each file is done; the document's own designation only from its title pages (a
+  book citing a standard is no standard), no "OST" inside "GOST", titles not taken from a page of authors, slide decks
+  and spreadsheets by their format, contents without picture names and service lines (or none when noisy), files and
+  parts in natural order, a folder of chapters drafted as one book with an optional `order` of its parts.
+- `intake_save_meta(path=…, check_only=…)`: a file of lines inside the batch folder, or a check without writing.
+- `[intake] auto_apply = true` in `assistant_x.local.toml`: a batch with a clean check is applied at once, unless it
+  replaces, links or duplicates a document of the library, rejects a file or holds hidden text addressed to an AI.
+  The confirmation token lives 30 minutes.
+
+### Throughput
+
+- The conversions go cheapest first; heavy files run side by side while their memory caps fit into the free memory,
+  with a worker kept for light ones; the OCR of a long scan is cut into page ranges read on every worker
+  (`[intake] ocr_shards = "off"` turns it off).
+
+### Text quality
+
+- A seed vocabulary from open Hunspell dictionaries (Russian, English) scores the first batch of a new library as a
+  later one; glued and repeated tokens are errors; a page of garbage gets the flag `garbled` (weighed less by the
+  search, listed by the quality report); pages OCR read at a reduced resolution get `dpi_reduced`.
+- A text layer shifted off the page box is reported once per page, not as hidden text.
+- Small caps read in both cases and the lines of narrow table cells are joined back (Russian).
+
+### Answers
+
+- At most two cards in an answer ([search] max_cards), shown after the pages as "Documents on the topic".
+- "Low closeness …" when the library may not cover a question; the wording of the second Claude window is honest.
+- `[search] cpu_int8` is off by default; a hint of a domain profile in `intake_list`.
+
 ## 0.1 — 2026-10-26 (the first open prototype)
 
 The first public version. What it does, by area; the details are in [README.md](README.md) and docs/.
