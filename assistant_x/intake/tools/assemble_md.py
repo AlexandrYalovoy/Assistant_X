@@ -65,8 +65,38 @@ def read_pages(path):
     return {int(parts[i]): unescape_text(parts[i + 1].strip("\n")) for i in range(1, len(parts), 2)}
 
 
+# a word set in small caps comes out of OCR with its letters in both cases ("INhIBITORS"): the packs that fix it
+# (mixed_case_fix of their ocr.json) give their letters; a capital after a lower-case letter inside a word of 5 letters
+# and more is the mark (an abbreviation with an ending, "GOSTu", has no such capital)
+CASE_FIX = "".join(lang.letters("lower")[c] for c in lang.active() if lang.get(c, "mixed_case_fix"))
+MIXED_RX = re.compile(rf"\b[{CASE_FIX}]{{5,}}\b", re.I) if CASE_FIX else None
+# the line of a narrow table cell that ends inside a phrase, the next one going on in lower case: one cell, one line
+CELL_BREAK = re.compile(r"(?<=[^\W\d_])<br>(?=[^\W\d_])")
+
+
+def fix_case(word):
+    """A word with a capital after a lower-case letter in it: all in the case most of its letters have."""
+    if not any(a.islower() and b.isupper() for a, b in zip(word, word[1:])):
+        return word
+    up = sum(c.isupper() for c in word)
+    return word.upper() if up >= len(word) - up else word[0] + word[1:].lower()
+
+
+def join_cells(md):
+    """In the rows of a Markdown table, a <br> between a word and a word going on in lower case is a space."""
+    out = []
+    for line in md.split("\n"):
+        if line.lstrip().startswith("|") and "<br>" in line:
+            line = CELL_BREAK.sub(lambda m: " " if line[m.end() : m.end() + 1].islower() else m.group(0), line)
+        out.append(line)
+    return "\n".join(out)
+
+
 def tidy(md):
     md = re.sub(r"</?mark>", "", md)
+    if MIXED_RX is not None:
+        md = MIXED_RX.sub(lambda m: fix_case(m.group(0)), md)
+    md = join_cells(md)
     return re.sub(r"\n{3,}", "\n\n", md).strip("\n")
 
 

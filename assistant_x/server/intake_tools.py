@@ -265,7 +265,7 @@ def inbox_list():
     """What lies in inbox waiting for the intake, and whether an intake runs now."""
     if not os.path.isdir(P.INBOX):
         os.makedirs(P.INBOX, exist_ok=True)
-    files, size, exts, tops = 0, 0, {}, []
+    files, size, exts, tops, names = 0, 0, {}, [], []
     for name in sorted(os.listdir(P.INBOX)):
         if name in SERVICE or name.lower() == "_readme.md":
             continue
@@ -276,6 +276,7 @@ def inbox_list():
             if dp == P.INBOX and fn.lower() == "_readme.md":
                 continue
             files += 1
+            names.append(os.path.relpath(os.path.join(dp, fn), P.INBOX))
             size += os.path.getsize(os.path.join(dp, fn))
             ext = os.path.splitext(fn)[1].lower() or "no extension"
             exts[ext] = exts.get(ext, 0) + 1
@@ -292,11 +293,48 @@ def inbox_list():
             "Time estimate: a page of a text PDF 0.2–1 s, a scan 2.5–9 s. Hundreds of files are better sorted "
             "overnight: intake_run(night=True)."
         )
+        hint = profile_hint(names)
+        if hint:
+            out.append(hint)
     for kind, what in (("run", "an intake"), ("reindex", "a base recalculation")):
         job = _job(kind)
         if _alive(job):
             out.append(f"Running now: {what} ({_ago(job)}): see intake_status.")
     return "\n".join(out)
+
+
+HINT_SHARE = 0.4  # the share of the files whose names have the words of a profile from which intake_list suggests it
+HINT_FILES = 5
+
+
+def profile_hint(names):
+    """A line for Claude when the workspace uses a profile without hint words (the general one) and most of the
+    files have the words of another profile ("hint" of its profile.json): the user may want that profile."""
+    import re
+
+    from assistant_x.core import config
+
+    try:
+        raw = config.load()[1]
+    except SystemExit:
+        return ""
+    current = raw.get("profile") or config.PROFILE
+    if config.profile_info(raw).get("hint") or len(names) < HINT_FILES:
+        return ""
+    for name in config.profiles():
+        words = config.profile_info({"profile": name}).get("hint") or []
+        if name == current or not words:
+            continue
+        rx = re.compile("|".join(re.escape(w) for w in words), re.I)
+        share = sum(bool(rx.search(n)) for n in names) / len(names)
+        if share >= HINT_SHARE:
+            info = config.profile_info({"profile": name})
+            return (
+                f"Profile: {share:.0%} of the files look like documents of the profile {name} ({info.get('name')}); "
+                f"this workspace uses {current}. That profile adds its synonyms and designations to the search: ask "
+                f'the user whether to set profile = "{name}" in assistant_x.toml (before the intake).'
+            )
+    return ""
 
 
 def run(night=False, resume=False):

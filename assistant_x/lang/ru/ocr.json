@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian words of the recognition score (intake/tools/ocr_score.py): two-letter words and units (other lower-case pairs are OCR crumbs), triples of a letter that are no garbage (a company form).",
+  "_comment": "Russian words of the recognition score (intake/tools/ocr_score.py): two-letter words and units (other lower-case pairs are OCR crumbs), triples of a letter that are no garbage (a company form); mixed_case_fix: a word of these letters with a capital after a lower-case letter is a word set in small caps that OCR read in both cases, made one case (assemble_md).",
   "two_letter_words": [
     "ай",
     "ах",
@@ -88,5 +88,6 @@
   ],
   "not_triple": [
     "ооо"
-  ]
+  ],
+  "mixed_case_fix": true
 }

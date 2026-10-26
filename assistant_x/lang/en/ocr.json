@@ -1,5 +1,5 @@
 {
-  "_comment": "English words of the recognition score (intake/tools/ocr_score.py): two-letter words, units and chemical elements, triples of a letter that are no garbage (a web address).",
+  "_comment": "English words of the recognition score (intake/tools/ocr_score.py): two-letter words, units and chemical elements, triples of a letter that are no garbage (a web address); mixed_case_fix: a word of these letters with a capital after a lower-case letter is a word set in small caps that OCR read in both cases, made one case (assemble_md); off: the CamelCase of chemical formulas and names (NaHCO, McDonald) is kept.",
   "two_letter_words": [
     "ag",
     "al",
@@ -88,5 +88,6 @@
   ],
   "not_triple": [
     "www"
-  ]
+  ],
+  "mixed_case_fix": false
 }

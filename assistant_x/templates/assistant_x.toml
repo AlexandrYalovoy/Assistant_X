@@ -24,7 +24,8 @@ profile = "general"
 # rerank = "auto"                  # true | false | "auto": every question on a video card, never on the processor
 # rerank_weight = 1.0              # the reranker's share in the final order beside the hybrid score
 # max_seq_length = 1024            # tokens the embedding model reads of a fragment and of a question
-# cpu_int8 = true                  # on a processor: bge-m3 in int8 when onnx_models --int8 made it (the same vectors)
+# cpu_int8 = false                 # true: on a processor bge-m3 in int8 when onnx_models --int8 made it (faster;
+                                   # its vectors are about 2 % different from those of the full model)
 # backend = "auto"                 # "auto" | "torch" | "onnx-dml"
 # synonyms = "synonyms.txt"        # your own list instead of the one of the profile
 # gpu_min_free_gb = 5

@@ -1,11 +1,35 @@
 {
-  "_comment": "A domain profile: the data of one field of work, chosen by `profile` in assistant_x.toml (assistant-x init --profile). A profile holds only the knowledge of a field (synonyms, the wording of the skill): the shelves of the library (schemas/shelves.json), the genres (schemas/card-1.json) and the languages of the cards ([documents] languages in assistant_x.toml, English always) are the same in every profile.",
+  "_comment": "A domain profile: the data of one field of work, chosen by `profile` in assistant_x.toml (assistant-x init --profile). A profile holds only the knowledge of a field (synonyms, the wording of the skill): the shelves of the library (schemas/shelves.json), the genres (schemas/card-1.json) and the languages of the cards ([documents] languages in assistant_x.toml, English always) are the same in every profile. hint: pieces of words that the names of the files of such a field have (intake_list suggests the profile when most of the files of a library of the general profile have them).",
   "name": "Oil and gas process engineering (Russian documents)",
   "languages": [
     "ru",
     "en"
   ],
   "synonyms": "synonyms.txt",
+  "hint": [
+    "нефт",
+    "газ",
+    "скважин",
+    "сепарат",
+    "насос",
+    "трубопровод",
+    "промысл",
+    "месторожд",
+    "пласт",
+    "резервуар",
+    "компрессор",
+    "обустройств",
+    "ГОСТ",
+    "РД",
+    "СТО",
+    "СП",
+    "API",
+    "oil",
+    "gas",
+    "well",
+    "pipeline",
+    "separator"
+  ],
   "skill": {
     "title": "oil and gas profile",
     "description": "Profile: an oil-and-gas process engineer.",

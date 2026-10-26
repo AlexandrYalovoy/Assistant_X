@@ -4,7 +4,7 @@
 
     load_embedder(cfg, device)   bge-m3: "dml:N" — ONNX through DirectML (onnx_models.py); "cuda" — torch in float16;
                                  "cpu" — the int8 ONNX (models/onnx/bge-m3/model.int8.onnx, onnx_models.py --export
-                                 --int8) when it is there and [search] cpu_int8 = true (the default), else torch;
+                                 --int8) when it is there and [search] cpu_int8 = true, else torch;
                                  None — CUDA when torch sees a card, else the processor. max_seq_length from [search].
     load_reranker(cfg, device)   bge-reranker-v2-m3: "dml:N" — ONNX, else torch (CrossEncoder giving the logit).
     model_name(path)             "bge-m3" of a folder or of a HuggingFace name: what a base remembers of its model.
@@ -53,7 +53,7 @@ def load_embedder(cfg, device=None):
         from assistant_x.search import onnx_models
 
         enc = onnx_models.OnnxEncoder(model, device=device)
-    elif device == "cpu" and cfg.get("cpu_int8", True) and os.path.exists(int8_path(model)):
+    elif device == "cpu" and cfg.get("cpu_int8", False) and os.path.exists(int8_path(model)):
         from assistant_x.search import onnx_models  # ~1.7x faster on a processor, accepted only by --check
 
         enc = onnx_models.OnnxEncoder(model, device="cpu", file=INT8)

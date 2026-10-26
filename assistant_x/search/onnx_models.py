@@ -12,7 +12,7 @@ same as torch gives (CLS, normalized): the base is shared, no recalculation need
     python onnx_models.py --adapters          DirectML video adapters (number = device_id)
 models/onnx/<model>/model.onnx (+ model.onnx.data), the tokenizer comes from the folder of the original model.
 
-int8 on the processor (search/models.py loads it there when it exists, [search] cpu_int8 = true): the weights of the
+int8 on the processor (search/models.py loads it there when it exists and [search] cpu_int8 = true): the weights of the
 MatMuls quantized dynamically to int8 (onnxruntime, QInt8, a scale per channel), about 1.7x faster than float32 on a
 processor. It must give the vectors of the same model, since a base keeps one model forever and mixes the vectors of
 every PC that extends it: --check embeds 200 fragments of the base (or the sample sentences of the language packs,
@@ -457,7 +457,9 @@ def int8_main(do_quantize):
         os.remove(int8)
         print(f"Refused: {int8} deleted, the processor uses the float32 model.")
         return 1
-    print("The int8 model gives the same vectors: the processor uses it ([search] cpu_int8 = true).")
+    print(
+        "The int8 model gives vectors close to those of the full model (about 2 % apart): set [search] cpu_int8 = true to use it on the processor."
+    )
     return 0
 
 

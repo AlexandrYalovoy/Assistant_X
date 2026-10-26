@@ -23,7 +23,9 @@ SEARCH = {
     "rerank": "auto",  # "auto": every question on a video card (search/retrieval.want_rerank)
     "rerank_weight": 1.0,  # the reranker's share in the final score, beside the normalized hybrid one
     "max_seq_length": 1024,  # tokens the embedding model reads of a fragment and of a question
-    "cpu_int8": True,  # on a processor bge-m3 in int8 ONNX when models/onnx/bge-m3/model.int8.onnx is there
+    # on a processor bge-m3 in int8 ONNX when models/onnx/bge-m3/model.int8.onnx is there: faster, but its vectors are
+    # about 2 % different (cosine 0.98 to those of the full model), so off unless asked
+    "cpu_int8": False,
     "backend": "auto",
     "gpu_min_free_gb": 5,
     "gpu_wait_minutes": 60,

@@ -321,7 +321,7 @@ search reports it and answers by words. The speed-ups keep the vectors: float16 
 processor bge-m3 in int8 ONNX (`python -m assistant_x.search.onnx_models --int8` writes
 `models\onnx\bge-m3\model.int8.onnx` and checks it at once: 200 fragments of the base, or the sample sentences of the
 language packs, must keep a mean cosine of 0.99 to the float32 vectors and 0.97 each, or the file is deleted;
-`[search] cpu_int8 = true` uses it). `search/models.py` is the one place that loads the models, for `embed` and the
+`[search] cpu_int8 = true` uses it; off by default since 0.2: its vectors are about 2 % apart from the full model's). `search/models.py` is the one place that loads the models, for `embed` and the
 search alike. The estimates of the time (`embed` on the processor, `intake_reindex`) use the speeds measured on this PC
 (`speed.json` in `%LOCALAPPDATA%\AssistantX`: every `embed` of 50 fragments or more, and `--check`). Measured on 2026-10-25 (200 fragments of a
 library, 120 Russian and 80 English, Core Ultra 9 275HX): int8 accepted only when the mean cosine to the torch float32

@@ -47,9 +47,9 @@ def test_the_embedder_by_device(onnx_dir, monkeypatch):
         assert isinstance(enc, FakeEmbedder) and enc.max_seq_length == 512 and enc.variant == "fp32"
         (onnx_dir / "bge-m3").mkdir(parents=True)
         (onnx_dir / "bge-m3" / models.INT8).write_bytes(b"")
-        enc = models.load_embedder(cfg, "cpu")  # int8 there: ONNX on the processor
+        assert isinstance(models.load_embedder(cfg, "cpu"), FakeEmbedder)  # int8 there, but off by default
+        enc = models.load_embedder(dict(cfg, cpu_int8=True), "cpu")  # asked for: ONNX int8 on the processor
         assert _Onnx.made == [("bge-m3", "cpu", models.INT8)] and enc.variant == "int8" and enc.max_seq_length == 512
-        assert isinstance(models.load_embedder(dict(cfg, cpu_int8=False), "cpu"), FakeEmbedder)  # switched off
         enc = models.load_embedder(cfg, "dml:1")
         assert _Onnx.made[-1] == ("bge-m3", "dml:1", "model.onnx") and enc.variant == "fp32"
     halved = []
