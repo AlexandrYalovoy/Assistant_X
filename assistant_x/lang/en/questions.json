@@ -1,0 +1,6 @@
+{
+  "_comment": "English words of a question that asks for every place ('all', 'list', 'where else'): the search then reranks more candidates (search/retrieval.py). A whole regex alternative.",
+  "all_places_rx": [
+    "\\b(all|every|list|enumerate|where else)\\b"
+  ]
+}

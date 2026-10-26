@@ -1,0 +1,42 @@
+{
+ "hybrid loose": {
+  "hit5": 0.875,
+  "mrr": 0.753,
+  "n": 16
+ },
+ "hybrid phrase": {
+  "hit5": 0.882,
+  "mrr": 0.827,
+  "n": 17
+ },
+ "meaning loose": {
+  "hit5": 0.875,
+  "mrr": 0.631,
+  "n": 16
+ },
+ "meaning phrase": {
+  "hit5": 0.824,
+  "mrr": 0.679,
+  "n": 17
+ },
+ "rerank loose": {
+  "hit5": 0.875,
+  "mrr": 0.753,
+  "n": 16
+ },
+ "rerank phrase": {
+  "hit5": 0.882,
+  "mrr": 0.827,
+  "n": 17
+ },
+ "words loose": {
+  "hit5": 0.875,
+  "mrr": 0.668,
+  "n": 16
+ },
+ "words phrase": {
+  "hit5": 0.941,
+  "mrr": 0.784,
+  "n": 17
+ }
+}

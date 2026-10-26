@@ -1,0 +1,44 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for the report. A vulnerability goes privately, not here: see SECURITY.md. Please do not attach
+        documents with personal or confidential content.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead (the message, if any).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands or the question to Claude, and the kind of document (a scan, a text PDF, DOCX...).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`assistant-x --version`"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Windows 10/11 or the Linux distribution; the video card if the search is involved.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Debug report
+      description: >
+        `assistant-x debug-report` makes a file to pass on. Read it first: it names your folders and the last
+        questions. Paste the relevant part or attach it.

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Check before a commit: every test but the slow ones (pytest -m "not slow" tests: the whole intake with LibreOffice
+# and OCR and the corpus run separately, pytest -m slow tests), and ruff when it is installed.
+# On an error the commit is cancelled. To bypass it in an emergency: git commit --no-verify.
+# Install: copy this file to .git/hooks/pre-commit.
+root="$(git rev-parse --show-toplevel)"
+py="$root/.venv/Scripts/python.exe"
+[ -f "$py" ] || py="$root/.venv/bin/python"
+if [ ! -f "$py" ]; then
+    echo "pre-commit: no environment .venv, check skipped"
+    exit 0
+fi
+export PYTHONUTF8=1
+if "$py" -m ruff --version >/dev/null 2>&1; then
+    (cd "$root" && "$py" -m ruff check -q .) || { echo "pre-commit: ruff found errors"; exit 1; }
+    (cd "$root" && "$py" -m ruff format -q --check .) || { echo "pre-commit: not formatted: python -m ruff format ."; exit 1; }
+fi
+echo "pre-commit: tests…"
+(cd "$root" && "$py" -m pytest -q -p no:cacheprovider -m "not slow" tests) || {
+    echo "pre-commit: the tests failed, commit cancelled (bypass: git commit --no-verify)"
+    exit 1
+}
+exit 0

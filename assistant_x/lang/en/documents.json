@@ -1,0 +1,162 @@
+{
+  "_comment": "English documents: designations of standards, places of publication and publishers, words that are no title, the head and the end of the title page of a standard, the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing; the designations, publishers and title words of a field are in its profile. Empty on purpose: national_standard (no English standard has the title page in capitals that gost_title reads), not_standards, company_forms (an English company form follows the name), title_words_en, title_phrases, title_letters, translit and designation_latin (an English title and designation are Latin already).",
+  "designations": [
+    "ISO\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
+    "IEC\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
+    "ASME\\s+(?:B|PTC\\s*)?\\d+(?:\\.\\d+)*[A-Z]?(?:-\\d{4})?",
+    "(?:BS\\s+)?EN\\s+\\d{3,5}(?:-\\d+)*"
+  ],
+  "designation_words": [
+    "ISO"
+  ],
+  "publish_places": [
+    "Houston",
+    "New York",
+    "Amsterdam",
+    "Oxford",
+    "London",
+    "Boston"
+  ],
+  "known_publishers": [
+    "Elsevier",
+    "Wiley",
+    "McGraw-Hill",
+    "Springer",
+    "ASME"
+  ],
+  "not_title": [
+    "isbn",
+    "©",
+    "copyright",
+    "printed",
+    "contents"
+  ],
+  "doc_type_words": {
+    "datasheet": [
+      "datasheet",
+      "data sheet",
+      "operation (and maintenance )?manual"
+    ],
+    "book": [
+      "\\bisbn\\b",
+      "handbook",
+      "textbook",
+      "publishing"
+    ],
+    "serial_issue": [
+      "\\bissn\\b",
+      "journal of the",
+      "\\bvol(ume)?\\.? ?\\d+,? (no|issue)\\.? ?\\d+"
+    ],
+    "law": [
+      "\\bpublic law \\d",
+      "be it enacted",
+      "\\bact of (congress|parliament)\\b"
+    ],
+    "regulation": [
+      "code of federal regulations",
+      "\\bregulation \\(e[uc]\\) no",
+      "\\bdirective \\d{2,4}/\\d+"
+    ],
+    "standard": [
+      "international standard",
+      "standard specification for"
+    ],
+    "guideline": [
+      "(?<!clinical )(?<!practice )\\bguidelines? for\\b",
+      "guidance (note|document) on"
+    ],
+    "contract": [
+      "\\bthis agreement\\b",
+      "\\bcontract no\\.?\\s*\\d",
+      "\\bagreement is made\\b"
+    ],
+    "court_decision": [
+      "\\bin the (supreme|district|high) court\\b",
+      "court of appeals?",
+      "judg(e)?ment of the court"
+    ],
+    "clinical_guideline": [
+      "clinical (practice )?guidelines?"
+    ],
+    "textbook": [
+      "a textbook for",
+      "for (undergraduate|graduate) students"
+    ],
+    "handbook": [
+      "\\bdata ?book\\b",
+      "reference book"
+    ],
+    "proceedings": [
+      "proceedings of the",
+      "conference proceedings",
+      "\\bsymposium on\\b"
+    ],
+    "article": [
+      "\\bkeywords?\\s*:",
+      "\\bdoi:?\\s*10\\.\\d{4,}/"
+    ],
+    "thesis": [
+      "a (thesis|dissertation) submitted",
+      "in partial fulfil?lment of the requirements",
+      "doctor of philosophy"
+    ],
+    "report": [
+      "technical report",
+      "final report",
+      "\\breport no\\.?\\s*\\d",
+      "test report"
+    ],
+    "manual": [
+      "user'?s? (manual|guide)",
+      "installation (manual|guide)",
+      "instruction manual"
+    ],
+    "drawing": [
+      "general arrangement drawing",
+      "\\bdrawing (no|number)\\b",
+      "\\bdwg\\.? no\\b"
+    ],
+    "project": [
+      "basis of design",
+      "design basis",
+      "feasibility study"
+    ],
+    "presentation": [
+      "\\bpresentation\\b"
+    ],
+    "lecture_notes": [
+      "lecture notes",
+      "\\blecture \\d+\\b"
+    ],
+    "dataset": [
+      "\\bdata ?set\\b",
+      "data dictionary"
+    ]
+  },
+  "national_standard": [],
+  "not_standards": [],
+  "publisher_words": [
+    "published by",
+    "publisher"
+  ],
+  "company_forms": [],
+  "standard_head": [
+    "^(international|european|british|american national)\\s+standard"
+  ],
+  "standard_end": [
+    "^(reference number|published (by|in)|copyright|©)"
+  ],
+  "supersedes": [
+    "supersedes\\s+([^\\n.]{3,60})",
+    "this edition replaces\\s+([^\\n.]{3,60})"
+  ],
+  "drawing_stamp": [
+    "\\b(scale\\s+\\d+\\s*:\\s*\\d+|sheet\\s+\\d+\\s+of\\s+\\d+|drawn by|checked by|approved by|drawing no\\.?)"
+  ],
+  "title_words_en": {},
+  "title_phrases": {},
+  "title_letters": "",
+  "translit": {},
+  "designation_latin": {}
+}

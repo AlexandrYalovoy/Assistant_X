@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a vulnerability privately
+    url: https://github.com/AlexandrYalovoy/Assistant_X/security/advisories/new
+    about: Not in a public issue. See SECURITY.md.

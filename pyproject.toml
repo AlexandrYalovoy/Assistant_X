@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=77"]  # PEP 639: license-files
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "assistant-x"
+dynamic = ["version"]  # assistant_x.__version__: the one place of the version
+description = "A local knowledge base of your own documents (PDF to texts, cards, keyword and semantic search) served to Claude over MCP"
+readme = "README.md"
+license = "AGPL-3.0-or-later"  # SPDX (PEP 639); the data folders also under CC-BY-4.0: NOTICE
+license-files = ["LICENSE", "LICENSES/*", "NOTICE"]  # the AGPL, the CC-BY-4.0 of the data folders, the notices
+authors = [{ name = "Alexandr Yalovoy" }]
+requires-python = ">=3.11"  # 3.11 is the tested version (CI, the medium); newer ones are not capped, not tested yet
+classifiers = [  # no License classifier (PEP 639); the systems and the Python of the CI matrix only
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Natural Language :: Russian",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Text Processing :: Indexing",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+# the one list of the dependencies: the search by words (FTS5) and the MCP server; the versions as tested, pinned in
+# assistant_x/setup/constraints.txt (python -m assistant_x.setup.constraints --write at a release): the online install
+# and the packages of an offline medium use it
+dependencies = [
+    "mcp>=2.3",
+    "jsonschema>=4.26",  # the document cards (schemas/card-1.json)
+    "snowballstemmer>=3.1",
+    "numpy>=2.4",
+    "pymupdf>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/AlexandrYalovoy/Assistant_X"
+Repository = "https://github.com/AlexandrYalovoy/Assistant_X"
+Issues = "https://github.com/AlexandrYalovoy/Assistant_X/issues"
+Changelog = "https://github.com/AlexandrYalovoy/Assistant_X/blob/main/CHANGELOG.md"
+Mirror = "https://gitflic.ru/project/alexandryalovoy/assistant_x"
+
+[project.optional-dependencies]
+# the search by meaning and the reranking (torch is large: the installer takes the CPU or CUDA build)
+dense = ["sentence-transformers>=6.1", "faiss-cpu>=1.15", "torch>=2.11", "onnxruntime>=1.31"]
+# the intake of your own documents; pymupdf4llm and pymupdf_layout 2.x are empty packages (their modules are in PyMuPDF
+# 2.x), kept as their makers ask: they keep pip from breaking an upgrade from PyMuPDF 1.x (NOTICE)
+intake = ["pymupdf4llm>=2.0", "pymupdf_layout>=2.0", "psutil>=7.2"]
+# AMD and Intel video cards through DirectML (replaces onnxruntime)
+dml = ["onnxruntime-directml>=1.24"]
+# export of the models to ONNX
+export = ["onnx>=1.23", "onnxscript>=0.7"]
+dev = ["pytest>=9.1", "ruff>=0.17"]
+
+[project.scripts]
+assistant-x = "assistant_x.cli.main:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "assistant_x.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["assistant_x*"]
+
+[tool.setuptools.package-data]
+assistant_x = ["lang/*/*.json", "lang/*/*.txt", "schemas/*.json", "profiles/*/*", "templates/*", "templates/*/*", "templates/*/*/*",
+               "setup/constraints.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: the whole intake (LibreOffice, OCR), the corpus, the two stage modes: not run by the pre-commit hook"]
+
+[tool.ruff]
+line-length = 125
+target-version = "py311"
+extend-exclude = ["private"]
+
+[tool.ruff.lint]
+# a small set first: errors of names and imports, syntax; the style rules come later
+select = ["F", "E9", "B006", "B008", "PLE"]

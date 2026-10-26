@@ -1,0 +1,11 @@
+{
+  "_comment": "The text of README.txt of a base package (base/export.py) in Russian.",
+  "package_readme": [
+    "Как установить (по-русски)",
+    "  1. Установите Assistant X (Setup.bat с его носителя), если его ещё нет на этом компьютере.",
+    "  2. Попросите Claude: «AX: установи пакет базы <путь к этому файлу>» или выполните",
+    "       assistant-x base inspect \"<путь к этому файлу>\"",
+    "       assistant-x base install \"<путь к этому файлу>\" --confirm",
+    "  Ваши документы остаются; о дубликатах и новых версиях Claude сначала спросит вас."
+  ]
+}

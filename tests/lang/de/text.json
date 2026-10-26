@@ -1,0 +1,29 @@
+{
+  "_comment": "A tiny German pack for the tests only (tests/test_lang_packs.py): a third language whose letters overlap English, to show that every language rule of the code comes from the packs.",
+  "name": "German",
+  "letters": "A-Za-zÄÖÜäöüß",
+  "lower": "a-zäöüß",
+  "upper": "A-ZÄÖÜ",
+  "lower_basic": "a-z",
+  "upper_basic": "A-Z",
+  "stem_detect": "äöüß",
+  "stemmer": "german",
+  "tesseract": [
+    "deu"
+  ],
+  "lang_share": 0.7,
+  "stop_words": [
+    "der",
+    "die",
+    "das",
+    "und",
+    "ist",
+    "nicht",
+    "mit",
+    "von",
+    "zu",
+    "den",
+    "im",
+    "für"
+  ]
+}

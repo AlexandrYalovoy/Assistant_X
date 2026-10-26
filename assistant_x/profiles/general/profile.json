@@ -1,0 +1,15 @@
+{
+  "_comment": "The default profile: a library of any field, without domain synonyms. A profile holds only the knowledge of a field (synonyms, the wording of the skill): the shelves of the library (schemas/shelves.json), the genres (schemas/card-1.json) and the languages of the cards ([documents] languages in assistant_x.toml, English always) are the same in every profile.",
+  "name": "General library",
+  "languages": [
+    "ru",
+    "en"
+  ],
+  "skill": {
+    "title": "general library",
+    "description": "Profile: a general library of documents.",
+    "example": "AX: what does the standard say about the test pressure?",
+    "role": "You are an expert reader of the user's library: you know the field of each document well enough to read it\ncritically. You speak to the point, with figures and units, you name the limits of applicability and do not hide\nuncertainty.",
+    "practice": "standards in force, recognised\n     handbooks and the practice of the field"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "Russian words of a question that asks for every place ('all', 'list', 'where else'): the search then reranks more candidates (search/retrieval.py). A whole regex alternative.",
+  "all_places_rx": [
+    "(?<![а-яё])(вс[её]|всех|перечисл[а-яё]*|где ещ[её]|во всех)(?![а-яё])"
+  ]
+}

@@ -1,0 +1,74 @@
+# A release from a tag vX.Y[.Z] (CONTRIBUTING.md, "Releases"): the wheel is built from a clean copy of the tagged
+# commit, checked to hold exactly the files of the package, and attached with its SHA-256 to a GitHub release whose
+# notes are the section of the version in CHANGELOG.md. The release is made by the GitHub CLI of the runner (no
+# third-party action); only this job may write to the repository. The actions are pinned by the commit of their
+# release tag (the comment names the tag), as in tests.yml.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  wheel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: The tag is the version of the code
+        run: |
+          v=$(python -c "import re; print(re.search(r'__version__ = \"([^\"]+)\"', open('assistant_x/__init__.py').read())[1])")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then echo "the tag $GITHUB_REF_NAME is not v$v of assistant_x/__init__.py"; exit 1; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: Build the wheel from a clean copy of the tagged commit
+        run: |
+          mkdir -p "$RUNNER_TEMP/src" dist
+          git archive "$GITHUB_SHA" | tar -x -C "$RUNNER_TEMP/src"
+          python -m pip install --upgrade pip
+          python -m pip wheel --no-deps -w dist "$RUNNER_TEMP/src"
+      - name: The wheel holds exactly the files of the package
+        run: |
+          python - <<'EOF'
+          import glob, subprocess, sys, zipfile
+          (wheel,) = glob.glob("dist/assistant_x-*.whl")
+          inside = {n for n in zipfile.ZipFile(wheel).namelist() if n.startswith("assistant_x/")}
+          out = subprocess.run(["git", "ls-files", "assistant_x"], capture_output=True, text=True, check=True).stdout
+          tracked = set(out.split())
+          missing, extra = sorted(tracked - inside), sorted(inside - tracked)
+          print(f"{wheel}: {len(inside)} files of the package, {len(tracked)} tracked")
+          for n in missing:
+              print("missing from the wheel:", n)
+          for n in extra:
+              print("not a file of the repository:", n)
+          sys.exit(1 if missing or extra else 0)
+          EOF
+      - name: The notes of the version from CHANGELOG.md
+        run: |
+          python - <<'EOF' > "$RUNNER_TEMP/notes.md"
+          import os, re
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          v = re.escape(os.environ["VERSION"])
+          m = re.search(rf"^## {v}(?: [^\n]*)?\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+          if not m:
+              raise SystemExit(f"CHANGELOG.md has no section ## {os.environ['VERSION']}")
+          print(m[1].strip())
+          EOF
+      - name: The release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum *.whl > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Assistant X $VERSION" --notes-file "$RUNNER_TEMP/notes.md" ./*.whl SHA256SUMS.txt

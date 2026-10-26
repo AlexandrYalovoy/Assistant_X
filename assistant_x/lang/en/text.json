@@ -1,0 +1,60 @@
+{
+  "_comment": "English: the letters (pieces of regex character classes), stem_detect empty (no letter is English only: a word of none of the letters of the other packs takes this stemmer), the stemmer, the Tesseract language and stop words; lang_share: the share of the letters of a text that makes it English (an English text with more Cyrillic is taken for a mixed one); no case folding beyond lower case (fold); keep_share false: Latin is what a broken font encoding or a bad recognition turns other letters into, so its share proves nothing; no look-alike letters (homoglyphs: Latin is the side the other packs map theirs to); the dashes and quotes of its typography (read as '-' and '\"' when a quote is checked); encodings: the legacy code pages of a plain-text file of the language.",
+  "name": "English",
+  "letters": "A-Za-z",
+  "lower": "a-z",
+  "upper": "A-Z",
+  "lower_basic": "a-z",
+  "upper_basic": "A-Z",
+  "stemmer": "english",
+  "lang_share": 0.85,
+  "homoglyphs": {},
+  "dashes": [
+    "‐",
+    "‑",
+    "‒",
+    "–",
+    "—",
+    "−"
+  ],
+  "quotes": [
+    "“",
+    "”",
+    "‘",
+    "’",
+    "‚",
+    "‛",
+    "'"
+  ],
+  "tesseract": [
+    "eng"
+  ],
+  "encodings": [
+    "cp1252"
+  ],
+  "stop_words": [
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
+    "with"
+  ],
+  "stem_detect": "",
+  "keep_share": false,
+  "fold": {}
+}

@@ -1,0 +1,16 @@
+name: Question
+description: How to do something with Assistant X.
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: What you want to do, and what you tried (README.md and docs/ first).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and system
+      description: "`assistant-x --version`, Windows or Linux"

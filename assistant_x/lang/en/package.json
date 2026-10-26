@@ -1,0 +1,11 @@
+{
+  "_comment": "The text of README.txt of a base package (base/export.py), in this language: {name}, {version}, {documents}, {created} are filled in; every pack that has the key adds its own part.",
+  "package_readme": [
+    "How to install (English)",
+    "  1. Install Assistant X (Setup.bat of its medium), if it is not on this PC yet.",
+    "  2. Ask Claude: \"AX: install the base package <path to this file>\", or run",
+    "       assistant-x base inspect \"<path to this file>\"",
+    "       assistant-x base install \"<path to this file>\" --confirm",
+    "  Your own documents stay; Claude asks you about duplicates and new versions first."
+  ]
+}

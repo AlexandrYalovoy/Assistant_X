@@ -1,0 +1,420 @@
+# Assistant X — Copyright (C) 2026 Alexandr Yalovoy
+# SPDX-License-Identifier: AGPL-3.0-or-later
+r"""Recognition score of a page and a document, 0-100, from the words of the text and (for an OCR page) the word
+confidence of Tesseract. 100: every word is known and Tesseract was sure; below 50: mostly garbage.
+
+Words. The text without markup is cut at spaces. A piece of symbols only is junk when it holds a sign OCR makes of
+specks and lines (| \ { } ~ ^ ¦) or three different signs ("=:>"); a lone sign or a leader line ("....." , "———") is
+neutral. In a piece with letters each token is: neutral with a digit (numbers, 10704-91, M100, designations of
+standards), with one letter, in another script (Greek), or a two-letter capital abbreviation; an error when it mixes
+the letters of two language packs (Latin and Cyrillic), holds a lost symbol U+FFFD, repeats a letter three times
+("AARAAA"), is a pair of the same capital ("XX" as a background pattern; Roman II and XX aside), or a two-letter word
+outside the short list of the pack of its letters (TWO: lang/<code>/ocr.json; crumbs like "iW Wl"); otherwise known
+when its lower-case form
+(folded: core/lang.fold)
+occurs in at least VOCAB_DF documents of the library (index/texts, parts of one document count once; a vocabulary of
+fewer than MIN_VOCAB_WORDS forms, as in a new library, is not used: the shape of the words decides), or, for a long
+word, its stem does, or each part of a hyphenated word does. One-letter tokens past SHORT_FREE of all tokens are
+errors too (specks read as letters). nonword = (unknown words + junk pieces + extra one-letter tokens) / counted.
+The weights were checked on 20 pages looked at by eye (debug/ocr_quality/review.md, assistant-x intake sample).
+
+Score of a page (thresholds in common.QUALITY):
+    words  = 100 - ocr_words_slope * (nonword - ocr_words_free), within 0..100
+    conf   = 100 * (mean confidence - ocr_conf_floor) / (ocr_conf_full - ocr_conf_floor), within 0..100,
+             minus 50 * share of words with confidence below ocr_low_conf
+    score  = words for a text page; ocr_conf_weight * conf + (1 - ocr_conf_weight) * words for an OCR page
+A document: the mean of its page scores weighted by the counted words of the page; no counted words, no score.
+
+The vocabulary is cached in .assistant_x/ocr_vocab.txt of the workspace; rebuilt by `assistant-x intake vocab` (or when the file is missing).
+"""
+
+import collections, functools, glob, os, re
+
+from assistant_x.core import lang
+from assistant_x.core.common import QUALITY, stemmer_for
+from assistant_x.core.formats import OCR_HEADER, PAGE_SPLIT_RX, column_keys
+
+from assistant_x.core import workspace
+
+VOCAB_DF = 3  # documents a word form must occur in to be known
+# a vocabulary smaller than this (a new or small library) cannot tell an unknown word from a recognition error: the
+# words are then judged by their shape only (mixed scripts, lost symbols, letter triples, crumbs), not by the vocabulary
+MIN_VOCAB_WORDS = 1000
+STEM_MIN = 6  # a word this long is also known by its stem
+LOST = "\ufffd"
+HY = "-\u2010'\u2019"  # hyphens and apostrophes inside a word
+MARK = PAGE_SPLIT_RX
+MARKUP = re.compile(r"<!--.*?-->|<[^>\n]{1,40}>|\]\([^)\s]*\)|\\(?=[^\w\s])|~~|[*_#`]", re.S)
+TABLE_ROW = re.compile(r"(?m)^\s*\|.*$")
+HYPHEN_BREAK = re.compile(r"(?<=[^\W\d_])[-\u2010\u00ad]\s*\n\s*(?=[^\W\d_])")
+TOKEN = re.compile(rf"[\w{LOST}]+(?:[{HY}][\w{LOST}]+)*")
+# the lower-case letters of every active pack, ordered by their first letter (Latin before Cyrillic) on purpose: the
+# hyphen of HY after the last letter makes a range of the class, as it always did (the measured behaviour of the score)
+LOWER = "".join(sorted(lang.letters("lower").values(), key=lambda cls: cls[0]))
+OTHER = re.compile(rf"[^{LOWER}{HY}]", re.I)
+PACK_LETTER = re.compile(f"[{lang.chars('lower')}]", re.I)  # a letter of any active pack
+SCRIPT = {code: re.compile(f"[{cls}]+", re.I) for code, cls in lang.letters("lower").items()}  # the letters of a pack
+BROKEN_FONT = re.compile(r"[\u0180-\u02af]")  # Latin Extended-B and IPA: a font read with a wrong code table
+TRIPLE = re.compile(r"([^\W\d_])\1\1", re.I)
+JUNK_SIGNS = set("|\\{}~^¦¬¤")
+MATH_SIGNS = set("+-−/±=<>≤≥×·*°%()[].,:;'\"«»–—…")
+LEADER = re.compile(r"[.…·_\-\u2010\u2013\u2014=*]+")
+# the two-letter words and units of every pack (English ones with the chemical elements); other lower-case pairs are
+# crumbs
+TWO = {code: set(lang.get(code, "two_letter_words", [])) for code in lang.active()}
+NOT_TRIPLE = set(lang.words("not_triple"))  # a company form and a web address are no garbage
+SHORT_FREE = 0.2  # share of one-letter tokens a text has anyway (prepositions, initials, variables); more is crumbs
+
+
+def vocab_file():
+    """The vocabulary file of the workspace in use (resolved at the call: a worker or a test may change it)."""
+    return str(workspace.current().ocr_vocab)
+
+
+def texts_dir():
+    """The library texts of the workspace in use."""
+    return str(workspace.current().texts)
+
+
+def clean(text):
+    """Text without Markdown and HTML markup (pipes of table rows too); a word broken at the line end is joined back."""
+    text = TABLE_ROW.sub(lambda m: m.group(0).replace("|", " "), text.replace("<br>", "\n"))
+    return HYPHEN_BREAK.sub("", MARKUP.sub(" ", text))
+
+
+def script(tok):
+    """The first active pack that has every letter of the token its packs know ("" for a token of letters of no pack),
+    or None when no single pack has them all: the token mixes scripts (a Latin word with a Cyrillic e in it)."""
+    known = "".join(PACK_LETTER.findall(tok))
+    if not known:
+        return ""
+    return next((code for code, rx in SCRIPT.items() if rx.fullmatch(known)), None)
+
+
+def two_known(tok):
+    """A two-letter token is a word or a unit of a pack whose letters it has (its list in lang/<code>/ocr.json; two
+    packs of one alphabet, English and German: either list); letters of no pack: the list of the first language."""
+    known = "".join(PACK_LETTER.findall(tok))
+    codes = [code for code, rx in SCRIPT.items() if known and rx.fullmatch(known)] or [next(iter(TWO))]
+    return any(norm(tok) in TWO[code] for code in codes)
+
+
+def kind(tok):
+    """'num' | 'short' | 'other' | 'abbr' | 'broken' | 'mixed' | 'junk' | '<code>2' (a two-letter word of the pack of
+    that language: 'en2', 'ru2') | 'word' of a token."""
+    if LOST in tok or BROKEN_FONT.search(tok):  # a broken font encoding: the word is lost
+        return "broken" if len(tok) > 1 else "short"  # a lone lost symbol is a formula sign
+    if any(c.isdigit() for c in tok):
+        return "num"
+    letters = re.sub(f"[{HY}]", "", tok)
+    if len(letters) < 2:
+        return "short"
+    if OTHER.search(tok) or "_" in tok:
+        return "other"
+    code = script(tok)
+    if code is None:
+        return "mixed"
+    if TRIPLE.search(tok) and tok.lower() not in NOT_TRIPLE:
+        return "junk"
+    if len(letters) == 2:
+        if letters.isupper():
+            # a pair of the same capital: a pattern, not an abbreviation; Roman II and XX are numbers
+            return "junk" if letters[0] == letters[1] and letters not in ("II", "XX") else "abbr"
+        return (code or next(iter(TWO))) + "2"  # letters of no pack: the list of the first language
+    return "word"
+
+
+def norm(w):
+    return lang.fold(w.lower())
+
+
+def doc_words(text):
+    """Set of the normalised words of a text (for the vocabulary): whole words and the parts of hyphenated ones."""
+    out = set()
+    for m in TOKEN.finditer(clean(text)):
+        t = m.group(0)
+        if kind(t) == "word":
+            w = norm(t)
+            out.add(w)
+            if re.search(f"[{HY}]", w):
+                out.update(p for p in re.split(f"[{HY}]", w) if len(p) >= 2)
+    return out
+
+
+@functools.lru_cache(maxsize=300_000)
+def stem(w):
+    """The stem of a normalised word by the stemmer of the pack whose letters it has (core/common.stemmer_for)."""
+    return stemmer_for(w).stemWord(w)
+
+
+def group_of(code):
+    """Parts of one document (N-00101-21) count as the document N-00101: copies of one scan are not three documents."""
+    return re.sub(r"^([A-Z]-\d{5})-\d{2,3}$", r"\1", code)
+
+
+def build_vocab(texts=None, out=None, df_min=VOCAB_DF):
+    """Count the documents of every word form of the texts (default: the library texts) and write the forms seen in
+    df_min or more documents to out (default: the vocabulary of the workspace). Returns the count."""
+    texts, out = texts or texts_dir(), out or vocab_file()
+    groups = collections.defaultdict(set)
+    files = sorted(p for p in glob.glob(os.path.join(texts, "*.md")) if not os.path.basename(p).startswith("_"))
+    for p in files:
+        with open(p, encoding="utf-8") as f:
+            groups[group_of(os.path.basename(p)[:-3])] |= doc_words(f.read())
+    df = collections.Counter()
+    for words in groups.values():
+        df.update(words)
+    known = sorted(w for w, n in df.items() if n >= df_min)
+    sdf = collections.Counter()
+    for words in groups.values():
+        sdf.update({stem(w) for w in words if len(w) >= STEM_MIN})
+    stems = sorted(s for s, n in sdf.items() if n >= df_min)
+    tmp = out + ".tmp"
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(
+            f"# vocabulary of the recognition score: {len(groups)} documents, a word in {df_min}+ documents "
+            f"(ocr_score.py; rebuild: assistant-x intake vocab)\n"
+        )
+        f.writelines(w + "\n" for w in known)
+        f.write("# stems\n")
+        f.writelines("~" + s + "\n" for s in stems)
+    os.replace(tmp, out)
+    _read_vocab.cache_clear()
+    return len(known), len(stems), len(groups)
+
+
+def load_vocab(path=None):
+    """(set of word forms, set of stems) of a vocabulary file (default: the one of the workspace); the file is built
+    first when missing."""
+    return _read_vocab(str(path or vocab_file()))
+
+
+@functools.lru_cache(maxsize=2)
+def _read_vocab(path):
+    if not os.path.exists(path):
+        build_vocab(out=path)
+    words, stems = set(), set()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line or line[0] == "#":
+                continue
+            (stems.add(line[1:]) if line[0] == "~" else words.add(line))
+    return frozenset(words), frozenset(stems)
+
+
+@functools.lru_cache(maxsize=1)
+def seed():
+    """(word forms, stems) of the seed vocabularies of the active packs (lang/<code>/vocab.txt): known under the
+    vocabulary of the library. They count only once the library vocabulary is big enough (MIN_VOCAB_WORDS): a seed
+    alone would call the terms of a new library unknown."""
+    words = frozenset(norm(w) for code in lang.active() for w in lang.vocab(code))
+    return words, frozenset(stem(w) for w in words if len(w) >= STEM_MIN)
+
+
+def known(w, vocab):
+    words, stems = vocab
+    sw, ss = seed()
+    if w in words or w in sw:
+        return True
+    if len(w) >= STEM_MIN and (stem(w) in stems or stem(w) in ss):
+        return True
+    parts = [p for p in re.split(f"[{HY}]", w) if p]
+    return len(parts) > 1 and all(
+        len(p) < 2 or p in words or p in sw or (len(p) >= STEM_MIN and stem(p) in stems | ss) for p in parts
+    )
+
+
+def word_counts(text, vocab=None):
+    """(counted words, unknown words and junk pieces, examples of them) of a text."""
+    vocab = vocab or load_vocab()
+    by_vocab = len(vocab[0]) >= MIN_VOCAB_WORDS
+    n = bad = tokens = short = 0
+    ex = []
+
+    def error(what):
+        nonlocal bad
+        bad += 1
+        if len(ex) < 8:
+            ex.append(what)
+
+    for piece in clean(text).split():
+        toks = TOKEN.findall(piece)
+        if not toks:
+            signs = set(piece)
+            if (
+                len(piece) > 1
+                and not LEADER.fullmatch(piece)
+                and (signs & JUNK_SIGNS or len(signs - MATH_SIGNS) + (len(signs) >= 3) >= 2)
+            ):
+                n += 1
+                error(piece)
+            continue
+        for t in toks:
+            k = kind(t)
+            tokens += 1
+            short += k == "short"
+            if k in ("num", "short", "other", "abbr"):
+                continue
+            n += 1
+            if (
+                k in ("mixed", "broken", "junk")
+                or (k[:-1] in TWO and k[-1] == "2" and not two_known(t))
+                or (k == "word" and by_vocab and not known(norm(t), vocab))
+            ):
+                error(t)
+    crumbs = int(short - SHORT_FREE * tokens)  # one-letter tokens past the usual share: specks read as letters
+    if crumbs > 0:
+        n += crumbs
+        bad += crumbs
+    return n, bad, ex
+
+
+def words_score(nonword):
+    q = QUALITY
+    return max(0.0, min(100.0, 100 - q["ocr_words_slope"] * (nonword - q["ocr_words_free"])))
+
+
+def conf_score(mean_conf, low_share):
+    q = QUALITY
+    s = 100 * (mean_conf - q["ocr_conf_floor"]) / (q["ocr_conf_full"] - q["ocr_conf_floor"])
+    return max(0.0, min(100.0, s) - 50 * low_share)
+
+
+def page_score(words, bad, conf=None, low=None):
+    """Score 0-100 of a page, or None when it has no counted words and no confidence."""
+    if not words and conf is None:
+        return None
+    w = words_score(bad / words) if words else None
+    if conf is None:
+        return round(w, 1)
+    c = conf_score(conf, low or 0.0)
+    if w is None:
+        return round(c, 1)
+    k = QUALITY["ocr_conf_weight"]
+    return round(k * c + (1 - k) * w, 1)
+
+
+def pages_of(md):
+    parts = MARK.split(md)
+    return [(int(parts[i]), parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
+
+
+def doc_score(page_rows):
+    """Weighted mean of [(score, counted words)]; None when nothing is counted."""
+    rows = [(s, max(w, 1)) for s, w in page_rows if s is not None]
+    total = sum(w for _, w in rows)
+    return round(sum(s * w for s, w in rows) / total, 1) if total else None
+
+
+A4_AREA = 595 * 842  # points
+DRAWING_WORDS = 150
+
+
+def is_drawing(pages, page_area, words=None):
+    """A drawing sheet: 1-2 pages bigger than A3 with little text. Its score says nothing of the
+    recognition: it gets one sparse-text pass (psm 11), no retries, no redo and no "to update" line."""
+    return bool(pages) and pages <= 2 and page_area >= 1.9 * A4_AREA and (words is None or words < DRAWING_WORDS)
+
+
+def pdf_is_drawing(path, words=None):
+    """is_drawing for a PDF file (its first page); False when it cannot be opened."""
+    try:
+        import pymupdf
+
+        with pymupdf.open(path) as d:
+            r = d[0].rect if d.page_count else None
+            return bool(r) and is_drawing(d.page_count, r.width * r.height, words)
+    except Exception:  # noqa: BLE001 — a broken file is not a drawing
+        return False
+
+
+def score_text(md, conf=None, vocab=None):
+    """{'score', 'words', 'nonword', 'pages': [{page, words, bad, score, ...}]} of a Markdown text with page marks.
+    conf: {page: {'conf': mean, 'low': share}} from the OCR of the intake (absent: words only)."""
+    vocab = vocab or load_vocab()
+    pages, n_all, bad_all = [], 0, 0
+    for no, text in pages_of(md) or [(1, md)]:
+        n, bad, ex = word_counts(text, vocab)
+        c = {k: v for k, v in ((conf or {}).get(no) or {}).items() if k in ("conf", "low", "tokens", "variant", "rotate")}
+        if c.get("conf") is None or c.get("tokens", n) < 0.3 * n:  # OCR read only a stamp or a picture of the page
+            c.pop("conf", None)
+        s = page_score(n, bad, c.get("conf"), c.get("low"))
+        pages.append({"page": no, "words": n, "bad": bad, "score": s, "examples": ex, **c})
+        n_all += n
+        bad_all += bad
+    return {
+        "score": doc_score([(p["score"], p["words"]) for p in pages]),
+        "words": n_all,
+        "nonword": round(bad_all / n_all, 3) if n_all else None,
+        "pages": pages,
+    }
+
+
+# ---------- index/ocr_quality.tsv: the score of every library text (read by search/build_index.py) ----------
+TSV_NAME = "ocr_quality.tsv"
+TSV_HEAD = OCR_HEADER
+
+
+def row_of(code, res, source, date):
+    """A row of ocr_quality.tsv from score_text(); source: "text" (the library text, words only), "intake" (at intake,
+    with the Tesseract confidence of OCR pages), «redo» (assistant-x intake redo)."""
+    lim = QUALITY["ocr_note"]
+    scored = [p for p in res["pages"] if p["score"] is not None and p["words"] >= 20]
+    worst = sorted(scored, key=lambda p: p["score"])[:5]
+    return {
+        "code": code,
+        "score": "" if res["score"] is None else f"{res['score']:.1f}",
+        "nonword": "" if res["nonword"] is None else f"{res['nonword']:.3f}",
+        "words": str(res["words"]),
+        "pages": str(len(res["pages"])),
+        "pages_below_threshold": str(sum(p["score"] < lim for p in scored)),
+        "worst_pages": ", ".join(f"{p['page']}:{p['score']:.0f}" for p in worst if p["score"] < 95),
+        "source": source,
+        "date": date,
+    }
+
+
+def read_tsv(path):
+    """{code: row} of ocr_quality.tsv; {} when there is none."""
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    head = column_keys(lines[0].split("\t")) if lines else TSV_HEAD
+    return {r["code"]: r for r in (dict(zip(head, ln.split("\t"))) for ln in lines[1:] if ln.strip())}
+
+
+def write_tsv(path, rows):
+    tmp = str(path) + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\t".join(TSV_HEAD) + "\n")
+        for code in sorted(rows):
+            f.write("\t".join(str(rows[code].get(k, "")).replace("\t", " ") for k in TSV_HEAD) + "\n")
+    os.replace(tmp, path)
+
+
+def _score_file(path):
+    with open(path, encoding="utf-8") as f:
+        return os.path.basename(path)[:-3], score_text(f.read())
+
+
+def score_library(texts=None, codes=None, workers=8):
+    """{code: score_text()} of the library texts (all, or the given codes; default folder: the workspace's), words only."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    files = sorted(
+        p
+        for p in glob.glob(os.path.join(texts or texts_dir(), "*.md"))
+        if not os.path.basename(p).startswith("_") and (codes is None or os.path.basename(p)[:-3] in codes)
+    )
+    load_vocab()
+    if workers <= 1 or len(files) < 20:
+        return dict(map(_score_file, files))
+    with ProcessPoolExecutor(workers) as ex:
+        return dict(ex.map(_score_file, files, chunksize=8))
+
+
+if __name__ == "__main__":
+    print(build_vocab())

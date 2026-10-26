@@ -1,0 +1,17 @@
+{
+  "_comment": "Sample sentences of the language for search/onnx_models.py --check when there is no base: the int8 model must give the vectors of the float32 one on them too. Of no field in particular: the sentences of a field belong to its profile.",
+  "model_check_sentences": [
+    "This standard specifies general requirements for the quality management system of an organization.",
+    "Table 3 — Values of the coefficient as a function of the ambient air temperature.",
+    "The results of the measurements are recorded in the log and signed by the persons responsible.",
+    "Chapter 2. Basic notions: sets, mappings and functions.",
+    "The calculation is made by formula (12) with a correction for humidity.",
+    "Before the work starts the tools and the protective equipment are checked.",
+    "The agreement comes into force on the date of its signature by the parties.",
+    "Terms and definitions: a record is information fixed on a medium with its attributes.",
+    "The patient is examined again two weeks after the start of the treatment.",
+    "The rate of the reaction grows with the temperature and the concentration of the reagents.",
+    "Annex A lists the normative references to international standards.",
+    "The report of the research work was prepared at the request of the customer."
+  ]
+}

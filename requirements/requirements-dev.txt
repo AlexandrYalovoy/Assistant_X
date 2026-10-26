@@ -1,0 +1,11 @@
+# Development only (tests, the pre-commit hook, the export of the models): not on an offline medium, whose packages
+# are those of assistant_x/setup/constraints.txt.
+pytest==9.1.1
+iniconfig==2.3.1
+pluggy==1.7.0
+# Export of the models to ONNX (python -m assistant_x.search.onnx_models --export, the build PC); wheels — .assistant_x/packages/wheels_dml
+onnx==1.23.2
+onnxscript==0.7.2
+onnx_ir==1.1.0
+ml_dtypes==0.6.0
+ruff==0.17.2

@@ -1,0 +1,52 @@
+{
+  "_comment": "Russian names in the inbox: personal papers by the name of a file or folder (land register extracts, insurance numbers, tax statements, passports, certificates…: sent to _to_delete unopened; not the bare word for 'passport', the datasheets of equipment are called so too), words of hidden text aimed at an AI, and the folders of a kit of a Russian standard as the registry distributes it (the document file, its scan images, additional documents) with the names of its administrative pages. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one).",
+  "personal_papers": [
+    "ЕГРН",
+    "СНИЛС",
+    "ипотек",
+    "НДФЛ",
+    "льгот",
+    "справк[аи]? о доходах",
+    "загранпаспорт",
+    "паспорт[ _-]?гражданина",
+    "паспорт[ _-]?РФ",
+    "скан[ _-]?паспорта",
+    "свидетельств[оа]? о (?:рождении|браке|разводе)",
+    "полис[ _-]?ОМС",
+    "водительск",
+    "больничн",
+    "медкнижк",
+    "медицинск\\w* книжк",
+    "трудов\\w* книжк",
+    "банковск\\w* выписк",
+    "выписк\\w* по (?:сч[её]ту|карте)"
+  ],
+  "suspect_words": [
+    "игнорир\\w*",
+    "инструкц\\w*",
+    "ассистент\\w*",
+    "систем\\w*",
+    "промпт\\w*",
+    "нейросет\\w*",
+    "не сообщай\\w*"
+  ],
+  "ai_phrases": [
+    "\\b(?:игнорир|пренебрег|забудь)\\w*(?:\\W+\\w+){0,3}?\\W+(?:предыдущ|прежн|вышеуказанн|все)\\w*\\W+(?:\\w+\\W+){0,2}?(?:инструкц|указан|правил)\\w*",
+    "\\bты\\W+(?:теперь\\W+)?(?:ии|ассистент|чат-?бот|языков\\w*\\W+модел)\\w*",
+    "\\bне\\W+(?:спрашива|сообща|говор|предупрежда)\\w*\\W+пользовател\\w*",
+    "\\b(?:вызови|запусти|выполни)\\W+(?:инструмент|функци)\\w*",
+    "\\bсистемн\\w*\\W+(?:промпт|подсказк)\\w*"
+  ],
+  "kit_folders": {
+    "file": "Файл документа",
+    "scan": "Скан-образы",
+    "supplement": "Дополнительные документы"
+  },
+  "kit_not_main": "реестр|лист регистр",
+  "kit_plan_of_measures": "план[ _-]*мероприят",
+  "kit_approval": "pm|пм|.*лист согл",
+  "kit_signed_title": "титул|ttt|ttr|^m-|^м-|^\\d+_m",
+  "kit_plan": "план",
+  "kit_explanatory": "поясн|_пз",
+  "kit_register": "реестр"
+}

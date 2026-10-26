@@ -1,0 +1,46 @@
+# Settings of an Assistant X workspace. Every value has a default (assistant_x/core/config.py); uncomment what you
+# change. Paths of programs on this PC go to assistant_x.local.toml beside this file (not shared).
+
+# domain data: synonyms, the wording of the skill (assistant_x/profiles):
+# "general" (any library) or "oil-gas-ru" (oil and gas process engineering, Russian standards)
+profile = "general"
+
+[documents]
+# the language packs that read the documents (assistant_x/lang), in order; the default is every pack
+# languages = ["ru", "en"]
+
+[paths]
+# folders, relative to this file
+# inbox = "inbox"
+# library = "library"
+# index = "index"
+# reports = "reports"
+# data = ".assistant_x"            # the base, the batches of the intake, the debug journals
+# models = ""                     # the models; default: .assistant_x/models when it exists, else those of the PC
+
+[search]
+# embed_model = "bge-m3"           # a folder of the models (see models above), or a HuggingFace name (BAAI/bge-m3)
+# rerank_model = "bge-reranker-v2-m3"
+# rerank = "auto"                  # true | false | "auto": every question on a video card, never on the processor
+# rerank_weight = 1.0              # the reranker's share in the final order beside the hybrid score
+# max_seq_length = 1024            # tokens the embedding model reads of a fragment and of a question
+# cpu_int8 = true                  # on a processor: bge-m3 in int8 when onnx_models --int8 made it (the same vectors)
+# backend = "auto"                 # "auto" | "torch" | "onnx-dml"
+# synonyms = "synonyms.txt"        # your own list instead of the one of the profile
+# gpu_min_free_gb = 5
+# gpu_wait_minutes = 60
+# table_rows = false               # true: a table is embedded as a line per row "header: value; …"
+
+[intake]
+# workers = 8
+# profile = "auto"                 # load of the PC: "auto" | "weak" | "night"
+# priority = "below_normal"        # "below_normal" | "idle" | "normal"
+# affinity = "auto"                # "auto" | "ecores" | "all" | "8,9,10"
+# ocr_threads = 2
+# worker_memory_mb = 3072
+# personal = false                 # true: every batch is marked personal; by default your documents go onto the same
+#                                   shelves as an installed base package, as if you had filled it yourself
+
+# [intake.disk]
+# factor = 3
+# min_free_gb = 10

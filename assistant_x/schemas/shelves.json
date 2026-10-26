@@ -1,0 +1,54 @@
+{
+  "_comment": "The shelves of every library, whatever the profile: the letter of a code, the folder in library, the name in English and Russian, what goes there and the genres (doc_type of schemas/card-1.json) that go there. Every genre is on exactly one shelf, so the shelf follows from the genre (Claude may put a document elsewhere with a note). The same shelves everywhere keep the codes of libraries and base packages compatible.",
+  "shelves": [
+    {
+      "letter": "N",
+      "folder": "01_Standards",
+      "name": {"en": "Standards", "ru": "Стандарты"},
+      "about": "Standards and norms: national, interstate and international standards, codes of rules, standards of organizations and guidelines.",
+      "doc_types": ["standard", "guideline"]
+    },
+    {
+      "letter": "L",
+      "folder": "02_Literature",
+      "name": {"en": "Literature", "ru": "Литература"},
+      "about": "Books one reads or looks things up in: monographs, textbooks, handbooks, theses, lecture notes.",
+      "doc_types": ["book", "textbook", "handbook", "thesis", "lecture_notes"]
+    },
+    {
+      "letter": "P",
+      "folder": "03_Projects",
+      "name": {"en": "Projects and reports", "ru": "Проекты и отчёты"},
+      "about": "Documents of projects and work: design and working documentation, reports, drawings, presentations, data sets.",
+      "doc_types": ["project", "report", "drawing", "presentation", "dataset"]
+    },
+    {
+      "letter": "E",
+      "folder": "04_Datasheets",
+      "name": {"en": "Equipment documents", "ru": "Паспорта и руководства"},
+      "about": "Documents of equipment and products: datasheets, operation manuals, questionnaires, catalogs of products.",
+      "doc_types": ["datasheet", "manual"]
+    },
+    {
+      "letter": "R",
+      "folder": "05_Regulations",
+      "name": {"en": "Regulations and law", "ru": "Нормативные акты и регламенты"},
+      "about": "Legal acts and regulations: laws and rules of authorities, process regulations, clinical guidelines, contracts, court decisions.",
+      "doc_types": ["law", "regulation", "clinical_guideline", "contract", "court_decision"]
+    },
+    {
+      "letter": "J",
+      "folder": "06_Journals",
+      "name": {"en": "Journals and papers", "ru": "Журналы и статьи"},
+      "about": "Issues of journals and other serials, proceedings of conferences, single articles and papers.",
+      "doc_types": ["serial_issue", "proceedings", "article"]
+    },
+    {
+      "letter": "X",
+      "folder": "99_Other",
+      "name": {"en": "Other", "ru": "Прочее"},
+      "about": "Whatever fits no other shelf; the card says why in its note.",
+      "doc_types": ["other"]
+    }
+  ]
+}

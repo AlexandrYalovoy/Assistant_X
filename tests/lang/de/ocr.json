@@ -1,0 +1,16 @@
+{
+  "_comment": "German two-letter words of the recognition score (tests only).",
+  "two_letter_words": [
+    "zu",
+    "im",
+    "am",
+    "um",
+    "ob",
+    "da",
+    "du",
+    "er",
+    "es",
+    "so",
+    "wo"
+  ]
+}

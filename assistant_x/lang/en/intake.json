@@ -1,0 +1,44 @@
+{
+  "_comment": "English names in the inbox: personal papers by the name of a file or folder (tax returns, payslips, bank statements, identity papers, medical records: sent to _to_delete unopened; not the bare word 'passport'), and words of hidden text aimed at an AI. The folders of a kit of a national standard (kit_*) are a Russian registry's: none here. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one).",
+  "suspect_words": [
+    "ignore",
+    "instructions?",
+    "assistant",
+    "prompt",
+    "system",
+    "claude",
+    "chatgpt",
+    "llm"
+  ],
+  "ai_phrases": [
+    "\\b(?:ignore|disregard|forget)\\b(?:\\W+\\w+){0,3}?\\W+(?:previous|prior|above|earlier|all)\\W+(?:\\w+\\W+){0,2}?(?:instructions?|prompts?|rules)\\b",
+    "\\b(?:you are|act as|pretend to be)\\W+(?:now\\W+)?(?:an?\\W+)?(?:ai|assistant|chatbot|language model|llm)\\b",
+    "\\bwithout\\W+(?:asking|telling|informing|warning)\\W+the\\W+user\\b",
+    "\\b(?:call|run|invoke|execute)\\W+(?:the\\W+)?(?:tool|function)s?\\b",
+    "\\bsystem\\W+prompt\\b",
+    "\\bnote\\W+to\\W+(?:the\\W+)?(?:ai|assistant|claude|llm)\\b"
+  ],
+  "personal_papers": [
+    "tax[ _-]?return",
+    "pay[ _-]?slip",
+    "pay[ _-]?stub",
+    "bank[ _-]?statement",
+    "social[ _-]?security",
+    "national[ _-]?insurance",
+    "passport[ _-]?(?:scan|copy)",
+    "birth[ _-]?certificate",
+    "marriage[ _-]?certificate",
+    "driver'?s?[ _-]?licen[cs]e",
+    "medical[ _-]?record",
+    "insurance[ _-]?card",
+    "credit[ _-]?report"
+  ],
+  "kit_folders": {},
+  "kit_not_main": "",
+  "kit_plan_of_measures": "",
+  "kit_approval": "",
+  "kit_signed_title": "",
+  "kit_plan": "",
+  "kit_explanatory": "",
+  "kit_register": ""
+}

@@ -1,0 +1,57 @@
+{
+  "_comment": "English headings: chapters (a new top section), generic headings that name no section, the words of a table of contents; the headings of the parts of a text the digest of the intake shows by genre (digest_heads: scope, abstract, characteristics).",
+  "chapter_words": [
+    "chapter",
+    "part",
+    "section"
+  ],
+  "digest_heads": {
+    "scope": [
+      "scope"
+    ],
+    "abstract": [
+      "abstract"
+    ],
+    "characteristics": [
+      "specifications",
+      "technical data",
+      "characteristics"
+    ]
+  },
+  "generic_headings": [
+    "solution",
+    "answer",
+    "example",
+    "problem",
+    "problems",
+    "table",
+    "tab",
+    "figure",
+    "fig",
+    "note",
+    "notes",
+    "continued",
+    "contents",
+    "table of contents",
+    "references",
+    "bibliography",
+    "literature",
+    "appendix",
+    "annex",
+    "nomenclature",
+    "notation",
+    "symbols",
+    "subscripts",
+    "introduction",
+    "preface",
+    "foreword",
+    "acknowledgements",
+    "acknowledgments",
+    "index"
+  ],
+  "generic_suffix_letters": "a-z",
+  "toc_heading_words": [
+    "contents",
+    "table of contents"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "_comment": "Russian headings: chapters (a new top section), generic headings that name no section, the words of a table of contents; the headings of the parts of a text the digest of the intake shows by genre (digest_heads: scope, abstract, characteristics).",
+  "chapter_words": [
+    "глава",
+    "часть",
+    "раздел"
+  ],
+  "generic_headings": [
+    "решение",
+    "ответ",
+    "пример",
+    "задача",
+    "задачи",
+    "таблица",
+    "табл",
+    "рисунок",
+    "рис",
+    "примечание",
+    "примечания",
+    "продолжение",
+    "окончание",
+    "содержание",
+    "оглавление",
+    "литература",
+    "список литературы",
+    "библиография",
+    "приложение",
+    "условные обозначения",
+    "обозначения",
+    "подстрочные индексы",
+    "введение",
+    "предисловие"
+  ],
+  "generic_suffix_letters": "а-я",
+  "toc_heading_words": [
+    "оглавление",
+    "содержание"
+  ],
+  "digest_heads": {
+    "scope": [
+      "область применения"
+    ],
+    "abstract": [
+      "аннотация",
+      "реферат"
+    ],
+    "characteristics": [
+      "технические характеристики",
+      "основные характеристики",
+      "основные параметры",
+      "технические данные"
+    ]
+  }
+}

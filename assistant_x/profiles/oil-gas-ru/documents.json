@@ -1,0 +1,61 @@
+{
+  "_comment": "Words of documents of the oil and gas field, merged by core/lang.py after the language packs of the same keys (words, alt, table): designations of the industry and of companies, publishers of the field, the English words of the titles of its standards. The general profile has none of them. program_ext: the files of the engineering programs of the field (HYSYS, UniSim, PIPESIM, Aspen EDR, OLGA…), sent by the intake to _rejected\\programs, not taken for documents.",
+  "designations": [
+    "\\b[МП]\\d?-\\d{2}\\.?\\d{2}\\.?\\d{2,4}(?:-\\d{2})?",
+    "API\\s+(?:RP\\s+|Spec\\s+|Std\\s+|MPMS\\s+)?\\d+[A-Z]?(?:\\.\\d+)*",
+    "DEP\\s+\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{2}-\\w+",
+    "NORSOK\\s+[A-Z]-\\d+",
+    "NACE\\s+(?:MR|SP|TM|RP)\\d+"
+  ],
+  "known_publishers": [
+    "Недра",
+    "Гостоптехиздат",
+    "American Petroleum Institute",
+    "Shell",
+    "ExxonMobil",
+    "Gulf Publishing",
+    "PennWell",
+    "Society of Petroleum Engineers",
+    "SPE",
+    "GPSA",
+    "Gas Processors Suppliers Association"
+  ],
+  "title_words_en": {
+    "насосы": "Pumps",
+    "трубы": "Pipes",
+    "стальные": "Steel",
+    "арматура": "Valves",
+    "трубопроводная": "Pipeline",
+    "электробуры": "Electric-Drills",
+    "сосуды": "Vessels",
+    "аппараты": "Apparatus",
+    "нефть": "Oil",
+    "газ": "Gas",
+    "нефтепродукты": "Petroleum-Products",
+    "бурильные": "Drill",
+    "обсадные": "Casing",
+    "насосно-компрессорные": "Tubing",
+    "штанги": "Rods",
+    "муфты": "Couplings",
+    "задвижки": "Gate-Valves",
+    "краны": "Ball-Valves",
+    "резервуары": "Tanks",
+    "нефтепромысловое": "Oilfield",
+    "устьевое": "Wellhead",
+    "буровое": "Drilling"
+  },
+  "program_ext": [
+    "hsc",
+    "bk0",
+    "bk1",
+    "bk2",
+    "bk3",
+    "usc",
+    "pips",
+    "edr",
+    "apw",
+    "apwz",
+    "bkp",
+    "olgx"
+  ]
+}

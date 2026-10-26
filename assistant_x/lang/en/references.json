@@ -1,0 +1,81 @@
+{
+  "_comment": "English captions of tables, figures and appendices, the words of references in running text ('see Table 4.2', 'Fig. 3', 'equation (12)', 'clause 5.3'), the words of a table of contents and the letters OCR makes of dot leaders, for the book map (search/bookmap.py, core/textmap.py). Regex pieces.",
+  "toc_words": [
+    "contents",
+    "table of contents"
+  ],
+  "dot_leader_letters": "eE",
+  "ref_num_suffix": "a-z",
+  "caption_table": [
+    "Table",
+    "TABLE",
+    "Tab\\."
+  ],
+  "caption_figure": [
+    "Figure",
+    "FIGURE",
+    "Fig\\.",
+    "FIG\\."
+  ],
+  "caption_appendix": [
+    "Appendix",
+    "APPENDIX",
+    "Annex",
+    "ANNEX"
+  ],
+  "ref_words": [
+    "tables?",
+    "tab\\.",
+    "fig(?:\\.|ures?)",
+    "equations?",
+    "eqs?\\.",
+    "formulae?",
+    "formulas",
+    "appendi(?:x|ces)",
+    "annex(?:es)?",
+    "clauses?",
+    "cl\\.",
+    "sections?",
+    "sub-?sections?",
+    "chapters?",
+    "ch\\."
+  ],
+  "ref_kinds": [
+    [
+      "tab",
+      "t"
+    ],
+    [
+      "fig",
+      "r"
+    ],
+    [
+      "eq",
+      "f"
+    ],
+    [
+      "formul",
+      "f"
+    ],
+    [
+      "append",
+      "a"
+    ],
+    [
+      "annex",
+      "a"
+    ],
+    [
+      "chapter",
+      "c"
+    ],
+    [
+      "ch.",
+      "c"
+    ]
+  ],
+  "toc_skip_words": [
+    "\\btables?\\b",
+    "\\bfig(?:ures?|\\.)"
+  ]
+}

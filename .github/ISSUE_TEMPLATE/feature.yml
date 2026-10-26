@@ -1,0 +1,21 @@
+name: Feature request
+description: A proposal for something new, or for something that works differently.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you need
+      description: The problem or the task, as you meet it in your work with the library.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you propose
+      description: How it could work; other ways you thought of.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: The field (a profile, a language of documents), the size of the library, anything else that matters.

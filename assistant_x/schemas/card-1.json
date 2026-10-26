@@ -1,0 +1,197 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://assistant-x.local/schemas/card-1.json",
+ "title": "Assistant X document card, schema 1",
+ "description": "index/cards/<code>.json: one document of the library. 'doc' is the meaning (written by Claude from the drafts of the intake), 'file' the file (written by the code). Text fields searched by exact words are maps {language: text} with 'en' always present; core/card.py checks every language the documents of the workspace are read in ([documents] languages).",
+ "type": "object",
+ "additionalProperties": false,
+ "required": ["schema", "code", "section", "doc_type", "doc", "file", "intake"],
+ "properties": {
+  "schema": {"const": 1},
+  "code": {"$ref": "#/$defs/code"},
+  "section": {"type": "string", "pattern": "^[A-Z]$", "description": "the shelf of the library: a letter of the sections of the profile"},
+  "doc_type": {"$ref": "#/$defs/doc_type"},
+  "doc": {"$ref": "#/$defs/doc"},
+  "file": {"$ref": "#/$defs/file"},
+  "intake": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["date", "personal"],
+   "properties": {
+    "batch": {"type": "string"},
+    "date": {"$ref": "#/$defs/date"},
+    "personal": {"type": "boolean", "description": "a document of the user added on their PC (not of a shared base package)"},
+    "package": {
+     "type": "object", "additionalProperties": false, "required": ["id", "version", "code"],
+     "description": "the base package the document came from (absent: a document of this library); code: its code in the package, which may differ from the code here",
+     "properties": {"id": {"$ref": "#/$defs/package_id"}, "version": {"type": "string", "minLength": 1, "maxLength": 40},
+                    "code": {"$ref": "#/$defs/code"}}
+    }
+   }
+  }
+ },
+ "$defs": {
+  "code": {"type": "string", "pattern": "^[A-Z]-[0-9]{5}$"},
+  "part_code": {"type": "string", "pattern": "^[A-Z]-[0-9]{5}-[0-9]{2,3}$"},
+  "any_code": {"type": "string", "pattern": "^[A-Z]-[0-9]{5}(-[0-9]{2,3})?$"},
+  "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+  "package_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+  "lang": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$"},
+  "page": {"type": "integer", "minimum": 1},
+  "doc_type": {
+   "enum": ["law", "regulation", "standard", "guideline", "contract", "court_decision", "clinical_guideline", "book",
+            "textbook", "handbook", "serial_issue", "proceedings", "article", "thesis", "report", "manual", "datasheet",
+            "drawing", "project", "presentation", "lecture_notes", "dataset", "other"]
+  },
+  "text_map": {
+   "type": "object",
+   "description": "{language: text}, 'en' always",
+   "required": ["en"],
+   "propertyNames": {"$ref": "#/$defs/lang"},
+   "additionalProperties": {"type": "string", "minLength": 1}
+  },
+  "authors": {"type": "array", "items": {"type": "string", "minLength": 1}},
+  "doc": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": ["title", "lang", "topics", "summary", "keywords"],
+   "properties": {
+    "title": {"$ref": "#/$defs/text_map"},
+    "designation": {"$ref": "#/$defs/text_map"},
+    "authors": {"$ref": "#/$defs/authors"},
+    "edition": {"type": "string"},
+    "publisher": {"type": "string"},
+    "year": {"type": ["integer", "null"], "minimum": 1000, "maximum": 2999},
+    "lang": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/lang"}, "description": "the languages of the text of the document"},
+    "scope": {"type": "string", "maxLength": 300},
+    "summary": {"type": "string", "minLength": 1, "maxLength": 800},
+    "questions": {"type": "array", "maxItems": 5, "items": {"type": "string", "minLength": 1}},
+    "note": {"type": "string"},
+    "topics": {"type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true,
+               "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}},
+    "keywords": {
+     "type": "object",
+     "required": ["en"],
+     "propertyNames": {"$ref": "#/$defs/lang"},
+     "additionalProperties": {"type": "array", "maxItems": 30, "items": {"type": "string", "minLength": 1}}
+    },
+    "terms": {
+     "type": "array", "maxItems": 40,
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["name"],
+      "properties": {"name": {"$ref": "#/$defs/text_map"}, "expansion": {"type": "string"}}
+     }
+    },
+    "toc": {
+     "type": "array", "maxItems": 300,
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["level", "pdf_from", "title"],
+      "properties": {"level": {"type": "integer", "minimum": 1, "maximum": 6}, "pdf_from": {"$ref": "#/$defs/page"},
+                     "title": {"$ref": "#/$defs/text_map"}}
+     }
+    },
+    "tables": {
+     "type": "array", "maxItems": 100,
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["label", "pdf_page"],
+      "properties": {"label": {"type": "string", "minLength": 1}, "pdf_page": {"$ref": "#/$defs/page"},
+                     "title": {"$ref": "#/$defs/text_map"}}
+     }
+    },
+    "references": {
+     "type": "array",
+     "items": {"type": "object", "additionalProperties": false, "required": ["designation"],
+               "properties": {"designation": {"type": "string", "minLength": 1}}}
+    },
+    "other_versions": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/code"}},
+    "page_offset": {
+     "type": "object", "additionalProperties": false, "required": ["checked", "value"],
+     "properties": {"checked": {"type": "boolean"}, "value": {"type": "integer"}},
+     "description": "printed page = PDF page - value; checked: someone compared them"
+    },
+    "serial": {
+     "type": "object", "additionalProperties": false, "required": ["name"],
+     "properties": {"name": {"$ref": "#/$defs/text_map"}, "issn": {"type": "string"},
+                    "volume": {"type": ["integer", "string", "null"]}, "number": {"type": ["integer", "string", "null"]}}
+    },
+    "units": {
+     "type": "array",
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "title", "pdf_from"],
+      "properties": {
+       "kind": {"enum": ["article", "paper", "standard", "chapter", "section", "other"]},
+       "title": {"$ref": "#/$defs/text_map"},
+       "authors": {"$ref": "#/$defs/authors"},
+       "pdf_from": {"$ref": "#/$defs/page"},
+       "summary": {"type": "string", "maxLength": 800}
+      }
+     }
+    }
+   }
+  },
+  "format": {
+   "type": "object", "additionalProperties": false, "required": ["kind", "pages"],
+   "properties": {
+    "kind": {"enum": ["pdf_text", "pdf_mixed", "pdf_scan", "pdf_no_ocr", "doc", "presentation", "image", "ebook", "text", "spreadsheet", "other"]},
+    "pages": {"type": ["integer", "null"], "minimum": 0},
+    "ocr_pages": {"type": "integer", "minimum": 0},
+    "no_ocr_pages": {"type": "integer", "minimum": 0},
+    "ocr_score": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+   }
+  },
+  "library_path": {"type": "string", "pattern": "^(library(/(?!\\.{1,2}(/|$))[^/\\:]+)+)?$",
+                   "description": "a file of the library: relative to the workspace, '/' between folders, under library/, no '.' or '..' part, no backslash or colon; empty when there is none"},
+  "text_path": {"type": "string", "pattern": "^(index/texts(/(?!\\.{1,2}(/|$))[^/\\:]+)+)?$",
+                "description": "a text of the index: relative to the workspace, under index/texts/; empty when there is none"},
+  "sha256": {"type": "string", "pattern": "^([0-9a-f]{64})?$"},
+  "size": {"type": ["integer", "null"], "minimum": 0},
+  "file": {
+   "type": "object", "additionalProperties": false, "required": ["library", "format", "text"],
+   "properties": {
+    "library": {"$ref": "#/$defs/library_path"},
+    "source_name": {"type": "string"},
+    "sha256": {"$ref": "#/$defs/sha256"},
+    "size": {"$ref": "#/$defs/size"},
+    "text": {"$ref": "#/$defs/text_path"},
+    "format": {"$ref": "#/$defs/format"},
+    "pdf_copy": {"$ref": "#/$defs/library_path", "description": "a PDF made from a DOC/DOCX and kept beside it, for page images"},
+    "hidden_text": {
+     "type": "array",
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["code", "fragments"],
+      "properties": {"code": {"$ref": "#/$defs/any_code"}, "fragments": {"type": "integer", "minimum": 0},
+                     "pages": {"type": "array", "items": {"$ref": "#/$defs/page"}}, "note": {"type": "string"}}
+     }
+    },
+    "issues": {
+     "type": "array",
+     "description": "what is wrong with the source and what is needed (the list of sources to update is made from them)",
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["what", "need", "priority", "noted"],
+      "properties": {"what": {"type": "string", "minLength": 1}, "need": {"type": "string"},
+                     "priority": {"enum": ["high", "medium", "low"]}, "noted": {"$ref": "#/$defs/date"},
+                     "closed": {"$ref": "#/$defs/date"}, "code": {"$ref": "#/$defs/any_code"}}
+     }
+    },
+    "parts": {
+     "type": "array",
+     "description": "the other files of a document of several files: each a code <code>-NN with its own text and PDF pages",
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["code", "library", "format", "text"],
+      "properties": {
+       "code": {"$ref": "#/$defs/part_code"},
+       "library": {"$ref": "#/$defs/library_path"},
+       "source_name": {"type": "string"},
+       "sha256": {"$ref": "#/$defs/sha256"},
+       "size": {"$ref": "#/$defs/size"},
+       "text": {"$ref": "#/$defs/text_path"},
+       "format": {"$ref": "#/$defs/format"},
+       "pdf_copy": {"$ref": "#/$defs/library_path"},
+       "what": {"type": "string"}
+      }
+     }
+    }
+   }
+  }
+ }
+}

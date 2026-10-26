@@ -1,0 +1,170 @@
+# Dictionary of abbreviations and synonyms for the search (default profile: oil and gas, Russian and English terms).
+# One group per line, the variants separated by " = ". Case and word endings do not matter.
+# When a question holds any variant, the search looks for all the others too. The groups are data: Russian terms of
+# Russian documents stay Russian (docs/GLOSSARY.md, "Kept in Russian (data)").
+ТЭГ = триэтиленгликоль = TEG
+ДЭГ = диэтиленгликоль = DEG
+МЭГ = моноэтиленгликоль = этиленгликоль = MEG
+гликоль = гликолевый = ТЭГ = ДЭГ = МЭГ
+метанол = метиловый спирт = CH3OH
+МДЭА = метилдиэтаноламин = MDEA
+МЭА = моноэтаноламин = MEA
+ДЭА = диэтаноламин = DEA
+амин = аминовая очистка = аминовый абсорбент
+УКПГ = установка комплексной подготовки газа
+УППГ = установка предварительной подготовки газа
+УПН = установка подготовки нефти
+УПСВ = установка предварительного сброса воды
+ДНС = дожимная насосная станция
+КНС = кустовая насосная станция
+БКНС = блочная кустовая насосная станция
+ЦПС = центральный пункт сбора
+ППД = поддержание пластового давления
+КСУ = концевая сепарационная установка = концевой сепаратор
+НТС = низкотемпературная сепарация
+НТК = низкотемпературная конденсация
+ДКС = дожимная компрессорная станция
+КС = компрессорная станция
+НПС = нефтеперекачивающая станция
+ГПЗ = газоперерабатывающий завод
+РВС = резервуар вертикальный стальной = резервуар
+ГЖС = газожидкостная смесь
+ПНГ = попутный нефтяной газ = попутный газ = нефтяной газ
+ШФЛУ = широкая фракция легких углеводородов
+СУГ = сжиженный углеводородный газ = LPG
+СПГ = сжиженный природный газ = LNG
+ГКС = газоконденсатная смесь
+АСПО = асфальтосмолопарафиновые отложения = парафиноотложения = парафин
+ингибитор гидратообразования = антигидратный ингибитор = ингибитор гидратов
+гидрат = гидратообразование = газовые гидраты
+ТТР = температура точки росы = точка росы = dew point
+точка росы по воде = ТТРв = влагосодержание
+точка росы по углеводородам = ТТРув
+влагосодержание = содержание влаги = влажность газа = water content
+осушка = обезвоживание газа = дегидратация = dehydration
+обезвоживание = деэмульсация = разрушение эмульсии = dehydration
+деэмульгатор = деэмульсатор = demulsifier
+обессоливание = desalting
+электродегидратор = ЭДГ
+отстойник = settler
+сепаратор = сепарация = separator
+каплеуловитель = каплеотбойник = туманоуловитель = demister = сетчатый отбойник
+унос = капельный унос = carryover = потери с газом
+скорость Саудерса = Саудерса-Брауна = Souders-Brown = допустимая скорость газа
+время пребывания = время удерживания = retention time = residence time
+пенообразование = вспенивание = foaming
+абсорбер = абсорбционная колонна = контактор = absorber
+десорбер = регенератор = десорбция = регенерация
+ректификация = ректификационная колонна = distillation
+адсорбер = адсорбция = adsorption
+цеолит = молекулярное сито = молекулярные сита = molecular sieve
+силикагель = silica gel
+теплообменник = теплообменный аппарат = heat exchanger
+АВО = аппарат воздушного охлаждения = воздушный холодильник
+печь = трубчатая печь = подогреватель = нагреватель = heater
+насос = насосный агрегат = pump
+компрессор = компрессорный агрегат = compressor
+ЦБН = центробежный нагнетатель
+КПД = коэффициент полезного действия = efficiency
+ВЭТТ = высота эквивалентная теоретической тарелке = HETP
+теоретическая тарелка = теоретическая ступень = equilibrium stage
+захлебывание = захлебывание колонны = flooding
+сероводород = H2S
+углекислый газ = диоксид углерода = CO2
+меркаптаны = RSH
+коррозия = коррозионный
+ингибитор коррозии = corrosion inhibitor
+z-фактор = коэффициент сжимаемости = compressibility factor
+PVT = свойства пластовых флюидов
+газосодержание = газовый фактор = GOR
+обводненность = содержание воды = water cut
+ДНП = давление насыщенных паров = упругость паров = RVP
+стабилизация = стабилизация нефти = стабилизация конденсата
+факел = факельная система = flare
+ППК = ПК = предохранительный клапан = pressure safety valve = PSV = relief valve = safety valve = pressure relief valve = PRV = safety relief valve
+
+# English-Russian terms of the industry: the library has English DEP, API, books, and Russian books
+# write English terms next to the Russian ones.
+гликолевая осушка = осушка гликолем = glycol dehydration
+газосепаратор = газовый сепаратор = gas separator = gas/liquid separator
+трехфазный сепаратор = three-phase separator
+скруббер = scrubber
+водоотделитель = аппарат предварительного сброса воды = free water knockout = FWKO
+коалесцер = коалесцирующий фильтр = coalescer
+фильтр-сепаратор = filter separator
+каплеуловитель = mist eliminator = mesh pad
+огневой подогреватель = печь с огневым подогревом = fired heater
+кожухотрубный теплообменник = кожухотрубчатый теплообменник = shell and tube heat exchanger
+АВО = air cooler = air-cooled heat exchanger
+ребойлер = кипятильник = reboiler
+орошение = флегма = reflux
+выветриватель = flash tank
+центробежный насос = centrifugal pump
+кавитационный запас = допускаемый кавитационный запас = NPSH
+УЭЦН = ЭЦН = электроцентробежный насос = ESP
+ШГН = штанговый насос = sucker rod pump
+газлифт = gas lift
+центробежный компрессор = centrifugal compressor
+поршневой компрессор = reciprocating compressor
+помпаж = surge = surging
+антипомпажный клапан = антипомпажное регулирование = anti-surge
+сухие газодинамические уплотнения = сухое газовое уплотнение = СГУ = dry gas seal
+торцевое уплотнение = торцовое уплотнение
+регулирующий клапан = control valve
+отсечной клапан = отсечная арматура = shutdown valve = SDV = ESDV
+обратный клапан = check valve
+задвижка = gate valve
+шаровой кран = ball valve
+дыхательный клапан = breather valve = pressure vacuum valve
+ПАЗ = противоаварийная защита = safety instrumented system = SIS
+SIL = уровень полноты безопасности = safety integrity level
+аварийный сброс давления = depressuring = blowdown = depressurization
+факельный оголовок = flare tip
+закрытый дренаж = closed drain
+технологическая схема = process flow diagram = PFD = PFS
+HAZOP = анализ опасности и работоспособности
+LOPA = анализ уровней защиты = layers of protection analysis
+запасные части = ЗИП = spare parts
+коммерческий учет = custody transfer
+расходомер = flow meter = flowmeter
+эрозионная скорость = erosional velocity
+сульфидное коррозионное растрескивание = СКРН = sulfide stress cracking = SSC
+водородное растрескивание = hydrogen induced cracking = HIC
+кислый газ = высокосернистый газ = сероводородсодержащий газ = sour gas
+очистка газа от сероводорода = обессеривание = сероочистка = sweetening
+аминовая очистка = amine treating = amine sweetening
+процесс Клауса = Клаус = Claus
+деэтанизатор = деэтанизация = deethanizer
+попутно добываемая вода = подтоварная вода = produced water
+закачка воды = заводнение = water injection
+промысловый трубопровод = выкидная линия = flowline
+газопровод = gas pipeline
+нефтепровод = oil pipeline
+радиус упругого изгиба = упругий изгиб = elastic bend
+гидроудар = гидравлический удар = water hammer
+малые дыхания = потери от малых дыханий = breathing losses
+уравнение состояния = equation of state = EOS
+Пенга-Робинсона = Пенг-Робинсон = Peng-Robinson
+Соаве-Редлиха-Квонга = SRK = Soave-Redlich-Kwong
+эффект Джоуля-Томсона = дроссель-эффект = дросселирование = Joule-Thomson
+турбодетандер = детандер = turboexpander = expander
+уравнение Гаммершмидта = Гаммершмидт = Hammerschmidt
+гидрат = hydrate
+ингибитор гидратообразования = hydrate inhibitor
+межфазное натяжение = поверхностное натяжение = interfacial tension
+
+# Designations of standards: the number is written with different words between the organization and the number
+API 520 = API Std 520 = API RP 520 = API Standard 520
+API 521 = API Std 521 = API RP 521 = API Standard 521
+API 526 = API Std 526 = API Spec 526
+API 14E = API RP 14E
+API 12J = API Spec 12J
+API 610 = API Std 610
+API 617 = API Std 617
+API 618 = API Std 618
+API 650 = API Std 650
+API 2000 = API Std 2000
+API 661 = API Std 661
+API 5L = API Spec 5L
+API 6D = API Spec 6D
+NACE MR0175 = NACE MR 0175 = ISO 15156

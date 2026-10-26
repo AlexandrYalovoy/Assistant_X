@@ -1,0 +1,111 @@
+# Assistant X — Copyright (C) 2026 Alexandr Yalovoy
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""tools/unpack.py: safe unpacking beside the archive, refusals before anything is written, limits."""
+
+import io, os, tarfile, zipfile
+
+import pytest
+
+from assistant_x.intake.tools import unpack
+
+
+def make_zip(path, members):
+    with zipfile.ZipFile(path, "w") as z:
+        for name, data in members.items():
+            z.writestr(name, data)
+    return path
+
+
+def files_under(d):
+    return sorted(os.path.relpath(os.path.join(dp, f), d).replace("\\", "/") for dp, _, fns in os.walk(d) for f in fns)
+
+
+def test_zip_beside_archive(tmp_path):
+    a = make_zip(tmp_path / "Документы.zip", {"a/x.pdf": b"%PDF-1", "y.txt": b"y"})
+    rep = unpack.unpack(a)
+    assert rep["error"] is None and rep["files"] == 2
+    assert rep["dest"] == str(tmp_path / "Документы")
+    assert files_under(tmp_path / "Документы") == ["a/x.pdf", "y.txt"]
+    rep2 = unpack.unpack(a)  # the folder is taken: Документы_2
+    assert rep2["dest"] == str(tmp_path / "Документы_2")
+
+
+@pytest.mark.parametrize("name", ["../evil.txt", "a/../../evil.txt", "/etc/evil.txt", "C:/evil.txt", "C:\\evil.txt"])
+def test_refuse_unsafe_names(tmp_path, name):
+    a = make_zip(tmp_path / "bad.zip", {"ok.txt": b"ok", name: b"x"})
+    rep = unpack.unpack(a)
+    assert rep["error"] and ("absolute" in rep["error"] or ".." in rep["error"])
+    assert not (tmp_path / "bad").exists()  # nothing written, not even the good file
+    assert not (tmp_path.parent / "evil.txt").exists()
+
+
+def test_refuse_unsafe_tar(tmp_path):
+    a = tmp_path / "bad.tar"
+    with tarfile.open(a, "w") as t:
+        info = tarfile.TarInfo("../evil.txt")
+        info.size = 1
+        t.addfile(info, io.BytesIO(b"x"))
+    rep = unpack.unpack(a)
+    assert rep["error"] and ".." in rep["error"] and not (tmp_path / "bad").exists()
+
+
+def test_size_limit(tmp_path):
+    a = make_zip(tmp_path / "big.zip", {"zeros.bin": b"\0" * 200_000})
+    rep = unpack.unpack(a, max_total=100_000)
+    assert rep["error"] and "limit" in rep["error"] and not (tmp_path / "big").exists()
+
+
+def test_nested_depth_limit(tmp_path):
+    inner = make_zip(tmp_path / "l3.zip", {"deep.pdf": b"%PDF-3"})
+    data = inner.read_bytes()
+    for k in (2, 1):  # l1.zip > l2.zip > l3.zip > deep.pdf
+        p = tmp_path / f"l{k}.zip"
+        make_zip(p, {f"l{k + 1}.zip": data})
+        data = p.read_bytes()
+    outer = make_zip(tmp_path / "outer.zip", {"l1.zip": data})
+    rep = unpack.unpack(outer, max_depth=2)
+    assert rep["error"] is None
+    assert len(rep["nested"]) == 1 and rep["nested"][0].endswith("l1.zip")
+    assert len(rep["left"]) == 1 and "nesting" in rep["left"][0]["why"]
+    assert any(f.endswith("l2.zip") for f in files_under(rep["dest"]))  # left as an archive, not unpacked
+    full = unpack.unpack(outer, max_depth=5)
+    assert any(f.endswith("deep.pdf") for f in files_under(full["dest"])) and not full["left"]
+
+
+def test_cp866_names(tmp_path):
+    a = tmp_path / "ru.zip"
+    with zipfile.ZipFile(a, "w") as z:
+        z.writestr("XXXXX.txt", b"x")
+    # how old archivers write Russian names: cp866 bytes, no UTF-8 flag (zipfile itself would write UTF-8)
+    a.write_bytes(a.read_bytes().replace(b"XXXXX.txt", "Отчёт.txt".encode("cp866")))
+    rep = unpack.unpack(a)
+    assert files_under(rep["dest"]) == ["Отчёт.txt"]
+
+
+def test_broken_archive(tmp_path):
+    a = tmp_path / "broken.zip"
+    a.write_bytes(b"PK\x03\x04 not really a zip")
+    rep = unpack.unpack(a, sevenzip=None)
+    assert rep["error"] and not (tmp_path / "broken").exists()
+
+
+def test_a_refusal_says_its_kind():
+    """The code reads Refused.kind, never the words of the message (they are for the user and may change)."""
+    from assistant_x.intake.tools import unpack
+
+    e = unpack.Refused("the archive is protected by a password", unpack.PASSWORD)
+    assert e.kind == "password" and str(e) == "the archive is protected by a password"
+    assert unpack.Refused("anything").kind == "damaged"
+
+
+@pytest.mark.parametrize("name", ["a.pdf:hidden", "CON.txt", "folder/nul", "doc.pdf.", "folder /x.pdf", "com1.pdf"])
+def test_names_windows_does_not_take_are_refused(tmp_path, name):
+    """The intake takes the names of an archive by the rules of a base package (txn.bad_path): no NTFS stream, no
+    device name, no part ending in a dot or a space; nothing is unpacked."""
+    from assistant_x.intake.tools import unpack
+
+    with pytest.raises(unpack.Refused) as e:
+        unpack.safe_name(name)
+    assert e.value.kind == "unsafe"
+    assert unpack.safe_name(r"Папка\.\sub/doc.pdf") == ["Папка", "sub", "doc.pdf"]
+    assert unpack.safe_name("e\u0301.pdf") == ["\u00e9.pdf"]  # a macOS name: made NFC, not refused

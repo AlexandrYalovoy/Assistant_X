@@ -1,0 +1,51 @@
+Assistant X (technical name Assistant_X)
+Copyright (C) 2026 Alexandr Yalovoy
+Author: Alexandr Yalovoy
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero
+General Public License as published by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version. This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE. See the GNU Affero General Public License (file LICENSE) for more details.
+
+The program is distributed under the GNU AGPL version 3 or later (file LICENSE).
+The data folders assistant_x/lang (language packs), assistant_x/profiles (domain profiles) and
+assistant_x/schemas (the card schema and the shelves) are also available under the Creative Commons Attribution
+4.0 International license, CC-BY-4.0 (file LICENSES/CC-BY-4.0.txt): you may use them under either license. Under
+CC-BY-4.0 credit "Assistant X by Alexandr Yalovoy", link the project and the license and say what you changed.
+Contributions are accepted under the Contributor License Agreement (file CLA.md, see CONTRIBUTING.md).
+The documents of a library (PDF, texts, cards, base) are not part of the program; the rights to them belong
+to their right holders.
+
+Disclaimer
+The author is not responsible for the documents and libraries that users load into the assistant. The rights
+to those documents belong to their right holders; users are responsible for checking that they may load and
+use what they load. This is in addition to the no-warranty clause of the GNU AGPL.
+
+AI-assisted development
+Assistant X was developed with Claude Desktop and Claude Code using Claude Opus 5.5 and Claude Fable 5.1.
+
+Third-party components (distributed under their own licenses; the full list of Python packages with their
+versions is THIRD_PARTY_LICENSES.txt, made by the release build):
+  PyMuPDF (pymupdf, pymupdf4llm, pymupdf_layout) — GNU AGPL-3.0 or the Artifex commercial license; in PyMuPDF 2.x
+  the modules pymupdf4llm and pymupdf.layout are part of PyMuPDF itself, and the packages pymupdf4llm and
+  pymupdf_layout (required by the intake extra) are empty compatibility packages of Artifex
+  Tesseract OCR — Apache-2.0
+  LibreOffice — MPL-2.0
+  7-Zip — GNU LGPL-2.1 with the unRAR restriction
+  DjVuLibre (ddjvu and the command-line tools) — GNU GPL-2.0-or-later
+  Microsoft Visual C++ runtime DLLs (beside LibreOffice and DjVuLibre on a medium) — Microsoft Software License Terms
+  (redistributable Distributable Code, unmodified, only with the programs that use them)
+  Model BAAI/bge-m3 — MIT
+  Model BAAI/bge-reranker-v2-m3 — Apache-2.0
+
+The main Python packages it uses (installed separately, not part of this repository; the full list with versions
+and license texts is THIRD_PARTY_LICENSES.txt of a release build): mcp — MIT; numpy — BSD-3-Clause (with parts
+under 0BSD, MIT, Zlib, CC0-1.0); jsonschema — MIT; snowballstemmer — BSD-3-Clause; psutil — BSD-3-Clause;
+torch — BSD-3-Clause; transformers, sentence-transformers, tokenizers, safetensors, huggingface-hub — Apache-2.0;
+faiss-cpu — MIT; onnxruntime (and onnxruntime-directml) — MIT.
+
+The programs of the intake (Tesseract OCR, LibreOffice, 7-Zip, DjVuLibre) are not part of Assistant X: an offline
+medium carries them as separate programs, with programs/VERSIONS.txt naming the license and the source code of each,
+and the source archives of DjVuLibre and 7-Zip in programs/sources/ (assistant_x/setup/medium.py).

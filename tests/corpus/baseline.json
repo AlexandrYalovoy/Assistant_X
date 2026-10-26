@@ -1,0 +1,18 @@
+{
+ "fast": {
+  "heading_precision": 1.0,
+  "heading_recall": 1.0,
+  "meta_accuracy": 1.0,
+  "ocr_accuracy": null,
+  "phrase_recall": 1.0,
+  "verdict_accuracy": 1.0
+ },
+ "full": {
+  "heading_precision": 0.923,
+  "heading_recall": 0.923,
+  "meta_accuracy": 1.0,
+  "ocr_accuracy": 0.9,
+  "phrase_recall": 0.955,
+  "verdict_accuracy": 1.0
+ }
+}
