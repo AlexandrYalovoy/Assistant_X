@@ -40,6 +40,17 @@ VOCAB_DF = 3  # documents a word form must occur in to be known
 # a vocabulary smaller than this (a new or small library) cannot tell an unknown word from a recognition error: the
 # words are then judged by their shape only (mixed scripts, lost symbols, letter triples, crumbs), not by the vocabulary
 MIN_VOCAB_WORDS = 1000
+# a seed vocabulary of the packs this big (forms and stems of an open dictionary, lang/<code>/vocab.txt) judges the words
+# of a new library by itself: its first batch is scored as a later one (audit 6, M-015)
+SEED_FULL = 20000
+GLUED = 16  # letters of an unknown token without a hyphen from which it is checked for words glued together
+SPLIT_MIN = 3  # letters of a word of a glued token at least
+# an unknown word when only the seed judges (a new library): as much of an error as this. Measured on the 79 texts of
+# a real library: the seed alone 85.8 on average with a full error, the vocabulary of the library 91.2, the shape of the
+# words alone (0.1) 96.0; with half an error the seed gives about the score of the library
+SEED_ONLY = 0.5
+REPEAT = re.compile(r"([^\W\d_]{3,})\1", re.I)  # a piece said twice inside a token ("gasgas"): a line read twice
+GARBLED = 0.25  # the share of unknown words of a page from which the page is garbled (page flag, search weight)
 STEM_MIN = 6  # a word this long is also known by its stem
 LOST = "\ufffd"
 HY = "-\u2010'\u2019"  # hyphens and apostrophes inside a word
@@ -210,7 +221,44 @@ def seed():
     vocabulary of the library. They count only once the library vocabulary is big enough (MIN_VOCAB_WORDS): a seed
     alone would call the terms of a new library unknown."""
     words = frozenset(norm(w) for code in lang.active() for w in lang.vocab(code))
-    return words, frozenset(stem(w) for w in words if len(w) >= STEM_MIN)
+    stems = frozenset(s for code in lang.active() for s in lang.vocab_stems(code))
+    return words, stems | frozenset(stem(w) for w in words if len(w) >= STEM_MIN)
+
+
+def judged_by_vocab(vocab, tok=None):
+    """Are the words (or the word tok) judged by the vocabulary: the library's is big enough; or, for a word, the seed
+    of every active pack whose letters it has is (a German word of Latin letters is not judged by an English seed)."""
+    if len(vocab[0]) >= MIN_VOCAB_WORDS:
+        return True
+    letters = "".join(PACK_LETTER.findall(tok)) if tok else ""
+    codes = [code for code, rx in SCRIPT.items() if letters and rx.fullmatch(letters)] if tok else list(SCRIPT)
+    return bool(codes) and all(code in seeded() for code in codes)
+
+
+@functools.lru_cache(maxsize=1)
+def seeded():
+    """The active packs whose seed vocabulary is big enough to judge words by itself (SEED_FULL)."""
+    return frozenset(c for c in lang.active() if len(lang.vocab(c)) + len(lang.vocab_stems(c)) >= SEED_FULL)
+
+
+def glued(t, long_ones=True, vocab=None):
+    """A token that is words glued or read twice: a piece repeated in it, or (long_ones: where the words are judged by
+    a vocabulary — a German compound is one word) GLUED letters and more without a hyphen that split into known words
+    ("installationofgasdrying"); a long term the vocabulary does not split stays a word."""
+    if REPEAT.search(t):
+        return True
+    w = norm(t)
+    if not long_ones or len(w) < GLUED or re.search(f"[{HY}]", w):
+        return False
+    vocab = vocab or (frozenset(), frozenset())
+
+    @functools.lru_cache(maxsize=None)
+    def splits(i, parts):
+        if i == len(w):
+            return parts >= 2
+        return parts < 4 and any(known(w[i:j], vocab) and splits(j, parts + 1) for j in range(len(w), i + SPLIT_MIN - 1, -1))
+
+    return splits(0, 0)
 
 
 def known(w, vocab):
@@ -229,13 +277,13 @@ def known(w, vocab):
 def word_counts(text, vocab=None):
     """(counted words, unknown words and junk pieces, examples of them) of a text."""
     vocab = vocab or load_vocab()
-    by_vocab = len(vocab[0]) >= MIN_VOCAB_WORDS
+    by_library = len(vocab[0]) >= MIN_VOCAB_WORDS
     n = bad = tokens = short = 0
     ex = []
 
-    def error(what):
+    def error(what, weight=1):
         nonlocal bad
-        bad += 1
+        bad += weight
         if len(ex) < 8:
             ex.append(what)
 
@@ -258,12 +306,14 @@ def word_counts(text, vocab=None):
             if k in ("num", "short", "other", "abbr"):
                 continue
             n += 1
-            if (
-                k in ("mixed", "broken", "junk")
-                or (k[:-1] in TWO and k[-1] == "2" and not two_known(t))
-                or (k == "word" and by_vocab and not known(norm(t), vocab))
-            ):
+            if k in ("mixed", "broken", "junk") or (k[:-1] in TWO and k[-1] == "2" and not two_known(t)):
                 error(t)
+            elif k == "word" and not known(norm(t), vocab):
+                judged = by_library or judged_by_vocab(vocab, t)
+                if by_library or glued(t, judged, vocab):
+                    error(t)
+                elif judged:  # the seed alone does not know the terms of a field: half an error (calibrated, M-015)
+                    error(t, SEED_ONLY)
     crumbs = int(short - SHORT_FREE * tokens)  # one-letter tokens past the usual share: specks read as letters
     if crumbs > 0:
         n += crumbs

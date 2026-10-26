@@ -16,6 +16,9 @@ TINY = 2.0  # pt: smaller text is not readable on paper
 LIGHT = 0.75  # text this light (0..1) is checked against what is under it
 FLAT = 25  # grey levels: a text box rendered this flat shows nothing to the reader
 SCAN = 0.6  # share of the page under images: such a page is a scan and its invisible text is OCR
+SHIFTED = 0.3  # share of the spans of a page outside the page box from which its text layer is shifted, not hidden
+SHIFTED_WHY = "text layer shifted off the page box"
+MAX_SPANS = 200  # spans written to the report at most (the count stays whole)
 
 
 def luminance(c):
@@ -64,6 +67,22 @@ def check(page):
     return out
 
 
+def shifted(page, hits):
+    """(the hits that stay hidden, the summary of a shifted text layer or None): when more than SHIFTED of the spans of
+    a page lie outside the page box, the text layer sits off its CropBox (audit 6, M-007): one line for the page
+    instead of a line per word, and it is no hidden text."""
+    spans = sum(1 for s in page.get_texttrace() if "".join(chr(c[0]) for c in s["chars"]).strip())
+    outside = [h for h in hits if h[0] == "outside the page margins"]
+    if not spans or len(outside) <= SHIFTED * spans:
+        return hits, None
+    sample = " ".join(t for _, t, _ in outside[:12])[:300]
+    return [h for h in hits if h[0] != "outside the page margins"], {
+        "why": SHIFTED_WHY,
+        "spans": len(outside),
+        "text": sample,
+    }
+
+
 def main(argv):
     if not argv or argv[0].startswith("-"):
         sys.exit(__doc__)
@@ -73,13 +92,19 @@ def main(argv):
     if "--json" in argv:
         rep = argv[argv.index("--json") + 1]
     doc = fitz.open(src)
-    found = {}
+    found, layer = {}, {}
     for page in doc:
         try:
             hits = check(page)
         except Exception as e:  # a damaged page: say so and go on
             print(f"page {page.number + 1}: not checked ({e!r})")
             continue
+        if not hits:
+            continue
+        hits, moved = shifted(page, hits)
+        if moved:
+            layer[page.number + 1] = moved
+            print(f"page {page.number + 1}: {SHIFTED_WHY} ({moved['spans']} spans)")
         if not hits:
             continue
         found[page.number + 1] = [{"why": w, "text": t[:300]} for w, t, _ in hits]
@@ -91,7 +116,15 @@ def main(argv):
                     page.add_redact_annot(r, fill=False)
             page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE, graphics=fitz.PDF_REDACT_LINE_ART_NONE)
     n = sum(len(v) for v in found.values())
-    summary = {"file": src, "pages": doc.page_count, "hidden": n, "hidden_pages": sorted(found), "found": found}
+    kept, left = {}, MAX_SPANS
+    for p in sorted(found):  # the report keeps the first MAX_SPANS spans; "hidden" counts them all
+        if left <= 0:
+            break
+        kept[p], left = found[p][:left], left - len(found[p][:left])
+    summary = {"file": src, "pages": doc.page_count, "hidden": n, "hidden_pages": sorted(found), "found": kept}
+    if layer:
+        summary["shifted_pages"] = sorted(layer)
+        summary["shifted"] = {str(p): v for p, v in sorted(layer.items())}
     if clean and n:  # nothing hidden: convert the original, no copy needed
         doc.save(clean, garbage=3, deflate=True)
         summary["clean"] = clean

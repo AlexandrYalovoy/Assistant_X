@@ -53,14 +53,25 @@ def pack(code):
 
 
 @functools.lru_cache(maxsize=None)
-def vocab(code):
-    """The seed vocabulary of a pack (lang/<code>/vocab.txt: a word form a line, "#" comments): the recognition score
-    knows these words under the vocabulary of the library; empty when the pack has none."""
+def _vocab_lines(code):
     d = next((x / code for x in pack_dirs() if (x / code).is_dir()), None)
     p = d / "vocab.txt" if d else None
     if not p or not p.is_file():
-        return frozenset()
-    return frozenset(w for w in (ln.strip() for ln in p.read_text(encoding="utf-8").splitlines()) if w and w[0] != "#")
+        return ()
+    return tuple(w for w in (ln.strip() for ln in p.read_text(encoding="utf-8").splitlines()) if w and w[0] != "#")
+
+
+@functools.lru_cache(maxsize=None)
+def vocab(code):
+    """The seed vocabulary of a pack (lang/<code>/vocab.txt: a word form a line, "~stem" a stem, "#" comments): the
+    recognition score knows these words under the vocabulary of the library; empty when the pack has none."""
+    return frozenset(w for w in _vocab_lines(code) if w[0] != "~")
+
+
+@functools.lru_cache(maxsize=None)
+def vocab_stems(code):
+    """The stems of the seed vocabulary of a pack (its "~stem" lines): a long word is known by its stem."""
+    return frozenset(w[1:] for w in _vocab_lines(code) if w[0] == "~" and len(w) > 1)
 
 
 def available():

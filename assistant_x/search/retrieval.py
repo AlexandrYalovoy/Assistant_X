@@ -43,6 +43,7 @@ ALL_PLACES_RX = re.compile(lang.alt("all_places_rx"), re.I)
 CODE_RX = re.compile(r"^[A-Z]-\d{1,6}(?:-\d{1,3})?$")  # N-00001, E-00006-02
 # the weight of the fragments of each kind in the fusion: a card says what a document is about but cites no page
 KIND_WEIGHT = {"text": 1.0, "card": 0.7, "card_q": 0.85, "unit": 1.0}
+GARBLED_WEIGHT = 0.7  # a page whose recognition is garbled (page flag): its fragments weigh less in the answer
 MAX_CARDS = 2  # cards in one answer at most ([search] max_cards): the rest of the k are pages (audit 6, M-030)
 # the fragments of a card ('card' per language, 'card_q' its questions) are one result of kind 'card'
 SHOWN_KIND = {"card_q": "card"}
@@ -558,6 +559,10 @@ class Library:
             )
         }
         order = [i for i in order if i in rows]  # a fragment removed by a rebuild a moment ago
+        for i in order:  # a garbled page answers less well than a clean one of the same closeness
+            if "garbled" in (rows[i].get("page_flags") or "").split(","):
+                fused[i] *= GARBLED_WEIGHT
+        order.sort(key=lambda i: -fused[i])
         if rerank and order:
             order = self.rerank(query, order, rows, fused, stats)
         order = [i for i in first if i in rows] + [i for i in order if i not in first]
@@ -868,6 +873,8 @@ def page_note(score, flags):
         out.append(f"recognition score {score:.0f} of 100 on this page: check words and figures with page_image")
     if "complex_table" in (flags or "").split(","):
         out.append("complex table on this page — check numbers with page_image")
+    if "garbled" in (flags or "").split(","):
+        out.append("garbled recognition on this page (glued or unknown words) — check the words with page_image")
     if "dpi_reduced" in (flags or "").split(","):
         out.append("recognized at a reduced resolution (a very large page) — check small print with page_image")
     return "; ".join(out)

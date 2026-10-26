@@ -47,6 +47,7 @@ def measure(md, row):
         "ocr_low_pages": int(row.get("ocr_low_pages") or 0),
         "ocr_retried": int(row.get("ocr_retried") or 0),
         "ocr_rotated": int(row.get("ocr_rotated") or 0),
+        "ocr_garbled_pages": int(row.get("ocr_garbled_pages") or 0),
         "drawing": bool(row.get("drawing")),
     }
 
@@ -99,6 +100,15 @@ def problems(m):
                 f"{QUALITY['ocr_note']}): many unknown words or a low OCR confidence",
                 "replace the file: a better scan" if m["ocr_score"] < QUALITY["ocr_replace"] else "improve the text",
                 "medium" if m["ocr_score"] < QUALITY["ocr_replace"] else "low",
+            )
+        )
+    if m.get("ocr_garbled_pages") and not (m.get("ocr_score") is not None and m["ocr_score"] < QUALITY["ocr_note"]):
+        # a good mean can hide pages of garbage (glued words, a line read twice): listed even then
+        out.append(
+            (
+                f"{m['ocr_garbled_pages']} pages with garbled recognition (more than a quarter of the words unknown)",
+                "improve the text: recognize those pages again",
+                "low",
             )
         )
     if m["pages"] and m["fallback"] / m["pages"] >= QUALITY["fallback_share"]:

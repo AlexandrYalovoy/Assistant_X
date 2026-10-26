@@ -15,6 +15,11 @@ assistant_x/schemas (the card schema and the shelves) are also available under t
 4.0 International license, CC-BY-4.0 (file LICENSES/CC-BY-4.0.txt): you may use them under either license. Under
 CC-BY-4.0 credit "Assistant X by Alexandr Yalovoy", link the project and the license and say what you changed.
 Contributions are accepted under the Contributor License Agreement (file CLA.md, see CONTRIBUTING.md).
+The seed vocabularies assistant_x/lang/ru/vocab.txt and assistant_x/lang/en/vocab.txt hold word forms and stems
+derived (modified: expanded and stemmed by scripts/seed_vocab.py) from open Hunspell dictionaries and stay under their
+own licenses, not CC-BY-4.0: the Russian dictionary, Copyright (c) 1997-2008 Alexander I. Lebedev, a BSD-style
+license (LICENSES/Hunspell-ru_RU.txt); the English dictionary of SCOWL, Copyright 2000-2018 Kevin Atkinson and the
+copyrights it names (LICENSES/SCOWL-en_US.txt).
 The documents of a library (PDF, texts, cards, base) are not part of the program; the rights to them belong
 to their right holders.
 

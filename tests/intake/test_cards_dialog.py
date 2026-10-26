@@ -83,12 +83,15 @@ def test_digest_by_genre(tmp_path, monkeypatch):
 
 
 def test_seed_vocabulary_under_the_library_one():
-    assert len(lang.vocab("en")) > 1000 and "separator" in lang.vocab("en") and lang.vocab("xx") == frozenset()
+    assert len(lang.vocab("en")) > 1000 and "pump" in lang.vocab("en") and lang.vocab("xx") == frozenset()
+    assert len(lang.vocab_stems("en")) > 1000 and lang.vocab_stems("xx") == frozenset()
     nothing = (frozenset(), frozenset())
     assert ocr_score.known("separator", nothing) and ocr_score.known("separators", nothing)  # by its stem too
     assert not ocr_score.known("qwzrtx", nothing)
-    # a new library: the seed does not switch the judging by the vocabulary on (MIN_VOCAB_WORDS of the library)
-    assert ocr_score.word_counts("qwzrtx bluvtap", nothing)[1] == 0
+    # a new library: the seed of an open dictionary judges its words by itself (audit 6, M-015)
+    assert (
+        ocr_score.judged_by_vocab(nothing) and ocr_score.word_counts("qwzrtx bluvtap", nothing)[1] == 2 * ocr_score.SEED_ONLY
+    )
     big = (frozenset(f"w{i}x" for i in range(ocr_score.MIN_VOCAB_WORDS)), frozenset())
     assert ocr_score.word_counts("separator qwzrtx", big)[1] == 1
 
