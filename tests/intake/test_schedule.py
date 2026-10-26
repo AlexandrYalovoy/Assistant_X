@@ -1,0 +1,210 @@
+# Assistant X — Copyright (C) 2026 Alexandr Yalovoy
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""The scheduler of a batch (schedule.py, process.Batch.run; audit 6, M-011, M-014, M-020): conversions cheapest
+first, heavy tasks side by side while their memory fits with a worker kept for light ones, the OCR of a long scan in
+page ranges on every worker and the file assembled after them, ocr_shards = "off" for the former way."""
+
+import json
+from concurrent.futures import Future
+
+import pytest
+
+from assistant_x.intake import config as intake_cfg
+from assistant_x.intake import pipeline as intake
+from assistant_x.intake import schedule
+from assistant_x.intake import work as intake_work
+from assistant_x.intake.state import State
+
+# ---------- the policy ----------
+
+
+def test_cost_and_heavy():
+    assert schedule.cost(100, 0) == 50.0 and schedule.cost(100, 100) == 330.0
+    assert schedule.cost(10, 50) == schedule.cost(10, 10)  # no more scans than pages
+    assert not schedule.heavy(600, 200, 800) and schedule.heavy(900, 10, 800) and schedule.heavy(10, 801, 800)
+
+
+def test_shard_count():
+    assert schedule.shard_count(59, 6) == 1  # too few scanned pages
+    assert schedule.shard_count(848, 6) == 6  # the scan of the first batch: every worker
+    assert schedule.shard_count(100, 6) == 2  # at least SHARD_PAGES a range
+    assert schedule.shard_count(848, 1) == 1  # one worker: nothing to gain
+
+
+def test_shard_ranges_cover_the_document():
+    scans = list(range(11, 211))  # 10 text pages, 200 scanned ones, 20 text pages
+    ranges = schedule.shard_ranges(230, scans, 4)
+    assert ranges[0][0] == 1 and ranges[-1][1] == 230
+    assert all(b + 1 == a for (_, b), (a, _) in zip(ranges, ranges[1:]))  # one after another, no gap, no overlap
+    per = [sum(a <= p <= b for p in scans) for a, b in ranges]
+    assert len(ranges) == 4 and max(per) - min(per) <= 1  # about the same scanned pages each
+    assert schedule.shard_ranges(10, [], 4) == [(1, 10)]
+
+
+def test_heavy_admission():
+    # the first heavy task always; another one while the caps fit and a worker stays for light work
+    assert schedule.may_admit_heavy(8192, [], 0, True, 0, 6)
+    assert schedule.may_admit_heavy(8192, [8192], 20000, True, 1, 6)
+    assert not schedule.may_admit_heavy(8192, [8192, 8192], 20000, False, 2, 6)  # no memory for a third
+    assert not schedule.may_admit_heavy(3072, [3072] * 5, 99999, True, 5, 6)  # the last worker stays for light work
+    assert schedule.may_admit_heavy(3072, [3072] * 5, 99999, False, 5, 6)  # no light work left: it may take it
+    assert schedule.heavy_budget_mb(20, 4) == pytest.approx(16 * 1024 * 0.7)
+
+
+def test_ready_cheapest_first_and_light_when_heavy_may_not():
+    r = schedule.Ready()
+    r.push(500, "big", is_heavy=True)
+    r.push(30, "small")
+    r.push(200, "medium")
+    assert r.take(lambda it: True) == "small"
+    r.push(1, "huge", is_heavy=True)
+    assert r.take(lambda it: False) == "medium"  # the heavy ones may not start: the cheapest light one
+    assert r.take(lambda it: False) is None and len(r) == 2
+    assert r.take(lambda it: True) == "huge"
+
+
+# ---------- the batch with a fake pipeline ----------
+
+
+class RecordPool:
+    """Runs a task at once and notes it: (function name, tid, pages of a range)."""
+
+    def __init__(self, seen, fail_shards=0):
+        self.seen, self.fail = seen, fail_shards
+
+    def submit(self, fn, *a, **kw):
+        job = a[0] if a and isinstance(a[0], dict) else None
+        if job:  # the fingerprints of the library are no stage of a file
+            self.seen.append((fn.__name__, job["tid"], tuple(job.get("pages") or ())))
+        f = Future()
+        try:
+            if fn.__name__ == "convert_shard" and self.fail:
+                self.fail -= 1
+                raise RuntimeError("a range broke")
+            f.set_result(fn(*a))
+        except Exception as e:  # noqa: BLE001
+            f.set_exception(e)
+        return f
+
+    def shutdown(self, wait=True, cancel_futures=False):
+        pass
+
+
+PAGES = {"text.pdf": 230, "Сканы/scan.pdf": 20}
+
+
+@pytest.fixture
+def fake(project, monkeypatch):
+    """The batch of the test project with fake stages: text.pdf is a long scan (200 scanned pages of 230)."""
+    root, cfg = project
+    monkeypatch.setattr(intake_cfg, "can_ocr", lambda cfg: True)
+
+    def prep(job):
+        n = PAGES.get(job["rel"], 3)
+        scans = list(range(11, 211)) if job["rel"] == "text.pdf" else []
+        return {"status": "prepped", "pages": n, "pdf": job["src"], "scan_pages": scans, "ocr_pages": len(scans), "fp": []}
+
+    def convert_shard(job):
+        return {"status": "shard", "pages": job["pages"]}
+
+    def convert(job):
+        return {"status": "converted", "chars": 100}
+
+    for name, fn in (("prep", prep), ("convert_shard", convert_shard), ("convert", convert)):
+        fn.__name__ = name
+        monkeypatch.setattr(intake_work, name, fn)
+
+    def run(workers=4, fail_shards=0, **settings):
+        if settings:
+            intake_cfg.save(settings, cfg.path)
+        c = intake_cfg.load(cfg.path)
+        work = c.work / "batch"
+        work.mkdir(parents=True, exist_ok=True)
+        state = State(work / "state.sqlite")
+        intake.register(c, state)
+        seen = []
+        b = intake.Batch(c, work, state, workers)
+        b.pool = lambda: RecordPool(seen, fail_shards)
+        b.run()
+        return seen, {r["rel"]: r for r in state.all()}
+
+    return run
+
+
+def test_a_long_scan_is_read_in_page_ranges(fake):
+    seen, rows = fake()
+    ranges = sorted(p for fn, t, p in seen if fn == "convert_shard")
+    tid = rows["text.pdf"]["tid"]
+    assert len(ranges) == 4 and ranges[0][0] == 1 and ranges[-1][1] == 230
+    conv = [i for i, (fn, t, _) in enumerate(seen) if fn == "convert" and t == tid]
+    shards = [i for i, (fn, t, _) in enumerate(seen) if fn == "convert_shard"]
+    assert len(conv) == 1 and conv[0] > max(shards)  # assembled after every range is back
+    assert rows["text.pdf"]["status"] == "done" and rows["text.pdf"]["shards"] == 4
+
+
+def test_ocr_shards_off(fake):
+    seen, rows = fake(ocr_shards="off")
+    assert not [s for s in seen if s[0] == "convert_shard"] and rows["text.pdf"]["status"] == "done"
+
+
+def test_a_broken_range_still_converts_the_file(fake):
+    seen, rows = fake(fail_shards=2)
+    assert rows["text.pdf"]["status"] == "done"  # the conversion reads the ranges that broke
+
+
+def test_one_worker_no_ranges(fake):
+    seen, rows = fake(workers=1)
+    assert not [s for s in seen if s[0] == "convert_shard"]
+
+
+def test_cheapest_conversion_first(fake):
+    seen, rows = fake(ocr_shards="off")
+    order = [t for fn, t, _ in seen if fn == "convert"]
+    by_tid = {r["tid"]: r for r in rows.values()}
+    costs = [by_tid[t]["cost"] for t in order]
+    assert costs == sorted(costs) and by_tid[order[-1]]["rel"] == "text.pdf"
+
+
+def test_bad_ocr_shards_setting(project):
+    root, cfg = project
+    intake_cfg.save({"ocr_shards": "sometimes"}, cfg.path)
+    with pytest.raises(SystemExit):
+        intake_cfg.load(cfg.path)
+
+
+# ---------- convert_md: a range of pages ----------
+
+
+def test_convert_md_converts_only_its_range(tmp_path):
+    from assistant_x.intake.tools import convert_md
+    from tests.intake.intake_fixtures import text_pdf
+
+    pdf = tmp_path / "a.pdf"
+    text_pdf(pdf, [f"Страница {i}" for i in range(1, 61)])  # 60 text pages: chunks from page 1 and from page 51
+    cache = tmp_path / "cache"
+    jobs = tmp_path / "jobs.json"
+    jobs.write_text(json.dumps({"T0001": {"parts": [[str(pdf), 1]], "use_ocr": False, "range": [51, 60]}}), encoding="utf-8")
+    convert_md.main([str(jobs), str(cache), "0"])
+    assert sorted(p.name for p in (cache / "T0001").glob("*.json")) == ["00051.json"]
+    assert json.loads((cache / "T0001.51.progress.json").read_text(encoding="utf-8"))["done"] == 10
+
+
+def test_ranges_give_the_chunks_of_the_whole(tmp_path):
+    """The chunks converted range by range are the chunks of one conversion of the whole: the same names, the same
+    text (the assembly after the ranges reads the same cache)."""
+    from assistant_x.intake.tools import convert_md
+    from tests.intake.intake_fixtures import text_pdf
+
+    pdf = tmp_path / "a.pdf"
+    text_pdf(pdf, [f"Раздел {i}. Сепарация нефти" for i in range(1, 61)])
+
+    def chunks(name, ranges):
+        cache = tmp_path / name
+        for rng in ranges:
+            job = {"parts": [[str(pdf), 1]], "use_ocr": False, **({"range": rng} if rng else {})}
+            jobs = tmp_path / f"{name}.json"
+            jobs.write_text(json.dumps({"T0001": job}), encoding="utf-8")
+            convert_md.main([str(jobs), str(cache), "0"])
+        return {p.name: p.read_text(encoding="utf-8") for p in (cache / "T0001").glob("*.json")}
+
+    assert chunks("whole", [None]) == chunks("ranges", [[1, 50], [51, 60]])

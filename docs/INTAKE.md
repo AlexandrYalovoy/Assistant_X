@@ -53,7 +53,8 @@ priority "high".
 | `affinity` | `auto` — all CPUs while the PC is free, E-cores (when there are enough of them) while someone works at it; `all`, `ecores`, a list `[2, 3]` — by hand | `auto` |
 | `idle_minutes`, `cpu_share_idle`, `cpu_share_active` | the PC is "free" after this many minutes without input; the CPU share in the states "free" and "at the computer" | 7, 0.75, 0.5 |
 | `temp_max_c`, `temp_cool_c` | above — remove workers one by one; add them again only below the second threshold | 85, 75 |
-| `heavy_mb` | bigger files go to the end of the queue and one at a time | 40 |
+| `heavy_mb` | before their preparation (the pages are not known yet) bigger files go after the small ones and take a heavy slot | 40 |
+| `ocr_shards` | `auto` — the OCR of a long scan (60 scanned pages and more) is cut into page ranges that every worker reads, the text is assembled when all are back; `off` — a document in one task, as in 0.1 | `auto` |
 | `ocr_threads` | `subprocess` — processes of `convert_md.py` / `reocr_empty.py` per document | 2 |
 | `worker_memory_mb` | the memory cap of a worker process and of every program it starts (with all its children); `workers` × the cap no more than the RAM | 3072 |
 | `timeouts` | seconds: `soffice`, `hidden`, `convert` (the whole document), `unpack` | 900, 1800, 14400, 1800 |
@@ -452,6 +453,17 @@ every test run, the full one (the whole intake) with the slow tests; neither may
   `convert_md`, `assemble_md`, `reocr_empty`, `ocr_page`, `ocr_score`, `onnx_threads`, `unpack`; each
   also as `python -m assistant_x.intake.tools.<name>`); they take Tesseract from `TESSERACT`, the folders of
   `dupcheck` from `AX_TEXTS` and `AX_FP_CACHE` when given.
+
+## The order of the work (`schedule.py`)
+
+After its preparation every file has an estimate of its conversion: its text pages at 0.5 s and its scanned pages at
+3.3 s (the speeds of the first real batch). The conversions go cheapest first, so a small file never waits behind a
+big scan. A heavy task (an estimate of 15 min and more, more than 800 pages, a file that needed a bigger memory cap)
+runs beside other heavy ones while their memory caps fit into 70 % of the free memory past the reserve of `balance.py`,
+measured again at every start; while light work is left, one worker stays for it. The OCR of a long scan is cut into
+page ranges (at least 40 scanned pages a range, at most one range a worker) that the pool runs as tasks of their own;
+the conversion of the file then finds them in the cache and assembles the text. `ocr_shards = "off"` turns the
+cutting off.
 
 ## Applying a batch from Claude: the plan, the token, `auto_apply`
 

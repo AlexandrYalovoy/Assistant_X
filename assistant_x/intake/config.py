@@ -96,6 +96,11 @@ def load(path=None):
     except ValueError as e:
         sys.exit(f"{path}: {e}")
     cfg["heavy_mb"] = float(raw.get("heavy_mb", default["heavy_mb"]))
+    from assistant_x.intake import schedule
+
+    cfg["ocr_shards"] = str(raw.get("ocr_shards") or default["ocr_shards"])
+    if cfg["ocr_shards"] not in schedule.SHARD_MODES:
+        sys.exit(f"{path}: ocr_shards {cfg['ocr_shards']!r}, one of these is needed: {', '.join(schedule.SHARD_MODES)}")
     cfg["timeouts"] = settings.merge(default["timeouts"], raw.get("timeouts"))
     cfg["unpack"] = settings.merge(default["unpack"], raw.get("unpack"))
     # free space before run: factor x the files of inbox and at least min_free_gb (core/common.free_space_problem)

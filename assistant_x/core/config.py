@@ -42,6 +42,7 @@ INTAKE = {
     "temp_max_c": 85,
     "temp_cool_c": 75,
     "heavy_mb": 40,
+    "ocr_shards": "auto",
     "ocr_threads": 2,
     "worker_memory_mb": 3072,
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800},

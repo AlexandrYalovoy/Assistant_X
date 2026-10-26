@@ -551,6 +551,40 @@ def prep(job: Job) -> Prep:
     return res
 
 
+def _convert_jobs(job, pages=None):
+    """The jobs file of convert_md for a file (jobs/<tid>.json), or for a range of its pages (jobs/<tid>.<a>-<b>.json:
+    only the chunks that start in the range are converted)."""
+    w, tid = Path(job["work"]), job["tid"]
+    (w / "jobs").mkdir(parents=True, exist_ok=True)
+    # the printed page labels come from the original PDF: the copy read as page images (imgocr) has none
+    original = w / "src" / f"{tid}.pdf"
+    one = {
+        "parts": [[job["pdf"], 1]],
+        "force_ocr": False,
+        "use_ocr": bool(job.get("ocr")),
+        "ocr_pages": job.get("scan_pages") or [],
+        "label_pdf": str(original if original.exists() else job["pdf"]),
+    }
+    if pages:
+        one["range"] = list(pages)
+    path = w / "jobs" / (f"{tid}.{pages[0]}-{pages[1]}.json" if pages else f"{tid}.json")
+    path.write_text(json.dumps({tid: one}), encoding="utf-8")
+    return path
+
+
+def convert_shard(job):
+    """The OCR of a range of pages of a long scan (job["pages"]: [first, last]) into the cache of convert_md, as a task
+    of its own (schedule.py); convert() of the file then finds those chunks done. An error is reported, not final: the
+    conversion of the file reads what a range left out."""
+    w, tid = Path(job["work"]), job["tid"]
+    for d in ("cache", "log"):
+        (w / d).mkdir(parents=True, exist_ok=True)
+    log = w / "log" / f"{tid}.log"
+    jobs = _convert_jobs(job, job["pages"])
+    err, _ = _tool("convert_md.py", jobs, w / "cache", "0", job=job, log=log, timeout=job["timeouts"]["convert"])
+    return err or {"status": "shard", "pages": job["pages"]}
+
+
 def convert(job: Job) -> Convert:
     t0 = time.time()
     w, tid = Path(job["work"]), job["tid"]
@@ -558,23 +592,7 @@ def convert(job: Job) -> Convert:
         (w / d).mkdir(parents=True, exist_ok=True)
     log = w / "log" / f"{tid}.log"
     ocr = bool(job.get("ocr"))
-    jobs = w / "jobs" / f"{tid}.json"
-    # the printed page labels come from the original PDF: the copy read as page images (imgocr) has none
-    original = w / "src" / f"{tid}.pdf"
-    jobs.write_text(
-        json.dumps(
-            {
-                tid: {
-                    "parts": [[job["pdf"], 1]],
-                    "force_ocr": False,
-                    "use_ocr": ocr,
-                    "ocr_pages": job.get("scan_pages") or [],
-                    "label_pdf": str(original if original.exists() else job["pdf"]),
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
+    jobs = _convert_jobs(job)
     # processes of convert_md and reocr_empty; a persistent worker converts the chunks itself (its ONNX threads instead)
     threads = "0" if job.get("inproc") else str(job.get("ocr_threads") or 1)
     tmo = job["timeouts"]["convert"]

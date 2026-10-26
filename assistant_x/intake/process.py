@@ -12,7 +12,7 @@ from pathlib import Path
 from assistant_x.core.formats import PAGES_SUFFIX
 from assistant_x.intake import config as intake_cfg
 from assistant_x.intake import pool as intake_pool
-from assistant_x.intake import versions
+from assistant_x.intake import schedule, versions
 from assistant_x.intake.batch import AUTO, DUP, PAGES_APART, PARTIAL, SAME, say, win
 from assistant_x.intake.prepare import KIT, THICK, known_hashes, sha256, walk
 from assistant_x.intake.results import Convert, Job, Prep
@@ -254,6 +254,9 @@ class Batch:
         return n
 
     def run(self):
+        """Every queued file through prep and convert on the pool. The order and the concurrency are those of
+        schedule.py: prep of the small files first, then the conversions cheapest first, heavy ones side by side while
+        their memory caps fit, the OCR of a long scan in page ranges on every worker."""
         from assistant_x.intake import work as intake_work
 
         n_sha = self.hash_all()
@@ -261,11 +264,10 @@ class Batch:
             say(f"Exact duplicates by SHA-256: {n_sha}")
         heavy_bytes = float(self.cfg["heavy_mb"]) * 2**20
         rows = self.state.all("queued")
-        heavy = {r["tid"] for r in rows if (r.get("size") or 0) > heavy_bytes}  # big scans: at the end and one at a time
-        queue = [
-            r["tid"]
-            for r in sorted(rows, key=lambda r: (r["tid"] in heavy, bool(KIT) and KIT["scan"] in r["rel"], r["tid"]))
-        ]  # the scan images of a standard's kit last
+        big = {r["tid"] for r in rows if (r.get("size") or 0) > heavy_bytes}  # before prep only the size is known
+        # small files first, the scan images of a standard's kit last
+        order = sorted(rows, key=lambda r: (bool(KIT) and KIT["scan"] in r["rel"], r.get("size") or 0, r["tid"]))
+        queue = [r["tid"] for r in order]
         if not queue:
             return
         self.ex = self.pool()
@@ -275,17 +277,24 @@ class Batch:
                 self.mine[r["tid"]] = load_fp(self.work, r["tid"])
             inflight, total, t0 = {}, len(queue), time.time()
             active, shown = set(), (None, 0.0)  # the tids a worker holds; the counter last printed and when
-            tasks, waiting, retried = {}, [], {}  # future -> (fn, args, memory); thick ones waiting their turn; R3 repeats
+            tasks, retried = {}, {}  # future -> (fn, args, memory); the memory cap of a file tried once more
+            ready, shards = schedule.Ready(), {}  # conversions waiting for a worker; tid -> [ranges left, its convert]
+            heavy_caps = {}  # future -> the memory cap of a heavy task in flight
+            workers = max(self.workers, 1)
+            budget0 = self.heavy_budget()
+            sharding = self.cfg.get("ocr_shards", "auto") != "off" and workers > 1 and not isinstance(self.ex, Inline)
             say(
-                f"Files in work: {total}, processes {max(self.workers, 1)}, OCR {'yes' if self.base['ocr'] else 'NO'}, "
+                f"Files in work: {total}, processes {workers}, OCR {'yes' if self.base['ocr'] else 'NO'}, "
                 f"LibreOffice {'yes' if self.base['soffice'] else 'NO'}"
             )
 
-            def send(stage, tid, fn, *args, memory=None):
+            def send(stage, tid, fn, *args, memory=None, is_heavy=False):
                 memory = memory or self.memory_for(tid)
                 kw = {"memory_mb": memory} if isinstance(self.ex, intake_pool.Persistent) else {}
                 f = self.ex.submit(fn, *args, **kw)
                 inflight[f], tasks[f] = (stage, tid), (fn, args, memory)
+                if is_heavy:
+                    heavy_caps[f] = memory
                 self.state.update(tid, stage=stage, active=False)
                 active.discard(tid)  # a new task of the file: in work again once a worker takes it
 
@@ -294,35 +303,90 @@ class Batch:
                 retried[tid] = min(2 * (mem or self.cfg.worker_memory_mb), self.memory_ceiling())
                 say(f"  {tid}: {STAGES.get(stage, stage)} — {why}, once more with a cap of {retried[tid]} MB")
                 self.state.update(tid, memory_retry=retried[tid])
-                heavy.add(tid)  # a thick one: alone from now on
                 args = tuple(
                     {**a, "memory_mb": retried[tid]} if isinstance(a, dict) and "memory_mb" in a else a for a in args
                 )
-                send(stage, tid, fn, *args, memory=retried[tid])
+                ready.push(0, (stage, tid, fn, args, retried[tid], True), is_heavy=True)  # with its big cap
 
-            while queue or inflight or waiting:
-                if waiting and not any(t in heavy for _, t in inflight.values()):
-                    stage, tid, fn, args = waiting.pop(0)  # a document past THICK pages, one at a time
-                    send(stage, tid, fn, *args)
-                while queue and len(inflight) < max(self.workers, 1) * 2:
-                    if queue[0] in heavy and any(t in heavy for _, t in inflight.values()):
-                        break  # one heavy document at a time
-                    tid = queue.pop(0)
-                    row = self.state.get(tid)
-                    self.state.update(tid, status="running")
-                    send("prep", tid, intake_work.prep, self.job(row))
+            def plan(tid, fn, job):
+                """A conversion after prep: in page ranges (a long scan) or whole, into the ready tasks by its cost."""
+                row = self.state.get(tid)
+                pages, scans = row.get("pages") or 0, len(job.get("scan_pages") or []) if job.get("ocr") else 0
+                c = schedule.cost(pages, scans)
+                self.state.update(tid, cost=c)
+                k = schedule.shard_count(scans, workers) if sharding and fn is intake_work.convert else 1
+                if k > 1:
+                    ranges = schedule.shard_ranges(pages, job["scan_pages"], k)
+                    shards[tid] = [len(ranges), (fn, job)]
+                    self.state.update(tid, shards=len(ranges))
+                    say(f"  {tid}: OCR of {scans} scanned pages in {len(ranges)} page ranges")
+                    for a, b in ranges:
+                        n = sum(a <= p <= b for p in job["scan_pages"])
+                        part = {**job, "pages": [a, b], "memory_mb": self.cfg.worker_memory_mb}
+                        item = ("convert_shard", tid, intake_work.convert_shard, (part,), self.cfg.worker_memory_mb, False)
+                        ready.push(schedule.cost(b - a + 1, n), item)
+                    return
+                hv = schedule.heavy(c, pages, THICK) or tid in retried
+                ready.push(c, (fn.__name__, tid, fn, (job,), retried.get(tid), hv), is_heavy=hv)
+
+            def shard_back(tid, res):
+                """A range is back (or lost): when all are, the conversion of the file reads the cache."""
+                if isinstance(res, dict) and res.get("status") == "error":
+                    say(f"  {tid}: a page range was not read ({res.get('why')}); the conversion reads it")
+                left = shards.get(tid)
+                if left is None:
+                    return
+                left[0] -= 1
+                if left[0] <= 0:
+                    fn, job = shards.pop(tid)[1]
+                    pages = self.state.get(tid).get("pages") or 0
+                    hv = pages > THICK or tid in retried  # the OCR is done: the assembly of a thick text still needs memory
+                    ready.push(schedule.cost(pages, 0), (fn.__name__, tid, fn, (job,), retried.get(tid), hv), is_heavy=hv)
+
+            def light_left():
+                return bool(queue) or ready.light()
+
+            def may_heavy(item):
+                cap = item[4] or self.memory_for(item[1])
+                budget = min(budget0, self.heavy_budget(sum(heavy_caps.values())))
+                return schedule.may_admit_heavy(
+                    cap, list(heavy_caps.values()), budget, light_left(), len(heavy_caps), workers
+                )
+
+            while queue or inflight or len(ready):
+                while len(inflight) < workers + 1:  # the pool has its own queue: one task more keeps it busy
+                    item = ready.take(lambda it: False)  # a light conversion first
+                    if item is None and queue:
+                        tid = queue[0]
+                        if not (tid in big and heavy_caps and not may_heavy(("prep", tid, None, (), None, True))):
+                            queue.pop(0)  # small files first: a big one waits while the memory of heavy tasks is taken
+                            self.state.update(tid, status="running")
+                            send("prep", tid, intake_work.prep, self.job(self.state.get(tid)), is_heavy=tid in big)
+                            continue
+                    if item is None:
+                        item = ready.take(may_heavy)
+                    if item is None:
+                        break
+                    stage, tid, fn, args, mem, hv = item
+                    send(stage, tid, fn, *args, memory=mem, is_heavy=hv)
                 if not inflight:
-                    continue
+                    if queue or len(ready):
+                        continue
+                    break
                 done, _ = wait(list(inflight), timeout=POLL, return_when=FIRST_COMPLETED)
                 self.mark_active(inflight, active)
                 broken = False
                 for f in done:
                     stage, tid = inflight.pop(f)
+                    heavy_caps.pop(f, None)
                     fn0, args0, mem0 = tasks.pop(f, (None, (), None))
                     try:
                         res = f.result()
                     except BrokenProcessPool:
                         broken = True
+                        if stage == "convert_shard":
+                            shard_back(tid, {"status": "error", "why": "the worker process crashed"})
+                            continue
                         self.crashed[tid] += 1
                         if self.crashed[tid] > 1:
                             self.state.update(tid, status="error", why="the worker process crashed twice (a broken file?)")
@@ -330,6 +394,9 @@ class Batch:
                             queue.append(tid)
                         continue
                     except intake_pool.Lost as e:  # only the worker of this file was killed or died; it is replaced
+                        if stage == "convert_shard":  # the conversion of the file reads the range once more
+                            shard_back(tid, {"status": "error", "why": lost_why(stage, e)})
+                            continue
                         self.crashed[tid] += e.why == "crash"
                         if e.why == "crash" and self.crashed[tid] == 1:
                             queue.append(tid)
@@ -339,34 +406,56 @@ class Batch:
                             continue
                         res = {"status": "error", "why": lost_why(stage, e)}
                     except Exception as e:  # noqa: BLE001 — one file must not stop the batch
+                        if stage == "convert_shard":
+                            shard_back(tid, {"status": "error", "why": f"{type(e).__name__}: {e}"})
+                            continue
                         res = self.failed(stage, tid, e)
+                    if stage == "convert_shard":
+                        shard_back(tid, res)
+                        continue
                     if isinstance(res, dict) and res.get("status") == "error" and res.pop("retry", None) == "memory":
                         if fn0 and tid not in retried:  # a tool past its cap, a MuPDF allocation failure: as above
                             retry(stage, tid, fn0, args0, mem0, res.get("why") or "memory")
                             continue
                     nxt = self.handle(stage, tid, res)
                     if nxt:
-                        if (self.state.get(tid).get("pages") or 0) > THICK:
-                            heavy.add(tid)
-                        if tid in heavy and any(t in heavy for _, t in inflight.values()):
-                            waiting.append((nxt[0].__name__, tid, nxt[0], nxt[1:]))
-                        else:
-                            send(nxt[0].__name__, tid, *nxt, memory=retried.get(tid))
+                        plan(tid, nxt[0], nxt[1])
                 if broken:
                     for f, (stage, tid) in inflight.items():  # the rest of the broken pool goes back to the queue
-                        queue.append(tid)
+                        if stage == "convert_shard":
+                            shard_back(tid, {"status": "error", "why": "the pool broke"})
+                        else:
+                            queue.append(tid)
                     inflight.clear()
                     tasks.clear()
+                    heavy_caps.clear()
                     self.ex.shutdown(wait=False, cancel_futures=True)
                     self.ex = self.pool()
-                ready = total - len(queue) - len(inflight) - len(waiting)
-                if ready != shown[0] or time.time() - shown[1] >= 60:  # on change, else once a minute
-                    say(f"  {ready}/{total} files, {time.time() - t0:.0f} s")
-                    shown = (ready, time.time())
+                busy = {t for _, t in inflight.values()} | {it[1] for *_, it in ready.heap} | set(shards)
+                ready_n = total - len(queue) - len(busy)
+                if ready_n != shown[0] or time.time() - shown[1] >= 60:  # on change, else once a minute
+                    say(f"  {ready_n}/{total} files, {time.time() - t0:.0f} s")
+                    shown = (ready_n, time.time())
         finally:
             self.ex.shutdown(wait=True, cancel_futures=True)
             self.state.reset_running()
         self.batch_pairs()
+
+    def heavy_budget(self, held_mb=0):
+        """The memory heavy tasks may take together now (schedule.heavy_budget_mb): the free memory past the reserve of
+        balance.py, plus what the heavy tasks in flight hold (their caps, held_mb) — they count against the budget
+        themselves."""
+        try:
+            import psutil
+
+            from assistant_x.intake import balance
+
+            o = self.cfg.get("balance") or balance.options({})
+            vm = psutil.virtual_memory()
+            hw = {"ram_gb": vm.total / 2**30, "avail_gb": vm.available / 2**30}
+            return schedule.heavy_budget_mb(hw["avail_gb"] + held_mb / 1024, balance.reserve_gb(hw, o))
+        except Exception:  # noqa: BLE001 — no psutil, no measurement: one heavy task at a time
+            return 0.0
 
     def mark_active(self, inflight, active):
         """The files a worker holds now (their task started) apart from those waiting in the queue of the pool: the

@@ -101,13 +101,16 @@ def status_data(work, state, started=None, now=None):
     for r in rows:
         if r["status"] != "running":
             continue
-        p = {}
-        try:
-            p = json.loads((Path(work) / "cache" / f"{r['tid']}.progress.json").read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            pass
+        p = {"done": 0, "total": 0}
+        for f in (Path(work) / "cache").glob(f"{r['tid']}.*progress.json"):  # the file, and its OCR ranges
+            try:
+                x = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            p["done"] += int(x.get("done") or 0)
+            p["total"] += int(x.get("total") or 0)
         item = {"tid": r["tid"], "rel": r["rel"], "stage": r.get("stage") or "prep", "active": bool(r.get("active"))}
-        if r.get("stage") == "convert" and p.get("total"):
+        if r.get("stage") in ("convert", "convert_shard") and p.get("total"):
             item["progress"] = [int(p.get("done") or 0), int(p["total"])]
         if r.get("pages"):
             item["pages"] = r["pages"]

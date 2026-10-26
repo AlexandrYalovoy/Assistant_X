@@ -149,14 +149,15 @@ def run(code, path, shift, pages, force_ocr, out, use_ocr=True, scans=()):
     return code, len(pages)
 
 
-def progress_path(cache, code):
-    """<cache>/<code>.progress.json: the pages of a document converted so far (intake status shows them)."""
-    return os.path.join(cache, f"{code}.progress.json")
+def progress_path(cache, code, rng=None):
+    """<cache>/<code>.progress.json: the pages of a document converted so far (intake status shows them, the files of
+    its ranges <code>.<first>.progress.json added up)."""
+    return os.path.join(cache, f"{code}.{rng[0]}.progress.json" if rng else f"{code}.progress.json")
 
 
-def progress(cache, code, done, total):
+def progress(cache, code, done, total, rng=None):
     try:
-        write_json({"done": done, "total": total, "updated": time.time()}, progress_path(cache, code))
+        write_json({"done": done, "total": total, "updated": time.time()}, progress_path(cache, code, rng))
     except OSError:
         pass  # a progress line is a help only
 
@@ -174,7 +175,10 @@ def main(argv):
                 if job.get("use_ocr", True)
                 else set()
             )
+            rng = job.get("range")  # a range of pages of a long scan: the chunks that start in it
             for part in chunks(n, scans):
+                if rng and not rng[0] <= first + part[0] <= rng[1]:
+                    continue
                 out = f"{cache}/{code}/{first + part[0]:05d}.json"
                 if not os.path.exists(out):
                     tasks.append(
@@ -191,8 +195,8 @@ def main(argv):
                     )
     total, done, failed, t0 = sum(len(t[3]) for t in tasks), 0, 0, time.time()
     print(f"pages to convert: {total}", flush=True)
-    for code in jobs:
-        progress(cache, code, 0, total)
+    for code, job in jobs.items():
+        progress(cache, code, 0, total, job.get("range"))
     if workers > 0:
         close_all()  # the pool processes open the documents themselves
 
@@ -202,7 +206,7 @@ def main(argv):
             code, k = get()
             done += k
             print(f"{done}/{total} pages, {time.time() - t0:.0f} s ({code})", flush=True)
-            progress(cache, code, done, total)
+            progress(cache, code, done, total, jobs[code].get("range"))
         except MemoryError:
             raise  # the worker is past its memory cap: intake.py restarts it
         except Exception as e:

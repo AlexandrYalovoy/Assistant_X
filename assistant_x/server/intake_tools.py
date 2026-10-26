@@ -329,7 +329,7 @@ def _minutes(seconds):
     return "less than a minute" if m < 1 else f"about {m} min" if m < 90 else f"about {m / 60:.1f} h"
 
 
-STAGE_WORDS = {"prep": "preparation", "convert": "conversion"}
+STAGE_WORDS = {"prep": "preparation", "convert": "conversion", "convert_shard": "OCR in page ranges"}
 
 
 def batch_words(data):
