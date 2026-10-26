@@ -49,7 +49,7 @@ def test_second_instance_loads_the_model_on_the_processor(second, lib, monkeypat
     at once, saying so; once the model is in, the second server searches by meaning (without reranking)."""
     monkeypatch.setattr(lib, "dense_search", lambda *a, **k: pytest.fail("searched by meaning before the model was in"))
     out = second.search_library("обводнённости газового фактора")
-    assert out.startswith(second.CPU_PENDING) and "[N-00001, PDF 2]" in out
+    assert out.startswith(second.cpu_pending()) and "[N-00001, PDF 2]" in out
     assert lib.device_override == "cpu" and _Thread.started == [mcp_server._warm_up_cpu]
     second.search_library("обводнённости")
     assert len(_Thread.started) == 1  # loaded once
@@ -336,3 +336,40 @@ def test_the_http_transport_needs_the_token_and_a_local_host(tmp_path, monkeypat
         assert c.post("/mcp", json=body, headers={**head, "Authorization": f"Basic {token}"}).status_code == 401
         assert c.post("/mcp", json=body, headers={**auth, "Host": "evil.example:9123"}).status_code in (400, 403, 421)
         assert c.post("/mcp", json=body, headers={**auth, "Origin": "http://evil.example"}).status_code in (400, 403)
+
+
+def test_cpu_pending_names_another_window_only_when_one_holds_the_lock(server, tmp_path, monkeypatch):
+    """M-029: the note blamed "another window" even when the holder of the lock was a sibling server long gone."""
+    lockf = tmp_path / "mcp_server.lock"
+    monkeypatch.setattr(mcp_server, "LOCK_FILE", str(lockf))
+    lockf.write_text("999999999", encoding="utf-8")  # no such process
+    assert mcp_server.OTHER_HOLDER not in mcp_server.cpu_pending()
+    import subprocess as sp, sys
+
+    p = sp.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        lockf.write_text(str(p.pid), encoding="utf-8")
+        assert mcp_server.OTHER_HOLDER in mcp_server.cpu_pending()
+    finally:
+        p.kill()
+    lockf.write_text(str(__import__("os").getpid()), encoding="utf-8")  # this process: no other window
+    assert mcp_server.OTHER_HOLDER not in mcp_server.cpu_pending()
+
+
+@pytest.mark.parametrize(
+    "stats, low",
+    [
+        ({"dense_top": 0.42}, True),
+        ({"dense_top": 0.42, "rerank_top": 0.1}, True),
+        ({"dense_top": 0.42, "rerank_top": 0.9}, False),  # the reranker is sure of its best fragment
+        ({"dense_top": 0.71}, False),
+        ({}, False),  # no meaning search: nothing to tell
+    ],
+)
+def test_low_closeness_note(server, stats, low):
+    note = mcp_server.search_note(stats, False)
+    assert ("Low closeness (0.42)" in note) is low
+
+
+def test_low_closeness_in_the_instructions():
+    assert '"Low closeness"' in mcp_server.INSTRUCTIONS

@@ -41,6 +41,8 @@ recognition): check its numbers with page_image. Before a verbatim quote or a nu
 verify_quote(code, page, text); when it answers "Not found", give it as a paraphrase marked "(paraphrase)".
 A "Source quality" line of a fragment: warn the user about it when you cite that document.
 Every part of a document of several files has a code of its own with a number (E-00006-02) and its own PDF pages.
+An answer that starts with "Low closeness": the library may have no document on the question — tell the user so
+before answering from general knowledge.
 An answer that starts with "Found by words only" was found without the semantic search: "is loading" — repeat the
 query in 10–20 s if what you need is not there; any other reason (no model, no embeddings file) — tell the user in one line.
 If a command answered "Library command failed…", tell the user that the failure was logged and how to make a debug report.
@@ -67,8 +69,15 @@ _owner = None  # the open lock file while this process holds it
 _cpu_started = False  # the second server has begun loading its model on the processor
 CPU_THREADS = 4  # the second server's share of the processor: a question still takes ~0.06 s
 CPU_PENDING = (
-    "Found by words only: the semantic search on the processor is still loading (another Claude window or "
-    "tab holds the video card), repeat the query in 10–20 s if the answer is not here."
+    "Found by words only: the semantic search on the processor is still loading{why}, repeat the query in 10–20 s if "
+    "the answer is not here."
+)
+OTHER_HOLDER = " (another Claude window or tab holds the video card)"
+WEAK = 0.5  # the closeness of the best fragment below which the library may not cover a question ([search] weak)
+RERANK_WEAK = 0.3  # the reranker's certainty of its best fragment below which it agrees ([search] rerank_weak)
+LOW_CLOSENESS = (
+    "Low closeness ({close:.2f}): the library may not cover this question — say so to the user before answering from "
+    "general knowledge."
 )
 NO_DENSE = (
     'Found by words only: {why}. The failure was logged; run "assistant-x doctor", and if that does not help, '
@@ -95,6 +104,28 @@ def take_models_lock():
     f.flush()
     _owner = f
     return True
+
+
+def holder_alive():
+    """True when another process that is alive holds the lock of the models (its pid is in the lock file)."""
+    try:
+        with open(LOCK_FILE, encoding="utf-8") as f:
+            pid = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        return False
+    if not pid or pid == os.getpid():
+        return False
+    try:
+        import psutil
+
+        return psutil.pid_exists(pid)
+    except ImportError:
+        return True
+
+
+def cpu_pending():
+    """The note of a light instance whose model still loads; it names another window only when one holds the lock."""
+    return CPU_PENDING.format(why=OTHER_HOLDER if holder_alive() else "")
 
 
 def full_mode():
@@ -268,7 +299,18 @@ def search_library(
     pending = f"{pending}\n\n" if pending else ""
     if not res:
         return pending + "Nothing found. Try other terms or remove the filters."
-    return pending + "\n\n".join(f"{_head(r)}\n{r['text']}" for r in res)
+    # the pages first; the cards (what a document is about) as a short block after them, unless the question names
+    # the document by its designation (its card leads)
+    first = [r for r in res if r.get("kind") != "card" or r.get("named")]
+    cards = [r for r in res if r.get("kind") == "card" and not r.get("named")]
+    text = "\n\n".join(f"{_head(r)}\n{r['text']}" for r in first)
+    if cards:
+        text += (
+            ("\n\n" if text else "")
+            + "## Documents on the topic\n\n"
+            + "\n\n".join(f"{_head(r)}\n{r['text']}" for r in cards)
+        )
+    return pending + text
 
 
 _noticed = False  # the start notice was given once in this server
@@ -303,10 +345,24 @@ def search_note(stats, light):
     elif stats.get("no_vectors"):
         why = NO_DENSE.format(why=NO_VECTORS.format(name=stats["no_vectors"]))
     elif stats.get("dense_pending"):
-        why = CPU_PENDING if light else DENSE_PENDING
+        why = cpu_pending() if light else DENSE_PENDING
     else:
         why = ""
-    return "\n".join(x for x in (why, gap) if x)
+    return "\n".join(x for x in (why, low_closeness(stats), gap) if x)
+
+
+def low_closeness(stats):
+    """The note of a search whose best fragment is far from the question (the cosine of the meaning search below
+    [search] weak) and that the reranker, when it ran, does not find sure either: the library may not cover it."""
+    close = stats.get("dense_top")
+    if close is None:
+        return ""
+    cfg = lib().cfg if _lib is not None else {}
+    weak = float(cfg.get("weak", WEAK))
+    rerank_weak = float(cfg.get("rerank_weak", RERANK_WEAK))
+    if close >= weak or (stats.get("rerank_top") is not None and stats["rerank_top"] >= rerank_weak):
+        return ""
+    return LOW_CLOSENESS.format(close=close)
 
 
 @mcp.tool()

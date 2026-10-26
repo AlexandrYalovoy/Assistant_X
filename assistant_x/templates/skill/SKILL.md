@@ -69,8 +69,12 @@ Notes at the start of an answer of `search_library`:
 
 - "Found by words only: the semantic search is still loading…" — the first 10–30 s after Claude starts; if what you need
   is not in the results, repeat the query in 10–20 s.
-- "…the semantic search on the processor is still loading…" — Claude is open in two windows or tabs, this one searches on
-  the processor; the same: repeat in 10–20 s.
+- "…the semantic search on the processor is still loading…" — this window searches on the processor (Claude is open in
+  two windows or tabs, or the model is loading); the same: repeat in 10–20 s.
+- "Low closeness (0.42): …" — the best fragments are far from the question: the library may have no document on it.
+  Tell the user so first, then answer from general knowledge marked "not from the library".
+- "## Documents on the topic" — after the pages, the cards of documents that are about the question: read their pages
+  before citing them.
 - "Found by words only: no embedding model…" or "…no embeddings file of the fragments…" — the search works worse than
   usual: tell the user in one line and pass on the advice of the note.
 - "The library is empty…" — a new workspace: there is nothing to cite yet. Say so, and offer to sort the user's

@@ -42,7 +42,8 @@ RRF_K = 60
 ALL_PLACES_RX = re.compile(lang.alt("all_places_rx"), re.I)
 CODE_RX = re.compile(r"^[A-Z]-\d{1,6}(?:-\d{1,3})?$")  # N-00001, E-00006-02
 # the weight of the fragments of each kind in the fusion: a card says what a document is about but cites no page
-KIND_WEIGHT = {"text": 1.0, "card": 0.7, "card_q": 1.0, "unit": 1.0}
+KIND_WEIGHT = {"text": 1.0, "card": 0.7, "card_q": 0.85, "unit": 1.0}
+MAX_CARDS = 2  # cards in one answer at most ([search] max_cards): the rest of the k are pages (audit 6, M-030)
 # the fragments of a card ('card' per language, 'card_q' its questions) are one result of kind 'card'
 SHOWN_KIND = {"card_q": "card"}
 # a designation named in the question puts the card of its document first: after the reranking, by place, not by a
@@ -482,7 +483,7 @@ class Library:
             self._reranker = models.load_reranker(self.cfg, self.dml() if dml else self.cfg.get("device"))
         return self._reranker
 
-    def rerank(self, query, order, rows, fused):
+    def rerank(self, query, order, rows, fused, stats=None):
         """order by final = fused / max(fused) + rerank_weight * sigmoid(logit): the reranker refines the hybrid
         order instead of replacing it (a fragment both lists found high keeps its lead over one the reranker alone
         likes). The reranker reads what the vector was made of (common.model_text)."""
@@ -497,12 +498,17 @@ class Library:
         top = max(fused[i] for i in order) or 1.0
         weight = float(self.cfg.get("rerank_weight", RERANK_WEIGHT))
         final = {i: fused[i] / top + weight / (1 + np.exp(-x)) for i, x in zip(order, logits)}
+        if stats is not None and len(logits):  # how sure the reranker is of its best fragment (the low closeness note)
+            stats["rerank_top"] = round(float(1 / (1 + np.exp(-logits.max()))), 3)
         return sorted(order, key=lambda i: -final[i])
 
     # ---------- all together ----------
-    def search(self, query, k=10, dense=None, rerank=None, max_per_doc=3, stats=None, **flt):
-        """stats: a dict to receive how strong the match was (for the call journal and query_log.py)."""
+    def search(self, query, k=10, dense=None, rerank=None, max_per_doc=3, stats=None, max_cards=None, **flt):
+        """stats: a dict to receive how strong the match was (for the call journal and query_log.py). max_cards: the
+        cards of documents in the answer at most ([search] max_cards, 2); the card of a document named in the question
+        by its designation always comes."""
         self.refresh()
+        max_cards = int(self.cfg.get("max_cards", MAX_CARDS)) if max_cards is None else max_cards
         stats = {} if stats is None else stats
         if dense is not False and self.vectors_missing():
             stats["no_vectors"] = self.vectors_missing()
@@ -553,9 +559,9 @@ class Library:
         }
         order = [i for i in order if i in rows]  # a fragment removed by a rebuild a moment ago
         if rerank and order:
-            order = self.rerank(query, order, rows, fused)
+            order = self.rerank(query, order, rows, fused, stats)
         order = [i for i in first if i in rows] + [i for i in order if i not in first]
-        out, per_doc, seen = [], {}, {}
+        out, per_doc, seen, cards = [], {}, {}, 0
         for cid in order:
             r = rows[cid]
             r["kind"] = SHOWN_KIND.get(r["kind"], r["kind"])
@@ -565,8 +571,11 @@ class Library:
                 continue
             if per_doc.get(r["code"], 0) >= max_per_doc:
                 continue
-            per_doc[r["code"]] = per_doc.get(r["code"], 0) + 1
             card = r["kind"] == "card"
+            if card and cards >= max_cards and r["code"] not in named:  # pages answer, cards point to documents
+                continue
+            cards += card
+            per_doc[r["code"]] = per_doc.get(r["code"], 0) + 1
             out.append(
                 dict(
                     code=r["code"],
