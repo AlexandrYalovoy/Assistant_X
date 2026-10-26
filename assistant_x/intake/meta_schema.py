@@ -239,12 +239,13 @@ def profile_rules(raw):
     }
 
 
-def check_batch(raw, work):
+def check_batch(raw, work, meta_path=None):
     """(meta, errors, warnings) of the meta.jsonl of a batch by the rules of the profile of raw (the settings): the one
     check of check-meta (intake_save_meta) and of build, so the cards Claude was told are fine build. Without the
-    state.sqlite of the batch the tids are not checked against its files."""
+    state.sqlite of the batch the tids are not checked against its files. meta_path: another file of lines checked as
+    the meta.jsonl of the batch (intake_save_meta(check_only=True))."""
     work = Path(work)
-    meta, errors = load(work / "meta.jsonl")
+    meta, errors = load(Path(meta_path) if meta_path else work / "meta.jsonl")
     names = None
     if (work / "state.sqlite").exists():
         from assistant_x.intake.state import State

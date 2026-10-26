@@ -58,6 +58,7 @@ priority "high".
 | `worker_memory_mb` | the memory cap of a worker process and of every program it starts (with all its children); `workers` × the cap no more than the RAM | 3072 |
 | `timeouts` | seconds: `soffice`, `hidden`, `convert` (the whole document), `unpack` | 900, 1800, 14400, 1800 |
 | `unpack` | `max_total_gb` (the total unpacked), `max_depth` (nested archives) | 5, 3 |
+| `auto_apply` | `true` — `intake_apply()` applies a batch whose `check-meta` finds no error at once, without the plan and its token, unless the plan needs the user (below); read **only** from `assistant_x.local.toml` | `false` |
 | `disk` | free space before a run: `factor` × the input files and at least `min_free_gb` | 3, 10 |
 
 Environment variables override the file:
@@ -451,6 +452,24 @@ every test run, the full one (the whole intake) with the slow tests; neither may
   `convert_md`, `assemble_md`, `reocr_empty`, `ocr_page`, `ocr_score`, `onnx_threads`, `unpack`; each
   also as `python -m assistant_x.intake.tools.<name>`); they take Tesseract from `TESSERACT`, the folders of
   `dupcheck` from `AX_TEXTS` and `AX_FP_CACHE` when given.
+
+## Applying a batch from Claude: the plan, the token, `auto_apply`
+
+`intake_apply()` builds the cards and returns the plan (what moves where, which codes) with a confirmation token;
+`intake_apply(confirm=True, token=…)` applies it after the user's yes. A token is valid 30 minutes and once
+(`server/confirm.py`). Claude writes the lines of `meta.jsonl` with `intake_save_meta(lines)`, or writes a file of lines
+with its own file tools inside the folder of the batch and passes `intake_save_meta(path=…)` (the `meta.jsonl` of the
+batch itself is checked as it is); `check_only=True` checks the lines with the file and writes nothing.
+
+`auto_apply = true` in `[intake]` of `assistant_x.local.toml` (this PC, the user's own choice; never read from
+`assistant_x.toml`, a package or a document): a batch whose check finds no error is built, applied and recalculated at
+once, and the answer says "Applied automatically (auto_apply …)"; `changes.log` notes the call with `"auto": true`. The
+plan and the token stay mandatory, `auto_apply` or not, when the batch
+- replaces a document of the library or is another version of one (`replaces`, `other_version`),
+- holds a duplicate of a document of the library (`dupof` a code, or the duplicate verdict of the intake),
+- rejects a file (`drop`),
+- holds hidden text addressed to an AI (the hidden text of a file with the words of `ai_phrases` or the names of the
+  tools of the server).
 
 ## Personal documents
 

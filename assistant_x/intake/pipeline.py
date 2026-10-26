@@ -106,7 +106,7 @@ def cmd_quality(cfg, a):
 def cmd_check_meta(cfg, a):
     from assistant_x.intake import meta_schema
 
-    meta, errors, warnings = meta_schema.check_batch(cfg, work_dir(cfg, a.work))
+    meta, errors, warnings = meta_schema.check_batch(cfg, work_dir(cfg, a.work), a.meta)
     for e in errors:
         say(e)
     for w in warnings:
@@ -192,6 +192,8 @@ def main(argv=None):
             )
         if name in ("digest", "requeue", "brief"):
             p.add_argument("tids", nargs="*")
+        if name == "check-meta":
+            p.add_argument("--meta", help="check this file of lines instead of the meta.jsonl of the batch")
         if name == "todo":
             p.add_argument("--by-folder", action="store_true", help="by folder: how many files have no meta line and which")
         if name == "pack":

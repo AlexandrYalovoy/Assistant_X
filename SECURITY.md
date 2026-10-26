@@ -54,7 +54,7 @@ format, archives in the inbox, base packages received from other people. These a
   Over HTTP (`assistant-x serve --http`) it listens on 127.0.0.1 only, every request needs the bearer token of
   `%LOCALAPPDATA%\AssistantX\mcp_http_token.txt`, and a Host or Origin other than 127.0.0.1 or localhost is refused.
   The commands that change the library (`base_install`, `base_update`, `base_remove`, `intake_apply`) need two steps:
-  the plan, then a confirmation that echoes the token of that plan. The token is random, valid 10 minutes, used once,
+  the plan, then a confirmation that echoes the token of that plan. The token is random, valid 30 minutes, used once,
   and bound to the action, its target, the workspace and what the plan was made of (the package file by its manifest
   and checksums, the registry entry of the package to remove, the `meta.jsonl` of the batch): a single call written
   into a document cannot change the library, and a token does not confirm a change in another workspace or of a file

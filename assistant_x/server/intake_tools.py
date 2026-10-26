@@ -440,26 +440,136 @@ def classification():
     return "\n".join(out)
 
 
-def save_meta(lines):
-    """Append the lines to meta.jsonl of the last batch and check the whole file (assistant-x intake check-meta)."""
-    work = _last_work()
-    if not work:
-        return "No batches: run intake_run first."
+def inside(path, folder):
+    """True when path (resolved, links followed) lies inside folder."""
+    try:
+        p, f = os.path.realpath(path), os.path.realpath(folder)
+        return os.path.commonpath([os.path.normcase(p), os.path.normcase(f)]) == os.path.normcase(f)
+    except ValueError:  # another disk
+        return False
+
+
+def _rows(lines):
+    """(rows, error) of lines given as dicts or JSON strings."""
     rows = []
     for x in lines:
+        if isinstance(x, str) and not x.strip():
+            continue
         try:
             rows.append(x if isinstance(x, dict) else json.loads(x))
         except ValueError as e:
-            return f"A line is not JSON ({e}): {str(x)[:200]}"
+            return None, f"A line is not JSON ({e}): {str(x)[:200]}"
     bad = [r for r in rows if not isinstance(r, dict) or not r.get("tid")]
     if bad:
-        return f"A line has no tid: {json.dumps(bad[0], ensure_ascii=False)[:200]}"
-    with open(os.path.join(work, "meta.jsonl"), "a", encoding="utf-8", newline="\n") as f:
-        for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        return None, f"A line has no tid: {json.dumps(bad[0], ensure_ascii=False)[:200]}"
+    return rows, ""
+
+
+def save_meta(lines=None, path=None, check_only=False):
+    """Append the lines to meta.jsonl of the last batch and check the whole file (assistant-x intake check-meta).
+    lines: the lines in the call; path: a file of lines Claude wrote with the client's file tools, inside the batch
+    folder only (the meta.jsonl of the batch itself is checked as it is); check_only: check the file with the lines
+    added, write nothing."""
+    work = _last_work()
+    if not work:
+        return "No batches: run intake_run first."
+    meta = os.path.join(work, "meta.jsonl")
+    own = False
+    if path:
+        if not inside(path, work):
+            return f"The file must lie in the folder of the batch {work}: {path}"
+        own = os.path.normcase(os.path.realpath(path)) == os.path.normcase(os.path.realpath(meta))
+        try:
+            with open(path, encoding="utf-8") as f:
+                given = f.read().splitlines()
+        except OSError as e:
+            return f"The file cannot be read: {e}"
+        lines = ([] if own else given) + list(lines or [])
+    rows, why = _rows(lines or [])
+    if why:
+        return why
+    if not rows and not own:
+        return "No lines: give lines, or path= of a file of lines in the folder of the batch."
+    if check_only:
+        trial = os.path.join(work, "meta.check.jsonl")
+        with open(trial, "w", encoding="utf-8", newline="\n") as out:
+            if os.path.exists(meta):
+                with open(meta, encoding="utf-8") as f:
+                    out.write(f.read().rstrip("\n") + "\n" if os.path.getsize(meta) else "")
+            for r in rows:
+                out.write(json.dumps(r, ensure_ascii=False) + "\n")
+        try:
+            rc, text = _intake("check-meta", "--meta", trial)
+        finally:
+            os.remove(trial)
+        return f"Checked only, nothing written ({len(rows)} lines with meta.jsonl).\n{text}"
+    if rows:
+        with open(meta, "a", encoding="utf-8", newline="\n") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
     rc, text = _intake("check-meta")
     rc2, todo = _intake("todo")
-    return f"Lines written: {len(rows)}.\n{text}\n\nStill without a line:\n{_cut(todo, 3000)}"
+    head = f"Lines written: {len(rows)}." if rows else "meta.jsonl of the batch checked as it is."
+    return f"{head}\n{text}\n\nStill without a line:\n{_cut(todo, 3000)}"
+
+
+def auto_apply_on():
+    """[intake] auto_apply = true in assistant_x.local.toml of the workspace: this PC, written by the user. Never from
+    assistant_x.toml (it may come with a copied workspace or a package) nor from a document."""
+    import tomllib
+
+    from assistant_x.intake import config as intake_cfg
+
+    try:
+        with open(intake_cfg.local_path(), "rb") as f:
+            return (tomllib.load(f).get("intake") or {}).get("auto_apply") is True
+    except (OSError, ValueError):
+        return False
+
+
+def always_ask(work):
+    """Why this batch needs the user's yes even with auto_apply ([] when it does not): a new version that replaces or
+    links a document of the library, a duplicate of a document of the library, a file rejected, hidden text addressed
+    to an AI."""
+    from assistant_x.core import card as C
+    from assistant_x.core.suspect import addressed_to_ai
+    from assistant_x.intake import meta_schema
+    from assistant_x.intake.state import State
+
+    meta, _ = (
+        meta_schema.load(os.path.join(work, "meta.jsonl")) if os.path.exists(os.path.join(work, "meta.jsonl")) else ({}, [])
+    )
+    out = []
+    for tid, m in sorted(meta.items()):
+        if m.get("replaces"):
+            out.append(f"{tid} replaces {m['replaces']} of the library")
+        if m.get("other_version"):
+            out.append(f"{tid} is another version of {m['other_version']} of the library")
+        if m.get("dupof") and C.is_code(str(m["dupof"])):
+            out.append(f"{tid} is a duplicate of {m['dupof']} of the library")
+        if m.get("drop"):
+            out.append(f"{tid} is rejected ({str(m['drop'])[:80]})")
+    st = os.path.join(work, "state.sqlite")
+    rows = State(st).all() if os.path.exists(st) else []
+    for r in rows:
+        m = meta.get(r["tid"], {})
+        if r["status"] == "dup" and r.get("dup_of") and C.is_code(str(r["dup_of"])) and not (m.get("sec") or m.get("part")):
+            if not m.get("dupof"):
+                out.append(f"{r['tid']} is a duplicate of {r['dup_of']} of the library")
+        hidden = os.path.join(work, "log", f"{r['tid']}.hidden.json")
+        if r.get("hidden") and os.path.exists(hidden):
+            try:
+                with open(hidden, encoding="utf-8") as f:
+                    found = json.load(f).get("found") or {}
+            except (OSError, ValueError):
+                found = {}
+            text = " ".join(str(s.get("text") or "") for spans in found.values() for s in spans if isinstance(s, dict))
+            if addressed_to_ai(text):
+                out.append(f"{r['tid']} holds hidden text addressed to an AI")
+    return out
+
+
+AUTO = "Applied automatically (auto_apply = true in assistant_x.local.toml): the check of meta.jsonl found no error"
 
 
 def apply(confirm=False, personal=False, token=None, ask=None):
@@ -479,16 +589,27 @@ def apply(confirm=False, personal=False, token=None, ask=None):
         if ask and ask("Assistant X: move the documents of the batch into the library, as in the plan shown?") is False:
             debuglog.log_change("intake_apply", args, "declined by the user")
             return K.DECLINED
-    debuglog.log_change("intake_apply", args, "started" if confirm else "plan")
     if _alive(_job("run")):
         return "The intake is still running: wait until it ends (intake_status)."
+    note = ""
+    if not confirm and auto_apply_on():
+        work = _last_work()
+        reasons = always_ask(work) if work else ["no batch"]
+        rc, checked = _intake("check-meta")
+        if rc == 0 and not reasons:
+            return _auto_apply(args, personal)
+        note = "auto_apply is on, but this plan needs the user's yes: " + (
+            "; ".join(reasons) if reasons else "the check of meta.jsonl found errors:\n" + _cut(checked, 3000)
+        )
+    debuglog.log_change("intake_apply", args, "started" if confirm else "plan")
     rc, built = _intake("build", *(["--personal"] if personal else []), timeout=3600)
     if rc:
         return "The build failed" + (" (the machine lock is busy)" if rc == BUSY else "") + f":\n{_cut(built, 8000)}"
     rc, plan = _intake("apply", *([] if confirm else ["--dry-run"]), timeout=3600)
     if rc or not confirm:
         return (
-            _cut(built, 4000)
+            (note + "\n\n" if note else "")
+            + _cut(built, 4000)
             + "\n\n"
             + _cut(plan, 8000)
             + (
@@ -504,6 +625,21 @@ def apply(confirm=False, personal=False, token=None, ask=None):
             )
         )
     return _cut(plan, 6000) + "\n\n" + reindex(cpu=False)
+
+
+def _auto_apply(args, personal):
+    """build, apply and the reindex without a token: auto_apply is on, the check found no error and nothing in the
+    plan needs the user (always_ask). changes.log notes it as automatic."""
+    from assistant_x.core import debuglog
+
+    debuglog.log_change("intake_apply", {**args, "auto": True}, "started (auto_apply)")
+    rc, built = _intake("build", *(["--personal"] if personal else []), timeout=3600)
+    if rc:
+        return "The build failed" + (" (the machine lock is busy)" if rc == BUSY else "") + f":\n{_cut(built, 8000)}"
+    rc, done = _intake("apply", timeout=3600)
+    if rc:
+        return f"The apply failed:\n{_cut(done, 8000)}"
+    return f"{AUTO}.\n\n{_cut(done, 6000)}\n\n{reindex(cpu=False)}"
 
 
 def reindex(cpu=False):

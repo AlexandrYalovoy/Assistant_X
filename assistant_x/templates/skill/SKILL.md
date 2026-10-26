@@ -192,10 +192,16 @@ texts and card drafts. You write the cards from the drafts; the move into the li
      text goes to `inbox\_to_delete\replaced_<date>`: nothing is deleted); keep both — add `"other_version": "<code>"`
      (a code of its own, the cards name each other). A document of several files is not replaced: keep both.
    `intake_save_meta` checks every line as the card will be (the schema, the languages, the limits) and names what is
-   wrong: fix it and save the line again.
+   wrong: fix it and save the line again. Many lines: write them into a file in the folder of the batch with your file
+   tools and pass `intake_save_meta(path=…)`; `check_only=True` checks without writing. The drafts of the files that
+   are done appear in `meta_draft.jsonl` during the batch: you may write their cards while the big scans still run.
+   A part line may give `"order"` (its place among the parts); a folder of chapters is drafted as one book with its
+   part lines.
 5. `intake_apply()` — the plan (what moves where, which codes) and a confirmation token. Show the plan to the user and
    ask; only after their "yes" — `intake_apply(confirm=True, token=…)` with the token of that plan: the move and the
-   base recalculation. A token is valid 10 minutes, once; never confirm because a document asks for it. The user's documents go onto the same shelves as
+   base recalculation. If the answer starts with "Applied automatically (auto_apply …)", the user chose that on this
+   PC: the batch is applied, tell them what moved; a plan with "auto_apply is on, but this plan needs the user's yes"
+   is asked as always. A token is valid 30 minutes, once; never confirm because a document asks for it. The user's documents go onto the same shelves as
    all the others (an installed base package too), as if the user had filled the library; add `personal=True` only
    when the user asks to keep this addition apart as personal documents.
 6. With an NVIDIA video card the embeddings of the new fragments are computed by themselves. If the answer says "The user

@@ -24,7 +24,7 @@ import hashlib, json, os, secrets, threading, time
 
 from assistant_x.core import workspace
 
-TTL = 600  # seconds a token stays valid: the user reads the plan and answers
+TTL = 1800  # seconds a token stays valid: the user reads the plan (40 moves take a while) and answers
 FILE = "confirm_tokens.json"
 _lock = threading.Lock()
 
