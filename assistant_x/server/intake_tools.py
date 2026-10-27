@@ -208,6 +208,7 @@ def _exit_code(kind, job):
 
 AGAIN = {  # what Claude calls when a job stopped before the end
     "run": "intake_run(resume=True)",
+    "apply": "intake_apply() (the plan again; an apply stopped halfway is resumed)",
     "reindex": "intake_reindex()",
     "base_install": "base_install(path, resume=True) (or rollback=True to undo)",
     "base_update": "base_update(path, resume=True) (or rollback=True to undo)",
@@ -247,7 +248,7 @@ def interrupted():
     """Lines about the background jobs that failed or were stopped before the end (for the status and the first
     answer of the server)."""
     out = []
-    for kind in ("run", "reindex", "base_export", "base_inspect", "base_install", "base_update", "base_remove"):
+    for kind in ("run", "apply", "reindex", "base_export", "base_inspect", "base_install", "base_update", "base_remove"):
         job = _job(kind)
         if state(kind, job)[0] in ("failed", "stopped"):
             out.append(f"Background job {kind} (started {_ago(job)} ago): {state_text(kind, job)}.")
@@ -357,6 +358,11 @@ def run(night=False, resume=False):
     )
 
 
+def apply_progress_path():
+    """The progress file of the transfer job (build, apply, then the recalculation: intake/apply_job.py)."""
+    return os.path.join(jobs_dir(), "apply.progress.json")
+
+
 def progress_path():
     """The progress file of the base recalculation (search/reindex.py writes it)."""
     return os.path.join(jobs_dir(), "reindex.progress.json")
@@ -405,6 +411,8 @@ def batch_words(data):
 
 def next_step(work, data, running, reindexing):
     """What Claude does next, by the state of the batch."""
+    if _alive(_job("apply")):
+        return "Next (Claude): wait — the transfer into the library runs (intake_status shows its stage)."
     if running:
         return (
             "Next (Claude): wait (intake_status every few minutes); the drafts of the files that are done are in "
@@ -419,34 +427,41 @@ def next_step(work, data, running, reindexing):
     return "Next (Claude): intake_apply() — the plan for the user (every file has its line in meta.jsonl)."
 
 
-def reindex_words(job):
-    """The step of the base recalculation from its progress file."""
-    p = None
+STAGE_NAMES = {
+    "build": "the cards and the plan (build)",
+    "apply": "moving the files into the library (apply)",
+    "build_index": "the search base by words",
+    "embed": "the meaning vectors",
+}
+
+
+def reindex_words(job, path=None):
+    """The step of the base recalculation (or of the transfer: path) from its progress file."""
     from assistant_x.search import reindex as rx
 
-    p = rx.read_progress(progress_path())
+    p = rx.read_progress(path or progress_path())
     if not p:
         return ""
-    stage = {"build_index": "the search base by words", "embed": "the meaning vectors"}.get(p.get("stage"), p.get("stage"))
+    stage = STAGE_NAMES.get(p.get("stage"), p.get("stage"))
     n = f": {p['done']} of {p['total']}" if p.get("total") else ""
     return f"Step: {stage}{n}."
 
 
 def status():
     out = []
-    for kind, what in (("run", "Intake"), ("reindex", "Base recalculation")):
+    for kind, what in (("run", "Intake"), ("apply", "Transfer to the library"), ("reindex", "Base recalculation")):
         job = _job(kind)
         if not job:
             continue
         alive = _alive(job)
         tail = _tail(kind, 8 if alive else 25)
         head = f"## {what}: {state_text(kind, job)} (started {_ago(job)} ago)"
-        if kind == "reindex":
-            step = reindex_words(job) if alive else ""
+        if kind in ("reindex", "apply"):
+            step = reindex_words(job, apply_progress_path() if kind == "apply" else None) if alive else ""
             out.append(head + (f"\n{step}" if step else "") + f"\n{tail}")
         else:
             out.append(head + (f"\n{tail}" if not alive else ""))
-        if kind == "reindex" and not alive and "--cpu" in tail:
+        if kind in ("reindex", "apply") and not alive and "--cpu" in tail:
             out.append(CPU_QUESTION)
     from assistant_x.server import base_tools
 
@@ -467,7 +482,7 @@ def status():
     work = _last_work()
     running = _alive(_job("run"))
     if work and data:
-        out.append(next_step(work, data, running, _alive(_job("reindex"))))
+        out.append(next_step(work, data, running, _alive(_job("reindex")) or _alive(_job("apply"))))
     if work and not running:
         for name in ("summary.md", "intake_quality.md"):
             p = os.path.join(work, name)
@@ -700,8 +715,9 @@ AUTO = "Applied automatically (auto_apply = true in assistant_x.local.toml): the
 
 
 def apply(confirm=False, personal=False, token=None, ask=None):
-    """build, then apply --dry-run (confirm=False: the plan to show the user, with a confirmation token) or apply
-    (confirm=True with that token, server/confirm.py) and the reindex. personal: mark the documents of the batch
+    """build, then apply --dry-run (confirm=False: the plan to show the user, with a confirmation token); confirm=True
+    with that token (server/confirm.py): build, apply and the reindex as one background job (start_apply), the answer at
+    once and the stage in intake_status. personal: mark the documents of the batch
     personal (only when the user asks to keep this addition apart). ask(question): the client asks the user itself
     (confirm.ask_user) where it can; a "no" changes nothing."""
     from assistant_x.core import debuglog
@@ -718,6 +734,8 @@ def apply(confirm=False, personal=False, token=None, ask=None):
             return K.DECLINED
     if _alive(_job("run")):
         return "The intake is still running: wait until it ends (intake_status)."
+    if _alive(_job("apply")):
+        return f"The transfer is already running (started {_ago(_job('apply'))} ago): intake_status shows its stage."
     note = ""
     if not confirm and auto_apply_on():
         work = _last_work()
@@ -729,51 +747,107 @@ def apply(confirm=False, personal=False, token=None, ask=None):
             "; ".join(reasons) if reasons else "the check of meta.jsonl found errors:\n" + _cut(checked, 3000)
         )
     debuglog.log_change("intake_apply", args, "started" if confirm else "plan")
+    if confirm:
+        return start_apply(personal)
     rc, built = _intake("build", *(["--personal"] if personal else []), timeout=3600)
     if rc:
         return "The build failed" + (" (the machine lock is busy)" if rc == BUSY else "") + f":\n{_cut(built, 8000)}"
-    rc, plan = _intake("apply", *([] if confirm else ["--dry-run"]), timeout=3600)
-    if rc or not confirm:
-        return (
-            (note + "\n\n" if note else "")
-            + _cut(built, 4000)
-            + "\n\n"
-            + _cut(plan, 8000)
-            + (
-                ""
-                if rc
-                else K.instruction(
-                    "intake_apply",
-                    P.ROOT,
-                    'intake_apply(confirm=True, token="TOKEN")'
-                    if not personal
-                    else 'intake_apply(confirm=True, personal=True, token="TOKEN")',
-                )
+    rc, plan = _intake("apply", "--dry-run", timeout=3600)
+    return (
+        (note + "\n\n" if note else "")
+        + _cut(built, 4000)
+        + "\n\n"
+        + _cut(plan, 8000)
+        + (
+            ""
+            if rc
+            else K.instruction(
+                "intake_apply",
+                P.ROOT,
+                'intake_apply(confirm=True, token="TOKEN")'
+                if not personal
+                else 'intake_apply(confirm=True, personal=True, token="TOKEN")',
             )
         )
-    return _cut(plan, 6000) + "\n\n" + reindex(cpu=False)
+    )
+
+
+def batch_documents(work):
+    """How many documents the transfer moves: the lines of meta.jsonl that give a shelf (the parts and the dropped
+    files aside)."""
+    from assistant_x.intake import meta_schema
+
+    path = os.path.join(work or "", "meta.jsonl")
+    meta = meta_schema.load(path)[0] if work and os.path.exists(path) else {}
+    return sum(bool(m.get("sec")) and not m.get("drop") for m in meta.values())
+
+
+def start_apply(personal=False, auto=False):
+    """The transfer in the background (intake/apply_job.py: build, apply, the recalculation); the answer at once."""
+    prog = apply_progress_path()
+    if os.path.exists(prog):
+        os.remove(prog)
+    cmd = [sys.executable, "-m", "assistant_x.intake.apply_job", *(["--personal"] if personal else [])]
+    started, text = _start("apply", cmd, AX_PROGRESS=prog)
+    if not started:
+        return f"The transfer did not start: {text}"
+    n = batch_documents(_last_work())
+    return (
+        (f"{AUTO}. " if auto else "")
+        + f"The transfer started in the background: {n} documents; intake_status shows the stage; the base is "
+        "recalculated after it."
+    )
 
 
 def _auto_apply(args, personal):
-    """build, apply and the reindex without a token: auto_apply is on, the check found no error and nothing in the
-    plan needs the user (always_ask). changes.log notes it as automatic."""
+    """build, apply and the reindex without a token, in the background: auto_apply is on, the check found no error and
+    nothing in the plan needs the user (always_ask). changes.log notes it as automatic."""
     from assistant_x.core import debuglog
 
     debuglog.log_change("intake_apply", {**args, "auto": True}, "started (auto_apply)")
-    rc, built = _intake("build", *(["--personal"] if personal else []), timeout=3600)
-    if rc:
-        return "The build failed" + (" (the machine lock is busy)" if rc == BUSY else "") + f":\n{_cut(built, 8000)}"
-    rc, done = _intake("apply", timeout=3600)
-    if rc:
-        return f"The apply failed:\n{_cut(done, 8000)}"
-    return f"{AUTO}.\n\n{_cut(done, 6000)}\n\n{reindex(cpu=False)}"
+    return start_apply(personal, auto=True)
 
 
-def reindex(cpu=False):
-    """build_index.py, then embed.py for the new fragments, in the background. Without a video card embed.py does not
-    start on the processor by itself: the answer carries its estimate and the question for the user."""
+def up_to_date(cfg):
+    """The words "The base is up to date: …" when nothing is to recalculate (no fragment without a vector, no text or
+    card newer than the base), else ""."""
+    from assistant_x.search import reindex as rx
+
+    if not os.path.exists(cfg["db"]) or pending_fragments(cfg):
+        return ""
+    since = max(os.path.getmtime(p) for p in (cfg["db"], cfg["db"] + "-wal") if os.path.exists(p))
+    cards = cfg.get("cards_dir") or ""
+    for name in os.listdir(cards) if os.path.isdir(cards) else ():
+        if name.endswith(".json") and os.path.getmtime(os.path.join(cards, name)) > since:
+            return ""
+    last = rx.read_last(cfg) or {}
+    total = last.get("fragments") or rx.counts(cfg["db"])[0]
+    when = (last.get("finished") or datetime.datetime.fromtimestamp(since).isoformat(timespec="seconds")).replace("T", " ")
+    rate = (
+        f", {last['per_second']:g}/s" + (f" on {last['device']}" if last.get("device") else "")
+        if last.get("per_second")
+        else ""
+    )
+    return f"The base is up to date: last recalculation {when}, {total} fragments{rate}. intake_reindex(force=True) runs it anyway."
+
+
+def reindex(cpu=False, force=False):
+    """build_index.py, then embed.py for the new fragments, in the background; nothing when the base is up to date
+    (force=True runs it anyway). Without a video card embed.py does not start on the processor by itself: the answer
+    carries its estimate and the question for the user."""
     if _alive(_job("reindex")):
         return f"A base recalculation is already running ({_ago(_job('reindex'))}): intake_status."
+    if _alive(_job("apply")):
+        return "The transfer into the library is running: the base is recalculated after it (intake_status)."
+    if not force:
+        from assistant_x.core.common import load_config
+
+        try:
+            fresh = up_to_date(load_config())
+        except Exception:  # noqa: BLE001 — no workspace or base: the recalculation says why
+            fresh = ""
+        if fresh:
+            return fresh
     prog = progress_path()
     if os.path.exists(prog):
         os.remove(prog)

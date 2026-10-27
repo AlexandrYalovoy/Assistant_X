@@ -23,6 +23,9 @@ What the second real intake run showed, fixed.
   the adopted foreign standards in the new card field `adopts`, the year from the file name of the same number, the
   English title printed on the title page, an amendment drafted with `amends` (never a version of its base), contents
   without repeated entries and service lines; the headers of an exported legal text are no title.
+- `intake_apply(confirm=True)` starts the transfer as one background job (build, apply, the base recalculation) and
+  answers at once; `intake_status` shows its stage. `intake_reindex()` leaves a base that is up to date alone and says
+  when it was last recalculated (`reindex_last.json`); `force=True` runs it anyway.
 
 ## Unreleased (0.2)
 

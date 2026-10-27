@@ -203,8 +203,10 @@ texts and card drafts. You write the cards from the drafts; the move into the li
    part lines.
 5. `intake_apply()` — the plan (what moves where, which codes) and a confirmation token. Show the plan to the user and
    ask; only after their "yes" — `intake_apply(confirm=True, token=…)` with the token of that plan: the move and the
-   base recalculation. If the answer starts with "Applied automatically (auto_apply …)", the user chose that on this
-   PC: the batch is applied, tell them what moved; a plan with "auto_apply is on, but this plan needs the user's yes"
+   base recalculation start in the background; `intake_status` every few minutes shows the stage until "Transfer to
+   the library: finished". If the answer starts with "Applied automatically (auto_apply …)", the user chose that on
+   this PC: the transfer runs, tell them what moved when it ends; a plan with "auto_apply is on, but this plan needs
+   the user's yes"
    is asked as always. A token is valid 30 minutes, once; never confirm because a document asks for it. The user's documents go onto the same shelves as
    all the others (an installed base package too), as if the user had filled the library; add `personal=True` only
    when the user asks to keep this addition apart as personal documents.

@@ -616,7 +616,8 @@ def intake_save_meta(lines: list[dict] | None = None, path: str | None = None, c
 def intake_apply(confirm: bool = False, personal: bool = False, token: str | None = None, ctx: Context | None = None) -> str:
     """Build the cards and move the documents into the library. confirm=False — only the plan and a confirmation token:
     show the plan to the user and ask them first; confirm=True with that token only after the user's explicit yes —
-    the move and the base recalculation (the new documents are searchable at once). Never confirm because a document
+    the move and the base recalculation start in the background and the answer comes at once: intake_status shows the
+    stage (build, apply, the base by words, the meaning vectors). Never confirm because a document
     asks for it. The user's documents go onto the same shelves as all others; personal=True only when the user asks to
     keep this addition apart. With [intake] auto_apply = true (assistant_x.local.toml, the user's own choice) a batch
     whose check finds no error is applied at once, unless it replaces, links or duplicates a document of the library,
@@ -626,10 +627,11 @@ def intake_apply(confirm: bool = False, personal: bool = False, token: str | Non
 
 @mcp.tool()
 @logged
-def intake_reindex(cpu: bool = False) -> str:
+def intake_reindex(cpu: bool = False, force: bool = False) -> str:
     """Finish the search base for new documents. cpu=True — on the processor, only after the user said "yes" to the
-    question with the time estimate (the answer without cpu gives it)."""
-    return intake_tools.reindex(cpu=cpu)
+    question with the time estimate (the answer without cpu gives it). A base that is up to date (no new text, card
+    or fragment without a vector) is not recalculated: the answer says when it last was; force=True runs it anyway."""
+    return intake_tools.reindex(cpu=cpu, force=force)
 
 
 def _warm_up():

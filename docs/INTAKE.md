@@ -512,7 +512,13 @@ cutting off.
 
 `intake_apply()` builds the cards and returns the plan (what moves where, which codes) with a confirmation token;
 `intake_apply(confirm=True, token=…)` applies it after the user's yes. A token is valid 30 minutes and once
-(`server/confirm.py`). Claude writes the lines of `meta.jsonl` with `intake_save_meta(lines)`, or writes a file of lines
+(`server/confirm.py`). The transfer runs in the background as one job (`intake/apply_job.py`: build, apply, then the
+base recalculation) and the answer comes at once ("The transfer started in the background: N documents…");
+`intake_status` shows its stage (`build`, `apply`, `build_index`, `embed`) and the next step after it; a second call
+while it runs says so. The plan itself stays a call that waits (build and `apply --dry-run`). `intake_reindex()` does
+nothing when the base is up to date — no fragment without a vector, no text or card newer than the base — and says
+when it was last recalculated (`reindex_last.json` beside the base: start, end, fragments, vectors per second, the
+device); `intake_reindex(force=True)` runs it anyway. Claude writes the lines of `meta.jsonl` with `intake_save_meta(lines)`, or writes a file of lines
 with its own file tools inside the folder of the batch and passes `intake_save_meta(path=…)` (the `meta.jsonl` of the
 batch itself is checked as it is); `check_only=True` checks the lines with the file and writes nothing.
 

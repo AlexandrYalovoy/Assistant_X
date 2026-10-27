@@ -99,13 +99,34 @@ def test_auto_apply_only_from_the_local_settings(batch):
     assert intake_tools.auto_apply_on()
 
 
+def run_job_here(monkeypatch, root):
+    """_start of the server that runs the transfer job in this process (the recalculation left out); [commands]."""
+    from assistant_x.intake import apply_job
+
+    started, call = [], apply_job.proc.call
+    monkeypatch.setattr(
+        apply_job.proc,
+        "call",
+        lambda cmd, **kw: started.append("reindex") or 0 if "assistant_x.search.reindex" in cmd else call(cmd, **kw),
+    )
+
+    def start(kind, cmd, **env):
+        started.append((kind, cmd[1:3]))
+        monkeypatch.chdir(root)
+        return apply_job.main(cmd[3:]) == 0, ""
+
+    monkeypatch.setattr(intake_tools, "_start", start)
+    return started
+
+
 def test_auto_apply_applies_a_clean_batch(batch, monkeypatch):
     root, work, t = batch
     _auto(root)
-    monkeypatch.setattr(intake_tools, "reindex", lambda cpu=False: "reindex started")
+    started = run_job_here(monkeypatch, root)
     intake_tools.save_meta([doc_line(t, "L", "Книга", "Book", year=2020)])
     out = intake_tools.apply(confirm=False)
-    assert out.startswith(intake_tools.AUTO) and "reindex started" in out and 'token="' not in out
+    assert out.startswith(intake_tools.AUTO) and "started in the background: 1 documents" in out and 'token="' not in out
+    assert started == [("apply", ["-m", "assistant_x.intake.apply_job"]), "reindex"]
     assert not (root / "inbox" / "text.pdf").exists()  # moved into the library
     from assistant_x.core import debuglog
 
