@@ -8,6 +8,7 @@ base was last recalculated."""
 import json, os, sqlite3, subprocess, sys, time
 
 import psutil
+import pytest
 
 from assistant_x.search import reindex
 from assistant_x.server import intake_tools
@@ -121,3 +122,9 @@ def test_a_redone_text_or_its_scores_make_the_base_old(tmp_path, monkeypatch):
     assert intake_tools.up_to_date(cfg).startswith("The base is up to date")
     (tmp_path / "texts" / "N-00001.pages.json").unlink()  # a text taken out: the folder changes
     assert intake_tools.up_to_date(cfg) == ""
+
+
+def test_reindex_help_builds_nothing(monkeypatch, capsys):
+    """--help of the recalculation shows its options; it once built the base in the middle of a running redo."""
+    monkeypatch.setattr(reindex.proc, "call", lambda *a, **k: pytest.fail("a step was started"))
+    assert reindex.main(["--help"]) == 0 and "--cpu" in capsys.readouterr().out

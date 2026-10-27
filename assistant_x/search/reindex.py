@@ -77,6 +77,9 @@ def main(argv=None):
     from assistant_x.core.common import load_config
 
     argv = sys.argv[1:] if argv is None else argv
+    if {"-h", "--help"} & set(argv):  # the options only: --help once built the base in the middle of a redo
+        print(__doc__)
+        return 0
     py, started = sys.executable, time.time()
     write_progress("build_index")
     rc = proc.call([py, "-m", "assistant_x.search.build_index"])
