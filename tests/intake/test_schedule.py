@@ -26,7 +26,7 @@ def test_cost_and_heavy():
 
 def test_shard_count():
     assert schedule.shard_count(29, 6) == 1  # too few pages read by OCR
-    assert schedule.shard_count(848, 6) == 6  # the scan of the first batch: every worker
+    assert schedule.shard_count(848, 6) == 18  # the scan of the first batch: three short ranges a worker
     assert schedule.shard_count(100, 6) == 5  # at least SHARD_PAGES a range
     assert schedule.shard_count(848, 1) == 1  # one worker: nothing to gain
 
@@ -135,11 +135,11 @@ def test_a_long_scan_is_read_in_page_ranges(fake):
     seen, rows = fake()
     ranges = sorted(p for fn, t, p in seen if fn == "convert_shard")
     tid = rows["text.pdf"]["tid"]
-    assert len(ranges) == 4 and ranges[0][0] == 1 and ranges[-1][1] == 230
+    assert len(ranges) > 4 and ranges[0][0] == 1 and ranges[-1][1] == 230  # more ranges than workers: short ones
     conv = [i for i, (fn, t, _) in enumerate(seen) if fn == "convert" and t == tid]
     shards = [i for i, (fn, t, _) in enumerate(seen) if fn == "convert_shard"]
     assert len(conv) == 1 and conv[0] > max(shards)  # assembled after every range is back
-    assert rows["text.pdf"]["status"] == "done" and rows["text.pdf"]["shards"] == 4
+    assert rows["text.pdf"]["status"] == "done" and rows["text.pdf"]["shards"] == len(ranges)
 
 
 def test_ocr_shards_off(fake):

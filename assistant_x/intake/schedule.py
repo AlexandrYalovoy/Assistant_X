@@ -23,6 +23,7 @@ HEAVY_SECONDS = 900  # an estimate from which a task is heavy (15 min of one wor
 HEAVY_SHARE = 0.7  # the share of the free memory (past the reserve) the caps of heavy tasks may take together
 SHARD_MIN = 30  # pages read by OCR (scanned, or text pages with a picture) from which a document is cut into ranges
 SHARD_PAGES = 20  # pages read by OCR of a range at least (a range is a task: fewer would cost more than they save)
+SHARD_WORKERS = 3  # page ranges of one document a worker at most
 SHARD_MODES = ("auto", "off")
 
 
@@ -40,10 +41,12 @@ def heavy(cost_s, pages, thick):
 
 
 def shard_count(scans, workers):
-    """Into how many page ranges the OCR of a document of `scans` scanned pages is cut (1: not cut)."""
+    """Into how many page ranges the OCR of a document of `scans` scanned pages is cut (1: not cut): up to SHARD_WORKERS
+    ranges a worker, so the last ranges of a long scan, started behind the cheaper files, are short (round 3 of the
+    pipeline test: twelve ranges of 46 pages of a 558-page book ran 200 s each at the end of the batch)."""
     if workers < 2 or scans < SHARD_MIN:
         return 1
-    return max(1, min(workers, scans // SHARD_PAGES))
+    return max(1, min(SHARD_WORKERS * workers, scans // SHARD_PAGES))
 
 
 def shard_ranges(pages, scan_pages, k):
