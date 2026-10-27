@@ -541,8 +541,8 @@ def prep(job: Job) -> Prep:
     # the scanned pages: convert reads them by OCR even when a stamp or a header gives them some text layer
     scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area)]
     # the other pages with a picture: OCR reads the picture once (ocr_page.beside_layer), the order of the work counts it
-    pictures = sum(bool(p.get_images()) for i, p in enumerate(doc) if i + 1 not in set(scans))
-    res.update(ocr_pages=len(scans), scan_pages=scans, image_pages=pictures)
+    pictures = [i + 1 for i, p in enumerate(doc) if i + 1 not in set(scans) and p.get_images()]
+    res.update(ocr_pages=len(scans), scan_pages=scans, image_pages=len(pictures), picture_pages=pictures)
     fp = dupcheck.fingerprint("\n".join(texts[:30]))
     res.update(pdf=str(pdf), fp=sorted(fp), phrases=len(fp), prep_seconds=round(time.time() - t0, 1))
     # plain text of the text layer: the fallback of assemble_md for pages the layout analysis loses

@@ -25,9 +25,9 @@ def test_cost_and_heavy():
 
 
 def test_shard_count():
-    assert schedule.shard_count(59, 6) == 1  # too few scanned pages
+    assert schedule.shard_count(29, 6) == 1  # too few pages read by OCR
     assert schedule.shard_count(848, 6) == 6  # the scan of the first batch: every worker
-    assert schedule.shard_count(100, 6) == 2  # at least SHARD_PAGES a range
+    assert schedule.shard_count(100, 6) == 5  # at least SHARD_PAGES a range
     assert schedule.shard_count(848, 1) == 1  # one worker: nothing to gain
 
 

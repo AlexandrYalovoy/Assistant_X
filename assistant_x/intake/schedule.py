@@ -10,7 +10,7 @@ tested by itself.
   pages (Batch.memory_for). Heavy tasks run side by side while their caps fit into the free memory of the PC (psutil,
   minus the reserve of balance.py, 70 % of it), re-evaluated at every admission; one worker stays for light tasks while
   there are any (M-014).
-- The OCR of a long scan is cut into page ranges (shards) that the persistent pool runs as tasks of their own, on
+- The OCR of a long scan, or of a long text with pictures on its pages (a scan with a visible layer), is cut into page ranges (shards) that the persistent pool runs as tasks of their own, on
   every worker; the Markdown is assembled when all of them are back, from the cache of convert_md (M-020).
   [intake] ocr_shards = "off" turns the cutting off (the conversion of a document in one task, as in 0.1)."""
 
@@ -18,11 +18,11 @@ import heapq, itertools, math
 
 # seconds per page measured on the first real batch (audit 6): a text page, a scanned page read by OCR
 TEXT_SECONDS, SCAN_SECONDS = 0.5, 3.3
-PICTURE_SECONDS = 1.0  # more for a text page with a picture: one sparse OCR reading of it (audit 7)
+PICTURE_SECONDS = 2.0  # more for a text page with a picture: its OCR reading (pipeline test round 1: 2.1-3.6 s)
 HEAVY_SECONDS = 900  # an estimate from which a task is heavy (15 min of one worker)
 HEAVY_SHARE = 0.7  # the share of the free memory (past the reserve) the caps of heavy tasks may take together
-SHARD_MIN = 60  # scanned pages from which the OCR of a document is cut into ranges
-SHARD_PAGES = 40  # scanned pages of a range at least (a range is a task: fewer would cost more than they save)
+SHARD_MIN = 30  # pages read by OCR (scanned, or text pages with a picture) from which a document is cut into ranges
+SHARD_PAGES = 20  # pages read by OCR of a range at least (a range is a task: fewer would cost more than they save)
 SHARD_MODES = ("auto", "off")
 
 
