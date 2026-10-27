@@ -367,14 +367,16 @@ class Batch:
 
             while queue or inflight or len(ready):
                 while len(inflight) < workers + 1:  # the pool has its own queue: one task more keeps it busy
-                    item = ready.take(lambda it: False)  # a light conversion first
-                    if item is None and queue:
+                    # prep first (seconds a file): every cost and every page range is known early, so the OCR of a big
+                    # scan does not start last behind the conversions of the small files (pipeline test round 2)
+                    if queue:
                         tid = queue[0]
                         if not (tid in big and heavy_caps and not may_heavy(("prep", tid, None, (), None, True))):
                             queue.pop(0)  # small files first: a big one waits while the memory of heavy tasks is taken
                             self.state.update(tid, status="running")
                             send("prep", tid, intake_work.prep, self.job(self.state.get(tid)), is_heavy=tid in big)
                             continue
+                    item = ready.take(lambda it: False)  # then a light conversion, cheapest first
                     if item is None:
                         item = ready.take(may_heavy)
                     if item is None:
