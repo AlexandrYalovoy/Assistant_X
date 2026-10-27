@@ -6,11 +6,12 @@ every phrase appears twice gets the flag "doubled", the quality report lists it,
 intake redo accepts a text that is no longer doubled."""
 
 import json
+from pathlib import Path
 
 import pymupdf
 
 from assistant_x.core.formats import read_pages_info, write_pages_info
-from assistant_x.intake import ocr_redo, quality_report, work as intake_work
+from assistant_x.intake import config as intake_cfg, ocr_redo, quality_report, work as intake_work
 from assistant_x.intake.tools import assemble_md, convert_md, ocr_page, ocr_score
 from tests.corpus import documents
 from tests.intake.intake_fixtures import FONT
@@ -170,34 +171,113 @@ def test_redo_counts_known_words_once_per_page(tmp_path):
     assert "fewer known words" in ocr_redo.verdict(r, tmp_path, 10)
 
 
-def test_redo_reads_the_page_images_only_for_a_broken_font_or_lost_words(tmp_path, monkeypatch):
-    clean = " ".join(documents.sentences(730, 4))
-    texts = {"X": f"=== page 1 ===\n\n{clean}\n\n", "X_img": f"=== page 1 ===\n\n{clean}\n\n"}
+def test_redo_reads_the_page_images_only_for_a_broken_font_or_lost_words():
+    md = f"=== page 1 ===\n\n{' '.join(documents.sentences(730, 4))}\n\n"
+    layer, scan = {"pages": 1, "ocr_pages": 0}, {"pages": 1, "ocr_pages": 1}
+    known, score = ocr_redo.known_words(md), ocr_redo.words_score(md)
+    assert not ocr_redo.second_reading(md, layer, old_known=known)  # a clean layer text that kept its words
+    assert ocr_redo.second_reading(md, layer, old_known=known, old_broken=True)  # a broken font of the old text
+    assert ocr_redo.second_reading(md, layer, old_known=3 * known)  # the layer lost known words
+    assert not ocr_redo.second_reading(md, scan, old_known=3 * known)  # a scan has no layer to blame
+    assert ocr_redo.second_reading(md, layer, old_score=score + ocr_redo.REDO_LOSS + 1, old_known=known)  # poor layer
+    assert not ocr_redo.second_reading(md, layer, old_score=score + 3, old_known=known)
+    assert ocr_redo.best_variant({"pipeline": md, "page images": md}, known) == "pipeline"  # a tie: the first reading
+
+
+def _redo_library(cfg, pages):
+    """Library PDFs and doubled old texts of codes {code: pages} (every phrase of a page twice)."""
+    lib = cfg.library / "01_Standards"
+    lib.mkdir(parents=True, exist_ok=True)
+    man = ["path\tsize\tchanged\tsha256\tcode"]
+    for i, (code, n) in enumerate(pages.items()):
+        doc = pymupdf.open()
+        for _ in range(n):
+            doc.new_page()
+        doc.save(lib / f"{code}.pdf")
+        man.append(f"library\\01_Standards\\{code}.pdf\t1\t-\tab\t{code}")
+        old = "".join(
+            f"=== page {p} ===\n\n{' '.join(documents.sentences(800 + 10 * i + p, 3))}\n"
+            f"{' '.join(documents.sentences(800 + 10 * i + p, 3))}\n\n"
+            for p in range(1, n + 1)
+        )
+        (cfg.index / "texts" / f"{code}.md").write_text(old, encoding="utf-8")
+    (cfg.index / "manifest.tsv").write_text("\n".join(man) + "\n", encoding="utf-8")
+
+
+def test_redo_reads_as_the_intake_and_writes_each_document_when_ready(project, monkeypatch):
+    """redo runs prep, the OCR of a long scan in page ranges and convert on the pool as the intake does, with the
+    scanned pages of prep; the biggest document first; each text is replaced once its document is read (results.jsonl
+    keeps a line a document) and a second run with --reuse takes the finished readings without reading again."""
+    from assistant_x.intake import process, schedule
+
+    root, cfg = project
+    pages = {"N-00001": 3, "N-00002": 2 * schedule.SHARD_MIN}
+    _redo_library(cfg, pages)
     calls = []
 
-    def variant(base, tid, imgocr):
-        calls.append(tid)
-        return texts[tid], {"pages": 1, "ocr_pages": 0}
+    def prep(job):
+        calls.append(("prep", job["tid"]))
+        n = pages[job["tid"].split("_")[0]]
+        return {
+            "status": "prepped",
+            "pages": n,
+            "pdf": job["src"],
+            "ocr_pages": n,
+            "scan_pages": list(range(1, n + 1)),
+            "picture_pages": [],
+            "phrases": 0,
+            "prep_seconds": 0.1,
+        }
 
-    monkeypatch.setattr(ocr_redo, "_variant", variant)
-    pdf = tmp_path / "X.pdf"
-    pdf.write_bytes(b"%PDF-1.4\n")
-    known = ocr_redo.known_words(texts["X"])
-    r = ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=known)
-    assert calls == ["X"] and r["variant"] == "pipeline"  # a clean layer text that kept its words: one reading
+    def convert_shard(job):
+        calls.append(("shard", job["tid"], tuple(job["pages"])))
+        return {"status": "shard", "pages": job["pages"], "seconds": 1.0}
+
+    def convert(job):
+        calls.append(("convert", job["tid"], len(job.get("scan_pages") or [])))
+        code, w = job["tid"].split("_")[0], Path(job["work"])
+        (w / "md").mkdir(exist_ok=True)
+        text = "".join(
+            f"=== page {p} ===\n\n{' '.join(documents.sentences(800 + 10 * list(pages).index(code) + p, 3))}\n\n"
+            for p in range(1, pages[code] + 1)
+        )
+        (w / "md" / f"{job['tid']}.md").write_text(text, encoding="utf-8")
+        return {"status": "converted", "convert_seconds": 2.0}
+
+    monkeypatch.setattr(intake_work, "prep", prep)
+    monkeypatch.setattr(intake_work, "convert", convert)
+    monkeypatch.setattr(intake_work, "convert_shard", convert_shard)
+    monkeypatch.setattr(intake_cfg, "can_ocr", lambda c: True)
+    monkeypatch.setattr(process, "regulated_pool", lambda *a, **k: (process.Inline(), 4))
+
+    class A:
+        codes, worst, below, dry_run, reuse = list(pages), None, None, False, None
+
+    assert ocr_redo.cmd_redo(cfg, A()) == 0
+    assert calls[0] == ("prep", "N-00002")  # the biggest first
+    shards = [c for c in calls if c[0] == "shard"]
+    assert len(shards) == schedule.shard_count(2 * schedule.SHARD_MIN, 4) > 1 and shards[0][1] == "N-00002"
+    assert ("convert", "N-00002", 2 * schedule.SHARD_MIN) in calls  # the scanned pages of prep reach the conversion
+    assert ("convert", "N-00001", 3) in calls
+    for code in pages:
+        new = (cfg.index / "texts" / f"{code}.md").read_text(encoding="utf-8")
+        assert ocr_redo.doubling(new)[0] == 0  # replaced: no longer doubled
+    work = next(cfg.work.glob("redo/*"))
+    lines = [json.loads(ln) for ln in (work / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert sorted(r["code"] for r in lines) == list(pages) and all(r["replaced"] for r in lines)
+    assert next(r for r in lines if r["code"] == "N-00002")["ranges"] == len(shards) and lines[0]["busy"] > 0
     calls.clear()
-    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=known, old_broken=True)
-    assert calls == ["X", "X_img"]  # a broken font of the old text: the page images too
-    calls.clear()
-    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=3 * known)
-    assert calls == ["X", "X_img"]  # the layer lost known words
-    calls.clear()
-    score = ocr_redo.words_score(texts["X"])
-    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_score=score + ocr_redo.REDO_LOSS + 1, old_known=known)
-    assert calls == ["X", "X_img"]  # a poor visible layer: well below the old score
-    calls.clear()
-    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_score=score + 3, old_known=known)
-    assert calls == ["X"]  # a score that merely did not grow
+    A.reuse = str(work)
+    for code in pages:  # the old texts back, as if the first run had been stopped before writing
+        (cfg.index / "texts" / f"{code}.md").write_text(
+            (cfg.inbox / "_to_delete" / next((cfg.inbox / "_to_delete").iterdir()).name / f"{code}.md").read_text(
+                encoding="utf-8"
+            ),
+            encoding="utf-8",
+        )
+    assert ocr_redo.cmd_redo(cfg, A()) == 0
+    assert not [c for c in calls if c[0] != "prep"]  # read before: no OCR, no conversion
+    assert all(ocr_redo.doubling((cfg.index / "texts" / f"{c}.md").read_text(encoding="utf-8"))[0] == 0 for c in pages)
 
 
 def test_a_phrase_repeated_many_times_is_no_doubled_text():

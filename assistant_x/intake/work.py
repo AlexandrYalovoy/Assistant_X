@@ -579,13 +579,14 @@ def convert_shard(job):
     """The OCR of a range of pages of a long scan (job["pages"]: [first, last]) into the cache of convert_md, as a task
     of its own (schedule.py); convert() of the file then finds those chunks done. An error is reported, not final: the
     conversion of the file reads what a range left out."""
+    t0 = time.time()
     w, tid = Path(job["work"]), job["tid"]
     for d in ("cache", "log"):
         (w / d).mkdir(parents=True, exist_ok=True)
     log = w / "log" / f"{tid}.log"
     jobs = _convert_jobs(job, job["pages"])
     err, _ = _tool("convert_md.py", jobs, w / "cache", "0", job=job, log=log, timeout=job["timeouts"]["convert"])
-    return err or {"status": "shard", "pages": job["pages"]}
+    return err or {"status": "shard", "pages": job["pages"], "seconds": round(time.time() - t0, 1)}
 
 
 def convert(job: Job) -> Convert:

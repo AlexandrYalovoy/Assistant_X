@@ -222,6 +222,7 @@ def main(argv=None):
             )
             p.add_argument("--below", type=float, help="the threshold for --worst (default: common.QUALITY ocr_note)")
             p.add_argument("--dry-run", action="store_true", help="recognize and score, do not replace the text")
+            p.add_argument("--reuse", help="a redo folder of an earlier (stopped) run: the texts it finished are taken")
     a = ap.parse_args(argv)
     cfg = intake_cfg.load(a.config)
     if a.cmd not in LOCKED:
