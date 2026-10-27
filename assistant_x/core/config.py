@@ -34,12 +34,12 @@ SEARCH = {
 # the defaults of [intake]: the one place for them (intake/config.py, intake/balance.py, core/common.DISK read them)
 INTAKE = {
     "stage_mode": "inproc",
-    "workers": 8,
+    "workers": 16,
     "profile": "auto",
     "priority": "below_normal",
     "affinity": "auto",
     "idle_minutes": 7,
-    "cpu_share_idle": 0.75,
+    "cpu_share_idle": 0.8,
     "cpu_share_active": 0.5,
     "temp_max_c": 85,
     "temp_cool_c": 75,

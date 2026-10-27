@@ -33,7 +33,7 @@ profile = "general"
 # table_rows = false               # true: a table is embedded as a line per row "header: value; …"
 
 [intake]
-# workers = 8
+# workers = 16
 # profile = "auto"                 # load of the PC: "auto" | "weak" | "night"
 # priority = "below_normal"        # "below_normal" | "idle" | "normal"
 # affinity = "auto"                # "auto" | "ecores" | "all" | "8,9,10"

@@ -47,11 +47,11 @@ priority "high".
 | `[paths]` `reports` | the reports of the hidden text check | `reports` |
 | `soffice`, `tesseract`, `tessdata`, `sevenzip` | programs; empty — look for them: the bundled programs folder `%LOCALAPPDATA%\AssistantX\programs` (portable copies of an offline media: `Tesseract-OCR`, `LibreOffice\program`, `7-Zip`; the folder — `AX_PROGRAMS`), the path of the settings, `%LOCALAPPDATA%\Programs`, `Program Files`, PATH; `-` — do not use. A path in the settings that is not there (another PC) does not stop the search. The paths of this PC are written to `assistant_x.local.toml` beside it (not in Git) and are read only from there: a program path in the shared `assistant_x.toml` is ignored, so a copied or received settings file never chooses which program runs | |
 | `stage_mode` | `inproc` — long-lived worker processes (`pool.py`), `subprocess` — the former mode: a python process per tool | `inproc` |
-| `workers` | at most this many worker processes (0 — everything in the main process, for debugging); how many really — `balance.py` decides by the PC | 8 |
+| `workers` | at most this many worker processes (0 — everything in the main process, for debugging); how many really — `balance.py` decides by the PC | 16 |
 | `profile` | `auto` — by the measurements; `day` — always "at the computer"; `weak` — a weak PC (1–2 workers, 1 thread, always "at the computer"); `night` — always "free" | `auto` |
 | `priority` | `below_normal` — below the user's programs (always, in both states), `idle`, `normal` | `below_normal` |
 | `affinity` | `auto` — all CPUs while the PC is free, E-cores (when there are enough of them) while someone works at it; `all`, `ecores`, a list `[2, 3]` — by hand | `auto` |
-| `idle_minutes`, `cpu_share_idle`, `cpu_share_active` | the PC is "free" after this many minutes without input; the CPU share in the states "free" and "at the computer" | 7, 0.75, 0.5 |
+| `idle_minutes`, `cpu_share_idle`, `cpu_share_active` | the PC is "free" after this many minutes without input; the CPU share in the states "free" and "at the computer" | 7, 0.8, 0.5 |
 | `temp_max_c`, `temp_cool_c` | above — remove workers one by one; add them again only below the second threshold | 85, 75 |
 | `heavy_mb` | before their preparation (the pages are not known yet) bigger files go after the small ones and take a heavy slot | 40 |
 | `ocr_shards` | `auto` — the OCR of a long scan (60 scanned pages and more) is cut into page ranges that every worker reads, the text is assembled when all are back; `off` — a document in one task, as in 0.1 | `auto` |
@@ -325,18 +325,27 @@ active waiting (`tools\onnx_threads.py`, any session, also the ones pymupdf4llm 
 cores, and several documents at once wasted CPU on waiting.
 
 The load on the PC (`balance.py`) is decided by measurements on any PC, without core numbers and processor models. At the
-start, a survey: CPU (logical, cores, E-cores if the CPU is hybrid), RAM, video card. The budget: workers — no more than
-cores − 2 and as many as fit into the available memory minus a reserve (≥ 4 GB or 15 % of the RAM, whichever is more,
-half of `worker_memory_mb` per worker); threads per worker — (logical CPUs − 2) / workers (onnxruntime, OpenMP, MKL,
-torch). The regulator (a thread in `pool.py`, every 4 s) measures the total CPU and the share of our processes
-(Job Object accounting: the load of others shows apart), the disk (`% Disk Time`), the available memory, the time since
+start, a survey: CPU (logical, cores, E-cores if the CPU is hybrid), RAM, video card. The budget: a worker is one core
+(one thread of onnxruntime, OpenMP, MKL, torch; `threads` of `[intake]` changes it, `ocr_threads` stays the Tesseract
+threads); "free" — as many workers as there are logical CPUs past the reserve of 2, as fit into the available memory
+minus a reserve (≥ 4 GB or 15 % of the RAM, whichever is more, a third of `worker_memory_mb` per worker) and no more
+than `workers`; "at the computer" — at most the cores − 2 and the share `cpu_share_active`. The regulator (a thread in
+`pool.py`, every 4 s) measures the total CPU and the share of our processes
+(Job Object accounting: the load of others shows apart), the disk (busy = 100 − `% Idle Time`, and the latency
+`Avg. Disk sec/Transfer`), the available memory, the time since
 the last input (`GetLastInputInfo`), the temperature (LibreHardwareMonitor / OpenHardwareMonitor when installed,
 otherwise `MSAcpi_ThermalZoneTemperature`, the video card — `nvidia-smi`; without a sensor the heat shows by the falling
 frequency under load, `% Processor Performance`) and keeps: "free" (no input for `idle_minutes` and no load of others) —
-a total CPU of 65–80 %; "at the computer" — 40–55 %. The user is back — in one step the extra workers pause; gone — one
-worker more every 45 s. Always: a priority below normal and a low disk priority, 2 CPUs free, a memory reserve, the disk
-≤ 80 %, the temperature below `temp_max_c`. Emergencies: memory < 1.5 GB, CPU > 90 % or disk > 90 % for more than 15 s —
-half of the workers pause, memory < 1 GB — all of them. A pause: the worker gets no new tasks, its tree (with LibreOffice
+a total CPU of 70–85 %; "at the computer" — 40–55 %. The user is back — in one step the extra workers pause; gone — one
+worker more every 45 s. Always: a priority below normal and a low disk priority, 2 CPUs free, a memory reserve, the
+temperature below `temp_max_c`; the disk slows the work only "at the computer" and only when a transfer takes more
+than 50 ms on average (a fast SSD 100 % busy at 0.2 ms is no reason). Emergencies: memory < 1.5 GB, CPU > 90 % or a
+disk 90 % busy with transfers over 200 ms for more than 15 s — half of the workers pause, memory < 1 GB — all of them.
+`balance.log` gets a line of the load every minute even when nothing changes ("cpu 42 % (ours 31 %), workers 8/8
+active, mem 17.2 GB free, disk 1 ms, gpu 0 %"), and `summary.md` the mean CPU share of the batch and the minutes with
+paused workers. The time left of `intake status` goes by the cost of the files (`schedule.cost`: text pages, scans,
+pages with a picture; a file not prepared yet by its size) over the cost done per second so far, told once 5 files are
+done: the cheap files go first, so pages per second would promise too much. A pause: the worker gets no new tasks, its tree (with LibreOffice
 and Tesseract) gets the IDLE priority until the end of the current task; on an emergency and overheating the tree is
 suspended, the pause time does not count against the time limit of the task. The decisions go to
 `work\<batch>\balance.log` (time, state, active/total, measurements, reasons).

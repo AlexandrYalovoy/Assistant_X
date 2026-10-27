@@ -40,6 +40,16 @@ def hidden_line(work, hidden):
     return line
 
 
+def load_of(work):
+    """The load line of a batch from the load.json the regulator writes beside balance.log ('' without it)."""
+    from assistant_x.intake import balance
+
+    try:
+        return balance.load_line(json.loads((Path(work) / "load.json").read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return ""
+
+
 def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
     from assistant_x.intake import quality_report
 
@@ -69,7 +79,7 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"- Programs: LibreOffice {'present' if cfg.soffice else 'MISSING (DOC/DOCX are skipped)'}; "
         f"Tesseract {'present' if intake_cfg.can_ocr(cfg) else 'MISSING (scans without OCR, marked)'}",
         f"- {quality_report.summary_line(quality)}" if quality else "- Quality: no documents done",
-        f"- Time: {seconds / 60:.1f} min",
+        f"- Time: {seconds / 60:.1f} min" + (f"; {load}" if (load := load_of(work)) else ""),
         "",
         "Next (Claude): check meta_draft.jsonl and write meta.jsonl (a line per file), "
         "then `assistant-x intake build` and `assistant-x intake apply --dry-run`, `assistant-x intake apply`.",
@@ -123,19 +133,7 @@ def status_data(work, state, started=None, now=None):
         for r in rows
         if r["status"] in ("error", "skipped")
     ]
-    # the time left: the pages done so far over the time spent, for the pages still to do (a file not prepared yet
-    # counts as the mean pages of the known ones)
-    eta = None
-    pages_of = [r.get("pages") or 0 for r in rows]
-    known = [p for p in pages_of if p]
-    mean = sum(known) / len(known) if known else 0
-    did = sum(r.get("pages") or 0 for r in done if r["status"] != "skipped")
-    did += sum((x.get("progress") or [0])[0] for x in running)
-    left = sum((r.get("pages") or mean) for r in rows if r["status"] in ("queued", "running")) - sum(
-        (x.get("progress") or [0])[0] for x in running
-    )
-    if started and did and now > started:
-        eta = round(left / (did / (now - started))) if left > 0 else 0
+    eta = time_left(rows, running, started, now)
     return {
         "work": str(work),
         "total": len(rows),
@@ -147,6 +145,43 @@ def status_data(work, state, started=None, now=None):
         "eta_seconds": eta,
         "ocr_seconds": round(sum(r.get("ocr_seconds") or 0 for r in done)),
     }
+
+
+ETA_DONE = 5  # files done before the time left is told
+
+
+def file_cost(r):
+    """The estimated seconds of the conversion of a prepared file (schedule.cost), None before prep."""
+    from assistant_x.intake import schedule
+
+    if not r.get("pages"):
+        return None
+    return schedule.cost(r["pages"], r.get("ocr_pages") or 0, r.get("image_pages") or 0)
+
+
+def time_left(rows, running, started, now):
+    """Seconds left of a batch by the cost of its files (schedule.cost: pages, scans, pages with a picture): the cost
+    still to do (the done share of the running files taken off; a file not prepared yet by its bytes, at the bytes per
+    cost unit of the prepared ones) over the cost done per second so far. The cheap files go first, so pages per
+    second would promise too much. None until ETA_DONE files are done."""
+    if not started or now <= started:
+        return None
+    done = [(r, file_cost(r)) for r in rows if r["status"] in ("done", "applied")]
+    done = [(r, c) for r, c in done if c]
+    if len(done) < ETA_DONE:
+        return None
+    rate = sum(c for _, c in done) / (now - started)
+    known = [(r.get("size") or 0, file_cost(r)) for r in rows if file_cost(r)]
+    per_byte = sum(c for _, c in known) / max(1, sum(b for b, _ in known))
+    share = {x["tid"]: x["progress"][0] / x["progress"][1] for x in running if x.get("progress") and x["progress"][1]}
+    left = 0.0
+    for r in rows:
+        if r["status"] not in ("queued", "running"):
+            continue
+        c = file_cost(r)
+        c = c if c is not None else (r.get("size") or 0) * per_byte
+        left += c * (1 - share.get(r["tid"], 0.0))
+    return round(left / rate) if rate > 0 else None
 
 
 def ocr_seconds(work, tid):

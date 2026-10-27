@@ -23,11 +23,11 @@ PC4 = {"logical": 4, "physical": 2, "ecores": None, "ram_gb": 8, "avail_gb": 5, 
 
 def test_budget_from_the_pc():
     o = balance.options({})
-    b = balance.budget(PC24, o, cap=8, worker_mb=3072)  # memory: (20 - 4.8) GB / 1.5 GB = 10, cap 8
-    assert b == {"workers": 8, "threads": 2, "free": 8, "active": 6}
-    assert balance.budget(PC24, o, cap=0)["workers"] == 9  # 10 by memory, 75 % of 24 CPUs by 2 threads: 9
-    small = balance.budget(PC4, o, cap=8)  # 2 cores, 4 logical: one worker, the reserve of 2 CPUs stays
-    assert small["workers"] == 1 and small["threads"] == 2
+    b = balance.budget(PC24, o, cap=8, worker_mb=3072)  # a worker is one core; the cap of the settings: 8
+    assert b == {"workers": 8, "threads": 1, "free": 8, "active": 8}
+    assert balance.budget(PC24, o, cap=0)["workers"] == 15  # memory: (20 - 4.8) GB / 1 GB = 15 (22 CPUs past the reserve)
+    small = balance.budget(PC4, o, cap=8)  # 5 GB free past the reserve of 4: one worker
+    assert small == {"workers": 1, "threads": 1, "free": 1, "active": 1}
     weak = balance.budget(PC24, balance.options({"profile": "weak"}), cap=8)
     assert weak == {"workers": 2, "threads": 1, "free": 2, "active": 2}
     with pytest.raises(ValueError):

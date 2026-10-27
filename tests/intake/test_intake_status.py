@@ -49,8 +49,7 @@ def test_status_data(tmp_path):
         {"tid": b, "rel": "b.pdf", "stage": "convert", "active": True, "progress": [100, 300], "pages": 300}
     ]
     assert data["queued"] == [c] and data["errors"][0]["tid"] == d
-    # 200 pages in 200 s; left: 200 of b and about 200 of c (the mean of the known files)
-    assert data["eta_seconds"] == 400
+    assert data["eta_seconds"] is None  # fewer than 5 files done: the time left is not told yet (test_load_regulator)
 
 
 def test_status_words():

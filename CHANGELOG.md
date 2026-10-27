@@ -15,6 +15,10 @@ What the second real intake run showed, fixed.
   work; the OCR seconds of a file show in the status.
 - A file that failed, was rejected or sent to delete is no duplicate when it comes again: only the events of a file
   in the library (accepted, or a duplicate of a code) count, and a duplicate always names a code.
+- The load regulator: a worker is one core, so a free PC runs a worker on every CPU past the reserve that the memory
+  allows (`workers` 16 at most by default, `cpu_share_idle` 0.8); the disk slows the work only at the computer and only
+  by its latency (`% Idle Time` and `Avg. Disk sec/Transfer` instead of `% Disk Time`); `balance.log` gets a line of
+  the load every minute and `summary.md` the mean load; the time left goes by the cost of the files.
 
 ## Unreleased (0.2)
 

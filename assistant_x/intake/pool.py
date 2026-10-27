@@ -14,7 +14,7 @@ Each worker is in a Windows Job Object of its own, made by this process: memory 
 A task past its time (timeout(fn, args) seconds) kills the worker. Lost.why: "timeout" | "memory" | "crash";
 the slot then starts a new worker for the next task, the other workers go on. Elsewhere psutil watches the memory."""
 
-import contextlib, gc, multiprocessing, os, queue, sys, threading, time
+import contextlib, gc, json, multiprocessing, os, queue, sys, threading, time
 from concurrent.futures import Future
 
 from assistant_x.intake.limits import Job
@@ -384,13 +384,15 @@ class Persistent:
             w.stop()
             self.workers[k] = None
 
-    def regulate(self, reg, sensors, log=None, period=4, ecores_mask=0, all_mask=0):
-        """Start the regulator thread: every period seconds a measurement, reg.step, set_active; decisions to log."""
+    def regulate(self, reg, sensors, log=None, period=4, ecores_mask=0, all_mask=0, beat=60):
+        """Start the regulator thread: every period seconds a measurement, reg.step, set_active; decisions to log, and
+        every beat seconds a line of the load (balance.heartbeat) and load.json beside the log (balance.Load)."""
 
         def loop():
             from assistant_x.intake import balance
 
             logical, last_t, last_cpu, where = os.cpu_count() or 1, time.time(), self.cpu_seconds(), None
+            load, last_beat = balance.Load(), time.time()
             while not self.closed:
                 time.sleep(period)
                 now, cpu = time.time(), self.cpu_seconds()
@@ -404,6 +406,12 @@ class Persistent:
                 n, state, why = reg.step(s, now)
                 hard = s["avail_gb"] < 1.5 or reg.hot or bool(reg.since)
                 self.set_active(n, hard)
+                load.add(s, n, len(self.workers), period)
+                if now - last_beat >= beat:
+                    last_beat = now
+                    _write(log, balance.heartbeat(s, n, len(self.workers)))
+                    if log:
+                        _save_json(os.path.join(os.path.dirname(str(log)), "load.json"), load.data())
                 want = ecores_mask if state == balance.ACTIVE and ecores_mask else all_mask
                 if want and want != where:
                     self.set_cpus(want)
@@ -414,7 +422,8 @@ class Persistent:
                     _write(
                         log,
                         f"{state}\tactive {n}/{len(self.workers)}{' pause-stop' if hard and n < len(self.workers) else ''}\t"
-                        f"CPU {s['cpu']:.0f} % (ours {s['ours']:.0f}), disk {s['disk']:.0f} %, memory {s['avail_gb']:.1f} GB, "
+                        f"CPU {s['cpu']:.0f} % (ours {s['ours']:.0f}), disk {s['disk']:.0f} % "
+                        f"{s.get('disk_ms') or 0:.0f} ms, memory {s['avail_gb']:.1f} GB, "
                         f"input {s['idle_s']:.0f} s ago, t {t if t is not None else '—'}"
                         f"{', frequency ' + format(s['perf'], '.0f') + ' %' if s.get('perf') is not None else ''}\t"
                         + "; ".join(why),
@@ -442,6 +451,15 @@ class Persistent:
         if wait:
             for t in self.threads:
                 t.join()
+
+
+def _save_json(path, data):
+    try:
+        with open(path + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        os.replace(path + ".tmp", path)
+    except OSError:
+        pass
 
 
 def _write(log, text):

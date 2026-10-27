@@ -6,12 +6,19 @@ Intake and search work at normal priority on every core can hang a PC.
 Always: below normal priority and low I/O (the OS keeps the user's programs first), a CPU and memory reserve.
 Two states, re-measured every few seconds by Regulator (intake_pool runs it):
   "free"           no input for idle_minutes and no other heavy load: total CPU kept in the corridor around
-                   cpu_share_idle (75 %), not 100 %: the PC stays cool and background programs keep their room
+                   cpu_share_idle (80 %), not 100 %: the PC stays cool and background programs keep their room
   "at the computer" the user is working: total CPU around cpu_share_active (50 %); on a hybrid CPU the workers are
                    moved to the efficiency cores when there are enough of them
-Limits on any PC: >= 2 logical CPUs and >= max(4 GB, 15 % of RAM) left free, disk <= 80 %, CPU/GPU temperature
-below temp_max_c (85; back up only under temp_cool_c, 75; without a sensor a CPU clock drop under load counts as
-heat). Emergencies: memory < 1.5 GB, CPU > 90 % or disk > 90 % for 15 s — half the workers stop; memory < 1 GB — all.
+A worker is one core: it runs one task at a time and Tesseract, LibreOffice and the layout models in it take one thread
+each ([intake] threads changes it); so "free" may run as many workers as there are logical CPUs past the reserve and
+as fit into the memory, "at the computer" at most the physical cores - 2.
+Limits on any PC: >= 2 logical CPUs and >= max(4 GB, 15 % of RAM) left free, CPU/GPU temperature below temp_max_c (85;
+back up only under temp_cool_c, 75; without a sensor a CPU clock drop under load counts as heat); the disk slows the
+work only "at the computer" and only by its latency (a mean transfer over DISK_LAT_MS: the user would feel it), not by
+its busy share, which a fast SSD reaches at no cost. Emergencies: memory < 1.5 GB, CPU > 90 % or a disk 90 % busy with
+a latency over DISK_EMERGENCY_MS for 15 s — half the workers stop; memory < 1 GB — all.
+Every minute the log gets a line of the load even when nothing changed; load.json beside it keeps the mean CPU share
+and the minutes with paused workers for the summary of the batch.
 
 assistant_x.toml: profile "auto" (default) | "day" (always "at the computer") | "weak" (1-2 workers, 1 thread, always
 "at the computer") | "night" (always "free"); workers = upper limit (0: by the PC); threads, priority, affinity
@@ -47,6 +54,9 @@ OPTIONS = {
     "regulate": True,
 }
 FREE, ACTIVE = "free", "at the computer"
+DISK_LAT_MS = 50  # the mean latency of a disk transfer from which the user at the computer feels the disk
+DISK_EMERGENCY_MS = 200  # … from which a disk 90 % busy is an emergency
+WORKER_SHARE = 3  # a worker takes a third of its memory cap on average: the regulator watches the memory live
 _nt = os.name == "nt"
 
 
@@ -158,22 +168,31 @@ def budget(hw, o, cap=0, worker_mb=INTAKE["worker_memory_mb"]):
     cap: workers of assistant_x.toml as an upper limit (0: none)."""
     logical = hw["logical"]
     usable = max(1, logical - int(o["reserve_cpus"]))
-    # worker_memory_mb is a ceiling a worker rarely reaches: half of it per worker, the regulator watches the rest live
-    by_mem = max(1, int((hw["avail_gb"] - reserve_gb(hw, o)) * 1024 // (worker_mb / 2))) if worker_mb else usable
+    # worker_memory_mb is a ceiling a worker rarely reaches: a share of it per worker, the regulator watches the rest live
+    by_mem = max(1, int((hw["avail_gb"] - reserve_gb(hw, o)) * 1024 // (worker_mb / WORKER_SHARE))) if worker_mb else usable
     if o["profile"] == "weak":
         n = max(1, min(2, by_mem, cap or 2))
         return {"workers": n, "threads": 1, "free": n, "active": n}
-    n = max(1, min(hw["physical"] - 2 if hw["physical"] > 3 else 1, by_mem, usable, cap or usable))
-    threads = int(o["threads"]) or max(1, usable // n)
-    free = max(1, min(n, round(logical * float(o["cpu_share_idle"]) / threads)))
-    active = max(1, min(free, round(logical * float(o["cpu_share_active"]) / threads)))
+    threads = int(o["threads"]) or 1  # a worker is one core (the Tesseract threads are ocr_threads, apart)
+    free = max(1, min(usable // threads, by_mem, cap or usable))
+    cores = hw["physical"] - 2 if hw["physical"] > 3 else 1
+    active = max(1, min(free, cores, round(logical * float(o["cpu_share_active"]) / threads)))
     return {"workers": free, "threads": threads, "free": free, "active": active}
+
+
+def disk_slow(s, state, ms=DISK_LAT_MS):
+    """Does the disk slow the user: "at the computer" and a mean transfer over ms (a sample of an older reader without
+    the latency: its busy share over disk_max)."""
+    if s.get("disk_ms") is None:
+        return state == ACTIVE and s.get("disk", 0) > OPTIONS["disk_max"]
+    return state == ACTIVE and s["disk_ms"] > ms
 
 
 class Regulator:
     """Active workers from measurements, with hysteresis. step() takes a sample:
-    {"cpu": total %, "ours": % of the PC our processes use, "disk": %, "avail_gb", "idle_s": since the last input,
-     "temp": °C or None, "throttled": bool}; returns (active workers, state, reasons or [] when nothing changed)."""
+    {"cpu": total %, "ours": % of the PC our processes use, "disk": busy %, "disk_ms": mean transfer, "avail_gb",
+     "idle_s": since the last input, "temp": °C or None, "throttled": bool}; returns (active workers, state, reasons
+     or [] when nothing changed)."""
 
     DOWN_EVERY, UP_EVERY, SUSTAIN = 8, 45, 15  # seconds: between two removals, between two additions, of an emergency
 
@@ -224,12 +243,13 @@ class Regulator:
         elif (
             s["avail_gb"] < 1.5
             or self._held("cpu90", s["cpu"] > 90, now)
-            or self._held("disk90", s.get("disk", 0) > 90, now)
+            or self._held("disk90", s.get("disk", 0) > 90 and (s.get("disk_ms") or 0) > DISK_EMERGENCY_MS, now)
         ):
             if n > 0 and now - self.last_down >= self.DOWN_EVERY:
                 n = n // 2
                 why.append(
-                    f"emergency: CPU {s['cpu']:.0f} %, disk {s.get('disk', 0):.0f} %, memory {s['avail_gb']:.1f} GB — half paused"
+                    f"emergency: CPU {s['cpu']:.0f} %, disk {s.get('disk', 0):.0f} % ({s.get('disk_ms') or 0:.0f} ms), "
+                    f"memory {s['avail_gb']:.1f} GB — half paused"
                 )
         else:
             if n > ceiling:
@@ -248,16 +268,16 @@ class Regulator:
                 elif s["cpu"] > hi:
                     n -= 1
                     why.append(f"CPU {s['cpu']:.0f} % > {hi:.0f} %")
-                elif s.get("disk", 0) > float(o["disk_max"]):
+                elif disk_slow(s, state):
                     n -= 1
-                    why.append(f"disk {s['disk']:.0f} % > {o['disk_max']} %")
+                    why.append(f"disk {s.get('disk_ms') or 0:.0f} ms a transfer > {DISK_LAT_MS} ms")
                 elif s["avail_gb"] < mem_floor:
                     n -= 1
                     why.append(f"memory {s['avail_gb']:.1f} GB < the reserve {mem_floor:.1f} GB")
             up_ok = (
                 not self.hot
                 and s["cpu"] < lo
-                and s.get("disk", 0) < float(o["disk_max"])
+                and not disk_slow(s, state)
                 and s["avail_gb"] > mem_floor + 1
                 and n < ceiling
                 and now - self.last_up >= self.UP_EVERY
@@ -278,10 +298,15 @@ class Regulator:
 
 
 class _Pdh:
-    """Two Windows counters by their English names (any language of Windows): % Disk Time and % Processor
-    Performance (the clock against its base: a drop under load means the CPU is throttling)."""
+    """Windows counters by their English names (any language of Windows): % Idle Time of the disks (busy = 100 - idle:
+    % Disk Time adds the queues of all disks up, past 100), % Processor Performance (the clock against its base: a drop
+    under load means the CPU is throttling) and Avg. Disk sec/Transfer (the latency the user feels)."""
 
-    PATHS = (r"\PhysicalDisk(_Total)\% Disk Time", r"\Processor Information(_Total)\% Processor Performance")
+    PATHS = (
+        r"\PhysicalDisk(_Total)\% Idle Time",
+        r"\Processor Information(_Total)\% Processor Performance",
+        r"\PhysicalDisk(_Total)\Avg. Disk sec/Transfer",
+    )
 
     def __init__(self):
         import ctypes
@@ -354,7 +379,7 @@ class Sensors:
             self.pdh = None
         self.has_gpu = shutil.which("nvidia-smi") is not None if has_gpu is None else has_gpu
         self.cpu_temp_ok = _nt  # turned off after the first empty answer
-        self.t_temp, self.temp = -1e9, None
+        self.t_temp, self.temp, self.gpu_load = -1e9, None, None
 
     def temps(self):
         now = time.time()
@@ -378,9 +403,12 @@ class Sensors:
             except (OSError, subprocess.SubprocessError):
                 self.cpu_temp_ok = False
         if self.has_gpu:
-            g = gpu()
-            if g and g[3] is not None:
-                vals.append(g[3])
+            rows = _smi("--query-gpu=temperature.gpu,utilization.gpu")
+            cells = [x.strip() for x in rows[0].split(",")] if rows else []
+            num = [float(x) if x.replace(".", "").isdigit() else None for x in cells] + [None, None]
+            if num[0] is not None:
+                vals.append(num[0])
+            self.gpu_load = num[1]
         self.temp = max(vals) if vals else None
         return self.temp
 
@@ -394,14 +422,17 @@ class Sensors:
 
     def sample(self, ours=0.0):
         cpu = self.cpu()
-        disk, perf = self.pdh.read() if self.pdh else (None, None)
+        idle, perf, sec = self.pdh.read() if self.pdh else (None, None, None)
+        temp = self.temps()
         return {
             "cpu": cpu,
             "ours": ours,
-            "disk": min(100.0, disk or 0.0),
+            "disk": max(0.0, min(100.0, 100.0 - idle)) if idle is not None else 0.0,
+            "disk_ms": round(sec * 1000, 1) if sec is not None else None,
+            "gpu": self.gpu_load,
             "avail_gb": self.ps.virtual_memory().available / 2**30,
             "idle_s": idle_seconds(),
-            "temp": self.temps(),
+            "temp": temp,
             "throttled": bool(perf is not None and cpu > 60 and perf < 60),
             "perf": perf,
         }
@@ -516,6 +547,40 @@ def apply_self(priority=None, affinity=None, threads=1):
     if cls != PRIORITIES["normal"]:
         low_io()
     return cls, m
+
+
+def heartbeat(s, active, workers):
+    """The line of the load the log gets every minute: "cpu 42 % (ours 31 %), workers 8/8 active, mem 17.2 GB free,
+    disk 1 ms, gpu 0 %"."""
+    ms = f"{s['disk_ms']:.0f} ms" if s.get("disk_ms") is not None else f"{s.get('disk', 0):.0f} %"
+    g = f"{s['gpu']:.0f} %" if s.get("gpu") is not None else "—"
+    return (
+        f"cpu {s['cpu']:.0f} % (ours {s.get('ours', 0):.0f} %), workers {active}/{workers} active, "
+        f"mem {s['avail_gb']:.1f} GB free, disk {ms}, gpu {g}"
+    )
+
+
+class Load:
+    """The load of a batch for its summary: the mean CPU share of our processes and the time with paused workers."""
+
+    def __init__(self):
+        self.samples, self.ours, self.paused = 0, 0.0, 0.0
+
+    def add(self, s, active, workers, seconds):
+        self.samples += 1
+        self.ours += s.get("ours", 0)
+        if active < workers:
+            self.paused += seconds
+
+    def data(self):
+        return {"mean_ours": round(self.ours / self.samples, 1) if self.samples else None, "paused_s": round(self.paused)}
+
+
+def load_line(data):
+    """'Load: mean CPU share x %, paused y min' of the load.json of a batch; '' without it."""
+    if not data or data.get("mean_ours") is None:
+        return ""
+    return f"Load: mean CPU share {data['mean_ours']:.0f} %, paused {data.get('paused_s', 0) / 60:.0f} min"
 
 
 def describe(hw, b, o):
