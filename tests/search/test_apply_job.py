@@ -111,8 +111,10 @@ def test_a_redone_text_or_its_scores_make_the_base_old(tmp_path, monkeypatch):
     reindex.write_last(cfg, time.time() - 900, 80.0, 10, "cuda")
     assert intake_tools.up_to_date(cfg).startswith("The base is up to date")
     old = time.time() - 3600
+    base = max(os.path.getmtime(p) for p in (cfg["db"], cfg["db"] + "-wal") if os.path.exists(p))
     for path in (tmp_path / "texts" / "N-00001.pages.json", tmp_path / "ocr_quality.tsv"):
         path.write_text("{}", encoding="utf-8")
+        os.utime(path, (base, base))  # written in the same clock tick as the base (the Windows runner of CI)
         assert intake_tools.up_to_date(cfg) == "", path.name
         os.utime(path, (old, old))
         os.utime(path.parent, (old, old))

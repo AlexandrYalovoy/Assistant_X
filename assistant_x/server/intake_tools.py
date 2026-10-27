@@ -981,7 +981,7 @@ def up_to_date(cfg):
     if cfg.get("ocr_scores") or cfg.get("catalog"):
         newer.append(cfg.get("ocr_scores") or os.path.join(os.path.dirname(cfg["catalog"]), OCR_SCORES))
     for p in newer:
-        if os.path.exists(p) and os.path.getmtime(p) > since:
+        if os.path.exists(p) and os.path.getmtime(p) >= since:  # a tie (one clock tick on Windows): recalculate
             return ""
     last = rx.read_last(cfg) or {}
     total = last.get("fragments") or rx.counts(cfg["db"])[0]
