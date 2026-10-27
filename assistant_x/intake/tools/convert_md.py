@@ -68,7 +68,7 @@ def preread(doc, pages, language):
             page = doc[i]
             if ocr_score.is_drawing(doc.page_count, page.rect.width * page.rect.height):
                 continue  # a drawing sheet is read in its own way
-            pix, _, empty, _, _ = ocr_page.page_image(page, 300)
+            pix, _, empty, *_ = ocr_page.page_image(page, 300)
             if empty:
                 continue
             png = os.path.join(tmp, f"{i}.png")

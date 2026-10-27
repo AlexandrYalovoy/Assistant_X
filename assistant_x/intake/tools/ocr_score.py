@@ -50,6 +50,8 @@ SPLIT_MIN = 3  # letters of a word of a glued token at least
 # words alone (0.1) 96.0; with half an error the seed gives about the score of the library
 SEED_ONLY = 0.5
 REPEAT = re.compile(r"([^\W\d_]{3,})\1", re.I)  # a piece said twice inside a token ("gasgas"): a line read twice
+DOUBLED = 0.4  # the share of repeated word 3-grams of a page from which its text is doubled (page flag "doubled")
+REPEAT_MIN = 30  # words a page needs for its share of repeated 3-grams
 GARBLED = 0.25  # the share of unknown words of a page from which the page is garbled (page flag, search weight)
 STEM_MIN = 6  # a word this long is also known by its stem
 LOST = "\ufffd"
@@ -380,8 +382,22 @@ def pdf_is_drawing(path, words=None):
         return False
 
 
+def repeated(text):
+    """Share of the word 3-grams of a page that occur twice or more in it (normalised words of two characters and more,
+    table rows aside); 0.0 for a page of fewer than REPEAT_MIN words. A text extracted twice (a scan's visible layer
+    and an invisible copy of its recognition) is near 1.0."""
+    body = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("|"))
+    ws = [w for w in re.findall(r"[^\W_]+", MARKUP.sub(" ", body).lower()) if len(w) >= 2]
+    if len(ws) < REPEAT_MIN:
+        return 0.0
+    grams = list(zip(ws, ws[1:], ws[2:]))
+    count = collections.Counter(grams)
+    return round(sum(count[g] >= 2 for g in grams) / len(grams), 3)
+
+
 def score_text(md, conf=None, vocab=None):
-    """{'score', 'words', 'nonword', 'pages': [{page, words, bad, score, ...}]} of a Markdown text with page marks.
+    """{'score', 'words', 'nonword', 'pages': [{page, words, bad, score, repeated, ...}]} of a Markdown text with page
+    marks.
     conf: {page: {'conf': mean, 'low': share}} from the OCR of the intake (absent: words only)."""
     vocab = vocab or load_vocab()
     pages, n_all, bad_all = [], 0, 0
@@ -391,7 +407,7 @@ def score_text(md, conf=None, vocab=None):
         if c.get("conf") is None or c.get("tokens", n) < 0.3 * n:  # OCR read only a stamp or a picture of the page
             c.pop("conf", None)
         s = page_score(n, bad, c.get("conf"), c.get("low"))
-        pages.append({"page": no, "words": n, "bad": bad, "score": s, "examples": ex, **c})
+        pages.append({"page": no, "words": n, "bad": bad, "score": s, "examples": ex, "repeated": repeated(text), **c})
         n_all += n
         bad_all += bad
     return {

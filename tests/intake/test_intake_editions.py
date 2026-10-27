@@ -184,7 +184,10 @@ def test_text_layer_of_a_scan_kept_beside_its_ocr(tmp_path, monkeypatch):
     old.mkdir()
     (old / "T0001.txt").write_text(f"\n=== page 1 ===\n{STAMP}\n", encoding="utf-8")
     (cache / "T0001" / "ocr").mkdir(parents=True)
-    ocr_text = "Давление насыщения нефти газом определяют по пробам пластовой нефти. " * 3
+    ocr_text = (
+        "Давление насыщения нефти газом определяют по пробам пластовой нефти. Пробы отбирают глубинным "
+        "пробоотборником на забое скважины. Температуру пласта измеряют перед отбором каждой пробы."
+    )
     (cache / "T0001" / "z_force_00001.json").write_text(json.dumps({"1": ocr_text}, ensure_ascii=False), encoding="utf-8")
     (cache / "T0001" / "ocr" / "z_force_00001.json").write_text(json.dumps({"1": {"conf": 90.0}}), encoding="utf-8")
     assemble_md.main([str(old), str(cache), str(out), "T0001"])

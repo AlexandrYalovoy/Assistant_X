@@ -67,6 +67,9 @@ class Convert(TypedDict, total=False):
     ocr_conf: float
     ocr_retried: int
     ocr_rotated: int
+    ocr_garbled_pages: int
+    ocr_doubled_pages: int  # pages whose every phrase appears twice (ocr_score.repeated)
+    ocr_layer_kept: int  # pages whose legible text layer made their recognition needless (ocr_page.beside_layer)
     drawing: bool
     fp: list  # the fingerprint of the recognised text of a scan
     phrases: int

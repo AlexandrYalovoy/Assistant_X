@@ -14,6 +14,9 @@ Beside it <code>.pages.json, every page with
   label      the printed page label of the PDF (its page labels, when it has them), else null
   flags      "complex_table": a Markdown table with a row of another cell count than its header (merged cells);
              "formula": a line ending with an equation number (core/textmap.py)
+  layer      "kept" (a scan's legible text layer made its recognition needless: the page is its layer) or "added"
+             (only the recognised words the layer lacks were added), on such pages only (ocr_page.beside_layer)
+A line or a sentence that repeats the one before it on the same page word for word (normalised) is dropped.
 Usage: python -m assistant_x.intake.tools.assemble_md <old_text_dir> <cache_dir> <out_dir> [--jobs JOBS] [CODE ...]
 JOBS: the jobs.json of convert_md; the labels come from the "label_pdf" of a job, else from the PDFs of its parts.
 (a persistent worker of intake.py calls main(argv) in its own process)"""
@@ -92,11 +95,39 @@ def join_cells(md):
     return "\n".join(out)
 
 
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+REPEAT_WORDS = 3  # words a line or a sentence needs to be dropped as a repeat of the one before it
+
+
+def _same(a, b):
+    na = ocr_page.norm_words(a)
+    return len(na) >= REPEAT_WORDS and na == ocr_page.norm_words(b)
+
+
+def drop_repeats(md):
+    """A line (not a table row) or a sentence that repeats the one before it word for word (normalised) is dropped:
+    only exact consecutive repeats on one page (a text extracted twice)."""
+    out, prev = [], ""
+    for line in md.split("\n"):
+        if not line.strip() or line.lstrip().startswith("|"):
+            out.append(line)
+            prev = prev if not line.strip() else ""
+            continue
+        if _same(line, prev):
+            continue
+        parts = SENTENCE_END.split(line)
+        if len(parts) > 1:
+            line = " ".join([parts[0]] + [b for a, b in zip(parts, parts[1:]) if not _same(b, a)])
+        out.append(line)
+        prev = line
+    return "\n".join(out)
+
+
 def tidy(md):
     md = re.sub(r"</?mark>", "", md)
     if MIXED_RX is not None:
         md = MIXED_RX.sub(lambda m: fix_case(m.group(0)), md)
-    md = join_cells(md)
+    md = drop_repeats(join_cells(md))
     return re.sub(r"\n{3,}", "\n\n", md).strip("\n")
 
 
@@ -187,7 +218,8 @@ def main(argv):
                 and keeps_letters(m, o)
                 and m.count("\ufffd") <= 0.1 * letters(m)
             ):
-                body, used, source = m, used + 1, "ocr" if n in stats else "markdown"
+                ocr = n in stats and stats[n].get("layer") != "kept"  # a kept layer is the text of the page
+                body, used, source = m, used + 1, "ocr" if ocr else "markdown"
                 if source == "ocr" and words(o) and kept(words(o), words(m)) < ocr_page.LOST_SHARE:
                     body = m + "\n\n" + o  # the text layer of a scan (a stamp, a header) OCR did not read: kept after it
             else:
@@ -201,6 +233,8 @@ def main(argv):
                 body = dehyphenate(body, known)
             out.append(f"=== page {n} ===\n\n{escape_marker(body)}\n")
             info[n] = {"source": source, "ocr_score": None, "label": labs.get(n), "flags": page_flags(body)}
+            if (stats.get(n) or {}).get("layer"):
+                info[n]["layer"] = stats[n]["layer"]
         text = "\n".join(out)
         with open(f"{out_dir}/{code}.md", "w", encoding="utf-8", newline="\n") as f:
             f.write(text)

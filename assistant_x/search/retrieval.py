@@ -559,8 +559,8 @@ class Library:
             )
         }
         order = [i for i in order if i in rows]  # a fragment removed by a rebuild a moment ago
-        for i in order:  # a garbled page answers less well than a clean one of the same closeness
-            if "garbled" in (rows[i].get("page_flags") or "").split(","):
+        for i in order:  # a garbled or doubled page answers less well than a clean one of the same closeness
+            if {"garbled", "doubled"} & set((rows[i].get("page_flags") or "").split(",")):
                 fused[i] *= GARBLED_WEIGHT
         order.sort(key=lambda i: -fused[i])
         if rerank and order:
@@ -875,6 +875,8 @@ def page_note(score, flags):
         out.append("complex table on this page — check numbers with page_image")
     if "garbled" in (flags or "").split(","):
         out.append("garbled recognition on this page (glued or unknown words) — check the words with page_image")
+    if "doubled" in (flags or "").split(","):
+        out.append("every phrase of this page is in the text twice — read it once, check with page_image")
     if "dpi_reduced" in (flags or "").split(","):
         out.append("recognized at a reduced resolution (a very large page) — check small print with page_image")
     return "; ".join(out)

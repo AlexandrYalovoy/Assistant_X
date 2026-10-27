@@ -19,6 +19,7 @@ KEEP = [c for c in lang.active() if lang.get(c, "keep_share")]  # letters a bad 
 HEAD = re.compile(r"(?m)^\s*(#{1,6}\s+\S|\*\*[^*\n]{3,}\*\*\s*$)")
 EMPTY = QUALITY["empty_chars"]
 MIN_PAGES_HEADS = QUALITY["min_pages_heads"]
+DOUBLED_SHARE = 0.1  # pages of a document whose phrases appear twice from which the text is to be extracted again
 
 
 def pages_of(md):
@@ -48,6 +49,7 @@ def measure(md, row):
         "ocr_retried": int(row.get("ocr_retried") or 0),
         "ocr_rotated": int(row.get("ocr_rotated") or 0),
         "ocr_garbled_pages": int(row.get("ocr_garbled_pages") or 0),
+        "ocr_doubled_pages": int(row.get("ocr_doubled_pages") or 0),
         "drawing": bool(row.get("drawing")),
     }
 
@@ -109,6 +111,15 @@ def problems(m):
                 f"{m['ocr_garbled_pages']} pages with garbled recognition (more than a quarter of the words unknown)",
                 "improve the text: recognize those pages again",
                 "low",
+            )
+        )
+    if m["pages"] and m.get("ocr_doubled_pages", 0) > DOUBLED_SHARE * m["pages"]:
+        out.append(
+            (
+                f"every phrase of {m['ocr_doubled_pages']} pages appears twice (a text layer and its recognition both "
+                "extracted)",
+                "re-extract the text",
+                "high",
             )
         )
     if m["pages"] and m["fallback"] / m["pages"] >= QUALITY["fallback_share"]:

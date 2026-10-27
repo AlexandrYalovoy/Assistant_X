@@ -229,7 +229,9 @@ recognition error fixed, a table put right); the base is built from it (`assista
   instead); `ocr_score`: the recognition score of the page; `label`: the printed page number from the page labels of
   the PDF, `null` when the PDF has none (the `page_offset` of the card is used then); `flags`: `complex_table` (a
   table with a row of another cell count than its header: merged cells, numbers to check against the page image),
-  `formula` (a line ending with an equation number). A text without it is still searched (a warning of the check);
+  `formula` (a line ending with an equation number), `garbled` (a quarter of the words unknown), `doubled` (every phrase
+  twice), `dpi_reduced` (OCR at a reduced resolution); `layer` (on some pages only): `kept` or `added` (the visible text
+  layer of a scan, see "Recognition score"). A text without it is still searched (a warning of the check);
   after a hand edit that adds or removes pages, put it right or delete it.
 
 ## Cards
@@ -374,6 +376,18 @@ An OCR page goes like this (`tools\ocr_page.py`; pymupdf4llm calls it instead of
   more: at 400 dpi and in black and white; the variant with the best score stays;
 - **a loss check**: if the Markdown after the layout analysis kept less than 60 % of the recognized words, the page takes
   the plain text of Tesseract (or it is appended after the Markdown of a page recognized in part).
+
+A page with a legible text layer of 8 words or more (a scan the publisher gave a visible text, a text page with a
+picture) is read once, without the rotation check and the retries. When 70 % of the distinct recognized words are
+already in the layer (lower case, letters and digits), the recognition is dropped and the page is its layer (`"layer":
+"kept"` in `<tid>.pages.json`); else only the recognized words the layer lacks are added (a figure caption, a stamp:
+`"layer": "added"`). Such a layer is often shifted from the glyphs under it, so the image still shows them: an invisible
+copy of the whole page would make the layout analysis extract every phrase twice. As a safety net the score counts
+for every page of 30 words and more the share of its word 3-grams that occur twice (`repeated`); from 0.4 the page gets
+the flag `doubled` (weighed like `garbled` by the search), a document with more than 10 % of such pages is listed in
+`intake_quality.md` ("re-extract the text"), and `assistant-x intake redo` replaces a library text whose doubled pages
+fall by 30 points of the page share (or whose mean share falls from above 0.4 to below 0.1) while it keeps its known
+words. A line or a sentence that repeats the one before it word for word is dropped at the assembly.
 
 A page costs about 2.5 s instead of 2 s with the built-in Tesseract (+0.5 s for the rotation check); a weak one 6–15 s.
 Per document, so the outputs stay the same (`tools\ocr_page.py`, checked on the golden corpus byte for byte):

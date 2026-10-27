@@ -32,7 +32,7 @@ _ESCAPED_RX = re.compile(r"^(\\*)(=== page \d+ ===\s*)$", re.M)  # a marker line
 # beside <code>.md: <code>.pages.json, what is known of every page (its source, recognition score, printed label, flags)
 PAGES_SUFFIX = ".pages.json"
 PAGE_SOURCES = ("layer", "markdown", "ocr", "fallback")
-PAGE_FLAGS = ("complex_table", "formula", "dpi_reduced", "garbled")
+PAGE_FLAGS = ("complex_table", "formula", "dpi_reduced", "garbled", "doubled")
 
 
 def page_marker(n):

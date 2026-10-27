@@ -16,6 +16,12 @@ image: convert_md takes OVERRIDE[page] instead of the Markdown of the page.
 STATS[page number from 0] = {conf, low, words, bad, score, variant, rotate, tried: {variant: score}, seconds}
 reset() before each document (or chunk of pages).
 
+A page with a legible text layer of MIN_WORDS words or more (a scan the publisher gave a visible text, a text page
+with a picture) is read once (no orientation check, no retries): when LAYER_KEEP of the distinct recognised words are
+already in the layer, the recognition is dropped (STATS "layer": "kept"); else only the recognised words the layer does
+not have are put on the page (a figure caption, a stamp: "layer": "added"). The layer is often shifted from the glyphs
+under it, so the blanked image still shows them: an invisible copy of the whole page would double every phrase.
+
 Speed, the outputs unchanged: the orientation is checked on the first OSD_SAMPLE pages of a document; when they agree,
 the other pages take it (a page whose first reading is weak is checked again itself). The retry of weak pages is chosen
 per document: after RETRY_SAMPLE weak pages, a retry variant (400 dpi or black and white) that won RETRY_SHARE of them
@@ -23,7 +29,7 @@ is the only one tried on the rest. prerecognise() reads the pages of a chunk in 
 images): exec_ocr takes such a reading when the image of the page is the same, else it runs Tesseract on the page.
 """
 
-import os, re, shutil, tempfile, time
+import os, re, shutil, tempfile, time, unicodedata
 
 from assistant_x.core import proc
 
@@ -37,6 +43,8 @@ MIN_WORDS = 8  # a page with fewer recognised words is not tried again (a stamp,
 LOST_SHARE = 0.6  # the Markdown of a page keeps less than this share of the recognised words: take the plain text
 OSD_SAMPLE = 5  # pages of a document whose orientation is checked each; the others take theirs when they agree
 RETRY_SAMPLE, RETRY_SHARE = 10, 0.7  # weak pages after which a retry variant that won this share is the only one tried
+LAYER_KEEP = 0.7  # share of the recognised words already in the legible layer from which the recognition is dropped
+WORD_RX = re.compile(r"[^\W_]+")
 STATS, OVERRIDE, PLAIN = {}, {}, {}
 DOCS = {}  # document -> {"osd": [(rotate, confidence)], "wins": [retry variant that won]}: kept between chunks
 PRE = {}  # page number from 0 -> (the PNG of the page, its reading by prerecognise)
@@ -263,15 +271,21 @@ def prerecognise(items, dpi, language):
         _clean(tmp)
 
 
+def norm_words(text):
+    """The words of a text as the layer and the recognition are compared: lower case, NFC, letters and digits only."""
+    return WORD_RX.findall(unicodedata.normalize("NFC", text.lower()))
+
+
 def page_image(page, dpi):
-    """(gray Pixmap of the page without its legible text, its legible spans, empty, has OCR text) as exec_ocr reads it."""
+    """(gray Pixmap of the page without its legible text, its legible spans, empty, has OCR text, display list, the
+    normalised words of the legible spans) as exec_ocr reads it."""
     import pymupdf
     from pymupdf4llm.ocr.get_culled_pixmap import get_pixmap
     from pymupdf4llm.ocr.tesseract_api import ocr_text
 
     displaylist = page.get_displaylist()
     stext = pymupdf.TextPage(displaylist.get_textpage(flags=pymupdf.TEXT_ACCURATE_BBOXES))
-    spans, ocr_spans = [], []
+    spans, ocr_spans, layer = [], [], []
     for b in stext.extractDICT()["blocks"]:
         for ln in b["lines"]:
             for s in ln["spans"]:
@@ -279,8 +293,9 @@ def page_image(page, dpi):
                     ocr_spans.append(s["bbox"])
                 elif "\ufffd" not in s["text"]:
                     spans.append(s["bbox"])
+                    layer += norm_words(s["text"])
     pix, empty = get_pixmap(displaylist, dpi=dpi, rects=spans, empty_threshold=250)
-    return pix, spans, empty, bool(ocr_spans), displaylist
+    return pix, spans, empty, bool(ocr_spans), displaylist, layer
 
 
 def recognise(png, dpi, language, tmp, tag, psm=None):
@@ -383,6 +398,36 @@ def _clean(tmp):
         pass
 
 
+def new_words(words, layer):
+    """The recognised words (boxes of parse_tsv) the legible layer does not have."""
+    return [w for w in words if not set(norm_words(w[4])) <= layer]
+
+
+def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None):
+    """One reading of a page with a legible layer: dropped when the layer already has LAYER_KEEP of its distinct words,
+    else only the words the layer lacks are put on the page."""
+    pre = PRE.pop(page.number, None)
+    with open(png, "rb") as f:
+        same = pre is not None and pre[0] == f.read()
+    best = pre[1] if same else recognise(png, dpi, language, tmp, "v0", psm=psm)
+    seen = set(norm_words(best["text"]))
+    share = len(seen & layer) / len(seen) if seen else 1.0
+    st = {"tokens": best["m"]["tokens"], "layer_share": round(share, 2)}
+    if share >= LAYER_KEEP:
+        st["layer"] = "kept"
+    else:
+        add = new_words(best["words"], layer)
+        insert_words(page, add, *best["size"])
+        lines = {}
+        for w in add:
+            lines.setdefault(w[5], []).append(w[4])
+        PLAIN[page.number] = ("\n".join(" ".join(x) for x in lines.values()), False)
+        st.update(layer="added", added=len(add), conf=best["m"]["conf"], low=best["m"]["low"])
+    seconds = round(time.time() - t0, 1) if t0 else 0.0
+    STATS[page.number] = {**st, "variant": f"layer psm {psm}" if psm else "layer", "rotate": 0, "seconds": seconds}
+    return STATS[page.number]
+
+
 def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
     import pymupdf
 
@@ -390,7 +435,7 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
     from pymupdf4llm.ocr.get_culled_pixmap import get_pixmap
 
     t0 = time.time()
-    pix, spans, empty, has_ocr, displaylist = page_image(page, dpi)
+    pix, spans, empty, has_ocr, displaylist, layer = page_image(page, dpi)
     if has_ocr and keep_ocr_text:
         return
     if empty:
@@ -402,7 +447,11 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         g = gray(pix)
         g.save(png)
         dpi = round(pix.width / page.rect.width * 72)  # get_pixmap lowers the dpi of a big page (a drawing sheet)
-        if ocr_score.is_drawing(page.parent.page_count, page.rect.width * page.rect.height):
+        drawing = ocr_score.is_drawing(page.parent.page_count, page.rect.width * page.rect.height)
+        if len(layer) >= MIN_WORDS:
+            beside_layer(page, png, dpi, language, tmp, set(layer), psm=11 if drawing else None, t0=t0)
+            return
+        if drawing:
             # a drawing gets one sparse-text pass; turning and retrying did not raise its score (177 of 288 in redo)
             best = recognise(png, dpi, language, tmp, "v0", psm=11)
             PLAIN[page.number] = (best["plain"].strip(), not spans)

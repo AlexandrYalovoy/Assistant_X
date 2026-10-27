@@ -50,7 +50,7 @@ def test_garbled_page_flag(tmp_path):
     res = intake_work.ocr_measures(tmp_path, "T0001", md)
     assert res["ocr_garbled_pages"] == 1
     info = read_pages_info(tmp_path / "md" / "T0001.pages.json")
-    assert info[2]["flags"] == ["garbled"] and info[1]["flags"] == []
+    assert "garbled" in info[2]["flags"] and "garbled" not in info[1]["flags"]
     assert "garbled recognition" in page_note(95, "garbled")
     from assistant_x.search import retrieval
 

@@ -2,6 +2,15 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## Unreleased (0.3)
+
+What the second real intake run showed, fixed.
+
+- The visible text layer of a scan is kept: a page with a legible layer is read once and its recognition dropped when
+  the layer has its words (only a caption or a stamp the layer lacks is added); a page whose every phrase appears twice
+  gets the flag `doubled` (listed by the quality report, weighed less by the search), a line repeated word for word is
+  dropped, and `intake redo` replaces a text that is no longer doubled.
+
 ## Unreleased (0.2)
 
 What the first real intake run (42 files, 8 644 pages) showed, fixed.

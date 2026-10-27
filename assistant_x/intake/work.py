@@ -736,6 +736,8 @@ def ocr_measures(w, tid, md):
     (w / "ocr" / f"{tid}.json").write_text(json.dumps(detail, ensure_ascii=False, indent=0), encoding="utf-8")
     garbled = [p["page"] for p in sc["pages"] if p["words"] >= 20 and p["bad"] / p["words"] > ocr_score.GARBLED]
     mark_pages(w, tid, "garbled", garbled)
+    doubled = [p["page"] for p in sc["pages"] if p.get("repeated", 0) >= ocr_score.DOUBLED]
+    mark_pages(w, tid, "doubled", doubled)
     confs = [s["conf"] for s in stats.values() if s.get("conf") is not None]
     lim = ocr_score.QUALITY["ocr_note"]
     return {
@@ -746,6 +748,8 @@ def ocr_measures(w, tid, md):
         "ocr_retried": sum(len(s.get("tried", {})) > 1 for s in stats.values()),
         "ocr_rotated": sum(bool(s.get("rotate")) for s in stats.values()),
         "ocr_garbled_pages": len(garbled),
+        "ocr_doubled_pages": len(doubled),
+        "ocr_layer_kept": sum(s.get("layer") == "kept" for s in stats.values()),
         # a drawing sheet (ocr_page read it as one): its score is no sign of a bad scan
         "drawing": bool(stats) and all(s.get("drawing") for s in stats.values()) and sc["words"] < ocr_score.DRAWING_WORDS,
     }

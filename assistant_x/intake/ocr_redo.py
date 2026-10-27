@@ -2,8 +2,11 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """assistant-x intake redo: recognise library documents again with the current pipeline (prep and convert of intake_work: OCR
 with word confidence, retries of weak pages, turned pages, plain text where the layout analysis lost the words) and
-replace index/texts/<code>.md only when the recognition score grew by QUALITY["ocr_redo_gain"] or more and the
-new text keeps QUALITY["ocr_redo_keep"] of the known words of the old one (a clean but nearly empty text is no gain).
+replace index/texts/<code>.md only when the recognition score grew by QUALITY["ocr_redo_gain"] or more, or the text
+is no longer doubled (the share of its pages whose every phrase appears twice fell by UNDOUBLED_DROP, or their mean
+share of repeated word 3-grams from above ocr_score.DOUBLED to below UNDOUBLED_MEAN: a scan's text layer extracted
+together with its recognition), and the new text keeps QUALITY["ocr_redo_keep"] of the known words of the old one (a
+clean but nearly empty text is no gain).
 
     assistant-x intake redo N-00101-21 E-00016 …        these documents
     assistant-x intake redo --worst 100 [--below 70]   the worst of index/ocr_quality.tsv below the threshold
@@ -50,8 +53,26 @@ def library_pdf(cfg, code):
     return None
 
 
+UNDOUBLED_DROP = 0.3  # the share of doubled pages falls by this much: the text is no longer doubled
+UNDOUBLED_MEAN = 0.1  # … or the mean share of repeated 3-grams falls from above ocr_score.DOUBLED to below this
+
+
 def words_score(md):
     return ocr_score.score_text(md)["score"]
+
+
+def doubling(md):
+    """(share of the pages whose text is doubled, mean share of repeated word 3-grams of the pages) of a text."""
+    pages = ocr_score.score_text(md)["pages"]
+    if not pages:
+        return 0.0, 0.0
+    rep = [p.get("repeated", 0.0) for p in pages]
+    return round(sum(r >= ocr_score.DOUBLED for r in rep) / len(rep), 3), round(sum(rep) / len(rep), 3)
+
+
+def undoubled(old, new):
+    """True when the new text is no longer doubled as the old one was ((share, mean) of doubling())."""
+    return old[0] - new[0] >= UNDOUBLED_DROP or (old[1] > ocr_score.DOUBLED and new[1] < UNDOUBLED_MEAN)
 
 
 def known_words(md):
@@ -80,7 +101,7 @@ def _variant(base, tid, imgocr):
     return md.read_text(encoding="utf-8"), {**conv, "pages": res.get("pages"), "ocr_pages": res.get("ocr_pages")}
 
 
-def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=False):
+def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=False, old_doubled=(0.0, 0.0)):
     """Recognise one document; the main process decides. {'code', 'new', 'variant', 'md', 'detail', 'why', …}"""
     t0 = time.time()
     w = Path(work) / code
@@ -101,7 +122,8 @@ def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=Fal
     best = ("pipeline", md, conv, code)
     out["variants"]["pipeline"] = words_score(md)
     has_layer = (conv.get("ocr_pages") or 0) < (conv.get("pages") or 0) or old_broken or broken(md)
-    if (not rank("pipeline", md)[0] or (out["variants"]["pipeline"] or 0) < (old_score or 0) + gain) and has_layer:
+    short = (out["variants"]["pipeline"] or 0) < (old_score or 0) + gain and not undoubled(old_doubled, doubling(md))
+    if (not rank("pipeline", md)[0] or short) and has_layer:
         img_src = w / "src" / f"{code}_img.pdf"  # prep of a variant takes the file under its own name
         if not img_src.exists():
             shutil.copy2(src, img_src)
@@ -128,6 +150,7 @@ def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=Fal
         "rotated": conv.get("ocr_rotated"),
         "conf": conv.get("ocr_conf"),
         "known": known_words(md),
+        "doubled": doubling(md),
         "seconds": round(time.time() - t0),
     }
 
@@ -203,22 +226,28 @@ def cmd_redo(cfg, a):
             }
             continue
         old = tp.read_text(encoding="utf-8")
-        jobs.append((code, pdf, old, words_score(old), known_words(old)))
+        jobs.append((code, pdf, old, words_score(old), known_words(old), doubling(old)))
     n_workers = max(1, min(cfg.workers or 1, len(jobs), 6))
     say(f"Recognizing documents again: {len(jobs)} in {n_workers} processes → {work}")
     t0 = time.time()
     with ProcessPoolExecutor(n_workers, initializer=_init, initargs=(env,)) as ex:
         futs = {
-            ex.submit(redo_one, code, str(pdf), str(work), base, old_s, gain, old_k, broken(old)): (code, pdf, old_s, old_k)
-            for code, pdf, old, old_s, old_k in jobs
+            ex.submit(redo_one, code, str(pdf), str(work), base, old_s, gain, old_k, broken(old), old_d): (
+                code,
+                pdf,
+                old_s,
+                old_k,
+                old_d,
+            )
+            for code, pdf, old, old_s, old_k, old_d in jobs
         }
         for f in as_completed(futs):
-            code, pdf, old_s, old_k = futs[f]
+            code, pdf, old_s, old_k, old_d = futs[f]
             try:
                 r = f.result()
             except Exception as e:  # noqa: BLE001 — one document must not stop the others
                 r = {"code": code, "why": f"failure: {e!r}"[:300]}
-            r.update(old=old_s, old_known=old_k, pdf=str(pdf))
+            r.update(old=old_s, old_known=old_k, old_doubled=old_d, pdf=str(pdf))
             results[code] = r
             say(
                 f"  {code}: was {old_s}, now {r.get('new')} ({r.get('variant') or r.get('why')}), {r.get('seconds', 0)} s"
@@ -227,36 +256,8 @@ def cmd_redo(cfg, a):
     events, replaced = [], 0
     for code in codes:
         r = results[code]
-        r["replaced"] = False
-        old_s, new_s = r.get("old"), r.get("new")
-        old_pages = (
-            len(PAGE_RX.findall((texts / f"{code}.md").read_text(encoding="utf-8")))
-            if (texts / f"{code}.md").exists()
-            else 0
-        )
-        if r.get("why"):
-            status = f"recognized again: text kept — {r['why']}"
-        elif new_s is None:
-            status = "recognized again: text kept — the new text has no words"
-        elif r["pages"] != old_pages:
-            status = f"recognized again: text kept — {r['pages']} pages, but the previous text has {old_pages}"
-        elif r["known"] < QUALITY["ocr_redo_keep"] * r["old_known"]:
-            status = (
-                f"recognized again: text kept — the new one has fewer known words ({r['known']} against "
-                f"{r['old_known']}), score {fmt(old_s)} → {fmt(new_s)}"
-            )
-        elif new_s < (old_s or 0) + gain:
-            status = (
-                f"recognized again: text kept — score {fmt(old_s)} → {fmt(new_s)}, "
-                f"{'growth below ' + str(gain) if new_s >= (old_s or 0) else 'the new one is worse'}"
-            )
-        else:
-            status = (
-                f"recognized again: text replaced — score by words {fmt(old_s)} → {fmt(new_s)}, with the OCR confidence "
-                f"{fmt(r.get('full'))} ({r['variant']})"
-            )
-            r["replaced"] = True
-        r["status"] = status
+        r["status"] = verdict(r, texts, gain)
+        r["replaced"] = r["status"].startswith("recognized again: text replaced")
         if r["replaced"] and not a.dry_run:
             new_md = Path(r["md"]).read_text(encoding="utf-8")
             tmp = texts / f"{code}.md.tmp"
@@ -281,7 +282,7 @@ def cmd_redo(cfg, a):
             size, sha = os.path.getsize(intake_cfg.lp(r["pdf"])), sha16(r["pdf"])
         else:
             place, size, sha = "—", "—", "—"
-        events.append([date, place, size, sha, code, f"index\\texts\\{code}.md", status])
+        events.append([date, place, size, sha, code, f"index\\texts\\{code}.md", r["status"]])
     if not a.dry_run:
         if replaced:
             ocr_score.write_tsv(tsv, rows)
@@ -300,6 +301,41 @@ def cmd_redo(cfg, a):
     if replaced and not a.dry_run:
         say("Next: assistant-x build and assistant-x embed")
     return 0
+
+
+def verdict(r, texts, gain):
+    """The event line of one document read again: "recognized again: text replaced — …" or "… text kept — why"."""
+    old_s, new_s, code = r.get("old"), r.get("new"), r["code"]
+    tp = texts / f"{code}.md"
+    old_pages = len(PAGE_RX.findall(tp.read_text(encoding="utf-8"))) if tp.exists() else 0
+    if r.get("why"):
+        return f"recognized again: text kept — {r['why']}"
+    if new_s is None:
+        return "recognized again: text kept — the new text has no words"
+    if r["pages"] != old_pages:
+        return f"recognized again: text kept — {r['pages']} pages, but the previous text has {old_pages}"
+    old_d, new_d = tuple(r.get("old_doubled") or (0.0, 0.0)), tuple(r.get("doubled") or (0.0, 0.0))
+    # a doubled text counts its words twice: the known words it would have once (half of its repeated 3-grams fewer)
+    old_known = r["old_known"] * (1 - old_d[1] / 2) if undoubled(old_d, new_d) else r["old_known"]
+    if r["known"] < QUALITY["ocr_redo_keep"] * old_known:
+        return (
+            f"recognized again: text kept — the new one has fewer known words ({r['known']} against "
+            f"{r['old_known']}), score {fmt(old_s)} → {fmt(new_s)}"
+        )
+    if new_s < (old_s or 0) + gain and undoubled(old_d, new_d):
+        return (
+            f"recognized again: text replaced — no longer doubled: doubled pages {old_d[0]:.0%} → {new_d[0]:.0%}, "
+            f"score by words {fmt(old_s)} → {fmt(new_s)} ({r['variant']})"
+        )
+    if new_s < (old_s or 0) + gain:
+        return (
+            f"recognized again: text kept — score {fmt(old_s)} → {fmt(new_s)}, "
+            f"{'growth below ' + str(gain) if new_s >= (old_s or 0) else 'the new one is worse'}"
+        )
+    return (
+        f"recognized again: text replaced — score by words {fmt(old_s)} → {fmt(new_s)}, with the OCR confidence "
+        f"{fmt(r.get('full'))} ({r['variant']})"
+    )
 
 
 def fmt(x):
