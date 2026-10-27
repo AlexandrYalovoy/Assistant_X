@@ -70,6 +70,34 @@ class Inline:
         pass
 
 
+def regulated_pool(cfg, workers, env, log, tasks=0, timeout=None):
+    """(pool, its size): persistent workers of the budget of this PC (at most workers, balance.budget; tasks: see
+    there) with the load regulator writing to log. env gets the thread caps of the budget before a worker starts, so
+    the math libraries of a worker see them at their import."""
+    from assistant_x.intake import balance
+    from assistant_x.intake import pool as intake_pool
+    from assistant_x.intake import work as intake_work
+
+    o = cfg.get("balance") or balance.options({})
+    hw = balance.probe()
+    b = balance.budget(hw, o, cap=workers, worker_mb=cfg.worker_memory_mb, tasks=tasks)
+    env.update(balance.env(cfg.priority, cfg.affinity, b["threads"]))
+    ex = intake_pool.Persistent(
+        b["workers"], cfg.worker_memory_mb, env, b["threads"], timeout=timeout or intake_work.task_timeout
+    )
+    intake_pool._write(log, balance.describe(hw, b, o))
+    say(f"Load: {balance.describe(hw, b, o)}; journal {log}")
+    if o.get("regulate", True):
+        reg = balance.Regulator(b, o, hw)
+        ex.set_active(reg.n)
+        auto = cfg.affinity in (None, "", "auto")
+        e = hw["ecores"] if auto else None
+        emask = sum(1 << i for i in e) if e and len(e) >= b["active"] * b["threads"] else 0
+        amask = (1 << hw["logical"]) - 1 if auto and hw["logical"] <= 64 else 0
+        ex.regulate(reg, balance.Sensors(has_gpu=bool(hw["gpu"])), log=log, ecores_mask=emask, all_mask=amask)
+    return ex, b["workers"]
+
+
 # ---------- processing ----------
 
 
@@ -101,28 +129,7 @@ class Batch:
         if self.workers <= 0:  # no memory cap on this process: it is the main one
             return Inline(intake_work.init_worker, args + (False,))
         if self.base["inproc"]:
-            from assistant_x.intake import balance
-            from assistant_x.intake import pool as intake_pool
-
-            o = self.cfg.get("balance") or balance.options({})
-            hw = balance.probe()
-            b = balance.budget(hw, o, cap=self.workers, worker_mb=self.cfg.worker_memory_mb)
-            self.env.update(balance.env(self.cfg.priority, self.cfg.affinity, b["threads"]))
-            ex = intake_pool.Persistent(
-                b["workers"], self.cfg.worker_memory_mb, self.env, b["threads"], timeout=intake_work.task_timeout
-            )
-            log = self.work / "balance.log"
-            intake_pool._write(log, balance.describe(hw, b, o))
-            say(f"Load: {balance.describe(hw, b, o)}; journal {log}")
-            self.workers = b["workers"]
-            if o.get("regulate", True):
-                reg = balance.Regulator(b, o, hw)
-                ex.set_active(reg.n)
-                auto = self.cfg.affinity in (None, "", "auto")
-                e = hw["ecores"] if auto else None
-                emask = sum(1 << i for i in e) if e and len(e) >= b["active"] * b["threads"] else 0
-                amask = (1 << hw["logical"]) - 1 if auto and hw["logical"] <= 64 else 0
-                ex.regulate(reg, balance.Sensors(has_gpu=bool(hw["gpu"])), log=log, ecores_mask=emask, all_mask=amask)
+            ex, self.workers = regulated_pool(self.cfg, self.workers, self.env, self.work / "balance.log")
             return ex
         return ProcessPoolExecutor(self.workers, initializer=intake_work.init_worker, initargs=args)
 

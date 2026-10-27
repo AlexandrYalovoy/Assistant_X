@@ -57,6 +57,7 @@ FREE, ACTIVE = "free", "at the computer"
 DISK_LAT_MS = 50  # the mean latency of a disk transfer from which the user at the computer feels the disk
 DISK_EMERGENCY_MS = 200  # … from which a disk 90 % busy is an emergency
 WORKER_SHARE = 3  # a worker takes a third of its memory cap on average: the regulator watches the memory live
+THREADS_MAX = 4  # threads of a worker when fewer tasks than cores share the PC (a process stays near 10 threads)
 _nt = os.name == "nt"
 
 
@@ -163,9 +164,10 @@ def reserve_gb(hw, o):
     return max(float(o["reserve_gb"]), float(o["reserve_ram_share"]) * hw["ram_gb"])
 
 
-def budget(hw, o, cap=0, worker_mb=INTAKE["worker_memory_mb"]):
+def budget(hw, o, cap=0, worker_mb=INTAKE["worker_memory_mb"], tasks=0):
     """{"workers": pool size, "threads": per worker, "free": workers when "free", "active": workers "at the computer"}.
-    cap: workers of assistant_x.toml as an upper limit (0: none)."""
+    cap: workers of assistant_x.toml as an upper limit (0: none). tasks: how many tasks of one piece each there are
+    (0: unknown): fewer tasks than workers get a worker each, the cores shared among them (threads "auto" only)."""
     logical = hw["logical"]
     usable = max(1, logical - int(o["reserve_cpus"]))
     # worker_memory_mb is a ceiling a worker rarely reaches: a share of it per worker, the regulator watches the rest live
@@ -175,6 +177,8 @@ def budget(hw, o, cap=0, worker_mb=INTAKE["worker_memory_mb"]):
         return {"workers": n, "threads": 1, "free": n, "active": n}
     threads = int(o["threads"]) or 1  # a worker is one core (the Tesseract threads are ocr_threads, apart)
     free = max(1, min(usable // threads, by_mem, cap or usable))
+    if tasks and tasks < free and not int(o["threads"]):
+        free, threads = tasks, max(1, min(THREADS_MAX, usable // tasks))
     cores = hw["physical"] - 2 if hw["physical"] > 3 else 1
     active = max(1, min(free, cores, round(logical * float(o["cpu_share_active"]) / threads)))
     return {"workers": free, "threads": threads, "free": free, "active": active}

@@ -18,11 +18,13 @@ text lost known words, is tried once more with the page images recognised instea
 for a broken font encoding). Known words count once per page, so a doubled old text is not "richer". Every document gets a
 row in index/intake_events.tsv ("recognized again: …", why the text was or was not replaced); a replaced one gets
 its new row in ocr_quality.tsv (source "redo"). The work goes to intake/work/redo/<date>_<time>/; the library PDF is
-copied there, library is only read. After replacements: build_index.py and embed.py.
+copied there, library is only read.
+The documents are read by the workers and the load regulator of the intake (process.regulated_pool). After
+replacements: build_index.py and embed.py.
 """
 
 import datetime, hashlib, json, os, shutil, time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import as_completed
 from pathlib import Path
 
 from assistant_x.intake import config as intake_cfg
@@ -160,10 +162,6 @@ def redo_one(code, pdf, work, base, old_score=None, old_known=0, old_broken=Fals
     }
 
 
-def _init(env):
-    os.environ.update(env)  # AX_FP_CACHE and AX_TEXTS of dupcheck among them
-
-
 def sha16(path):
     h = hashlib.sha256()
     with open(intake_cfg.lp(path), "rb") as f:
@@ -232,10 +230,19 @@ def cmd_redo(cfg, a):
             continue
         old = tp.read_text(encoding="utf-8")
         jobs.append((code, pdf, old, words_score(old), known_words(old), doubling(old)))
-    n_workers = max(1, min(cfg.workers or 1, len(jobs), 6))
-    say(f"Recognizing documents again: {len(jobs)} in {n_workers} processes → {work}")
     t0 = time.time()
-    with ProcessPoolExecutor(n_workers, initializer=_init, initargs=(env,)) as ex:
+    ex = None
+    if jobs:  # the workers and the load regulator of the intake: thread caps set before a worker imports anything
+        from assistant_x.intake import process, work as intake_work
+
+        limit = 2 * (
+            intake_work.task_timeout(intake_work.prep, (base,)) + intake_work.task_timeout(intake_work.convert, (base,))
+        )
+        ex, n_workers = process.regulated_pool(
+            cfg, cfg.workers or 1, env, work / "balance.log", tasks=len(jobs), timeout=lambda fn, args: limit
+        )
+        say(f"Recognizing documents again: {len(jobs)} in {n_workers} processes → {work}")
+    try:
         futs = {
             ex.submit(redo_one, code, str(pdf), str(work), base, old_s, old_k, broken(old)): (
                 code,
@@ -258,6 +265,9 @@ def cmd_redo(cfg, a):
                 f"  {code}: was {old_s}, now {r.get('new')} ({r.get('variant') or r.get('why')}), {r.get('seconds', 0)} s"
                 f" — {len(results)}/{len(codes)}, {time.time() - t0:.0f} s"
             )
+    finally:
+        if ex is not None:
+            ex.shutdown(cancel_futures=True)
     events, replaced = [], 0
     for code in codes:
         r = results[code]

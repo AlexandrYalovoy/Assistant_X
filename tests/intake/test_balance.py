@@ -32,6 +32,10 @@ def test_budget_from_the_pc():
     assert weak == {"workers": 2, "threads": 1, "free": 2, "active": 2}
     with pytest.raises(ValueError):
         balance.options({"profile": "turbo"})
+    few = balance.budget(PC24, o, cap=8, worker_mb=3072, tasks=3)  # 3 documents: a worker each, the cores shared
+    assert few["workers"] == 3 and few["threads"] == balance.THREADS_MAX
+    assert balance.budget(PC24, o, cap=8, worker_mb=3072, tasks=20)["threads"] == 1  # more tasks than workers
+    assert balance.budget(PC24, balance.options({"threads": 2}), cap=8, tasks=3)["threads"] == 2  # set by hand
 
 
 def sample(cpu=30, ours=20, disk=10, avail=12, idle=0, temp=None, throttled=False):
