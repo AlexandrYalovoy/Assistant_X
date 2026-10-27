@@ -18,8 +18,8 @@ text lost known words, is tried once more with the page images recognised instea
 for a broken font encoding). Known words count once per page, so a doubled old text is not "richer". Every document gets a
 row in index/intake_events.tsv ("recognized again: …", why the text was or was not replaced); a replaced one gets
 its new row in ocr_quality.tsv (source "redo"). The work goes to intake/work/redo/<date>_<time>/; the library PDF is
-copied there, library is only read.
-The documents are read by the workers and the load regulator of the intake (process.regulated_pool). After
+copied there, library is only read. A replaced text and its page file are copied to inbox/_to_delete/redo_<date>/
+first. The documents are read by the workers and the load regulator of the intake (process.regulated_pool). After
 replacements: build_index.py and embed.py.
 """
 
@@ -162,6 +162,20 @@ def redo_one(code, pdf, work, base, old_score=None, old_known=0, old_broken=Fals
     }
 
 
+def keep_aside(texts, code, aside):
+    """Copy the text of a code and its page file into aside (inbox\\_to_delete\\redo_<date>) before they are replaced;
+    a copy of an earlier run of the same day is kept, the new one gets the time in its name."""
+    aside.mkdir(parents=True, exist_ok=True)
+    for name in (f"{code}.md", f"{code}{PAGES_SUFFIX}"):
+        src = texts / name
+        if not src.exists():
+            continue
+        dst = aside / name
+        if dst.exists():
+            dst = aside / f"{time.strftime('%H%M%S')}_{name}"
+        shutil.copy2(src, dst)
+
+
 def sha16(path):
     h = hashlib.sha256()
     with open(intake_cfg.lp(path), "rb") as f:
@@ -268,12 +282,14 @@ def cmd_redo(cfg, a):
     finally:
         if ex is not None:
             ex.shutdown(cancel_futures=True)
+    aside = Path(cfg.inbox) / "_to_delete" / f"redo_{date}"  # the replaced texts, never deleted
     events, replaced = [], 0
     for code in codes:
         r = results[code]
         r["status"] = verdict(r, texts, gain)
         r["replaced"] = r["status"].startswith("recognized again: text replaced")
         if r["replaced"] and not a.dry_run:
+            keep_aside(texts, code, aside)
             new_md = Path(r["md"]).read_text(encoding="utf-8")
             tmp = texts / f"{code}.md.tmp"
             tmp.write_text(new_md, encoding="utf-8", newline="\n")

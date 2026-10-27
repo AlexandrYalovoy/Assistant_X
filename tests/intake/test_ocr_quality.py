@@ -4,7 +4,7 @@
 around them (ocr_quality.py, ocr_redo.py). The fast tests need no Tesseract; the slow ones recognise turned pages and
 a scan for real (python -m pytest -m slow intake/tests)."""
 
-import json, os
+import datetime, json, os
 
 import pytest
 
@@ -227,6 +227,9 @@ def test_redo_replaces_only_a_better_text(project, monkeypatch):
     assert ocr_redo.cmd_redo(cfg, A()) == 0
     text = (cfg.index / "texts" / "L-00001.md").read_text(encoding="utf-8").lower()
     assert "давление" in text and "насыщения" in text
+    aside = cfg.inbox / "_to_delete" / f"redo_{datetime.date.today().isoformat()}" / "L-00001.md"
+    assert "eenpcuameanas" in aside.read_text(encoding="utf-8")  # the replaced text is kept aside
+    assert list(cfg.work.glob("redo/*/balance.log"))  # read by the workers and the regulator of the intake
     row = ocr_score.read_tsv(cfg.index / ocr_score.TSV_NAME)["L-00001"]
     assert row["source"] == "redo" and float(row["score"]) > 50
     events = (cfg.index / "intake_events.tsv").read_text(encoding="utf-8")
@@ -263,3 +266,17 @@ def test_drawing_has_no_quality_problems():
     }
     assert quality_report.problems(m)  # a scan like this would go to sources_to_update
     assert quality_report.problems({**m, "drawing": True}) == []
+
+
+def test_a_replaced_text_is_kept_aside(tmp_path):
+    from assistant_x.intake import ocr_redo
+
+    texts, aside = tmp_path / "texts", tmp_path / "inbox" / "_to_delete" / "redo_2026-10-27"
+    texts.mkdir()
+    (texts / "N-00001.md").write_text("old", encoding="utf-8")
+    (texts / "N-00001.pages.json").write_text("{}", encoding="utf-8")
+    ocr_redo.keep_aside(texts, "N-00001", aside)
+    assert sorted(p.name for p in aside.iterdir()) == ["N-00001.md", "N-00001.pages.json"]
+    (texts / "N-00001.md").write_text("newer", encoding="utf-8")
+    ocr_redo.keep_aside(texts, "N-00001", aside)  # a second run the same day keeps the first copy
+    assert (aside / "N-00001.md").read_text(encoding="utf-8") == "old" and len(list(aside.glob("*_N-00001.md"))) == 1
