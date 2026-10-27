@@ -8,6 +8,7 @@ from pathlib import Path
 
 from assistant_x.core import lang
 from assistant_x.core.formats import PAGE_SPLIT_RX
+from assistant_x.core.suspect import addressed_to_ai
 from assistant_x.intake import config as intake_cfg
 from assistant_x.intake.state import State
 from assistant_x.intake.batch import say, win, work_dir
@@ -28,7 +29,9 @@ def hidden_line(work, hidden):
             rep = json.loads((Path(work) / "log" / f"{r['tid']}.hidden.json").read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        hits = [it["text"] for items in rep.get("found", {}).values() for it in items if SUSPECT.search(it.get("text", ""))]
+        # a word of suspect_words alone ("system") is in every technical text: the phrases addressed to an AI decide
+        texts = [it.get("text", "") for items in rep.get("found", {}).values() for it in items]
+        hits = [t for t in texts if SUSPECT.search(t) and addressed_to_ai(t)]
         if hits:
             first = re.sub(r"\s+", " ", hits[0])[:120]
             shown.append(f'{r["tid"]} "{first}"' + (f" and {len(hits) - 1} more" if len(hits) > 1 else ""))

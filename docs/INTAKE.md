@@ -480,8 +480,8 @@ from where it stopped; the result is `reports\hidden_text_<DATE>.tsv`, the progr
 not in the last finished one (under the machine lock; `set AX_PRIORITY=idle` — only when the PC is free). After a full
 pass `--apply [--dry-run]` writes `file.hidden_text` into the cards, `assistant-x build` shows it in "Source quality". New
 documents are checked at the intake (`prep`); the summary of a batch shows only the fragments that look like
-instructions for an AI (ignore, instruction, assistant, prompt, system, and their Russian counterparts: suspect_words
-of the language packs), the rest as a number.
+instructions for an AI (a word of suspect_words of the language packs: ignore, instruction, assistant, prompt, system,
+and their Russian counterparts, in a phrase addressed to an AI as the search marks it), the rest as a number.
 
 ## Tests
 
