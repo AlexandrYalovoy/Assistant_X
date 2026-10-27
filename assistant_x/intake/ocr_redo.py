@@ -63,7 +63,11 @@ def library_pdf(cfg, code):
 
 UNDOUBLED_DROP = 0.3  # the share of doubled pages falls by this much: the text is no longer doubled
 UNDOUBLED_MEAN = 0.1  # … or the mean share of repeated 3-grams falls by this much, to below this
-REDO_LOSS = 5  # a new text this much below the old score by words is worse: the page images are read, it is not taken
+REDO_LOSS = 5  # a new text this much below the old score by words is worse: it is not taken
+# a pipeline text of a document with a text layer this much below the old score: its page images are read too. Run 2a2
+# (62 doubled scans with a layer): 25 lost 1-5 points without that reading, the page images of the same scans scored
+# about 3 points more (N-00006 88.6 against 91.7, N-00019 94.9 against 98.6)
+SECOND_LOSS = 1
 VARIANTS = {"pipeline": "", "page images": "_img"}  # a variant of the reading and the suffix of its tid
 
 
@@ -98,10 +102,10 @@ def broken(md):
 def second_reading(md, conv, old_score=None, old_known=0, old_broken=False):
     """Are the page images read as a second variant after the pipeline text md (conv: pages, ocr_pages)? Only when a
     font is broken (old or new text), or the new text of a document with a text layer lost known words or fell
-    REDO_LOSS below the old score (a poor visible layer): a score that merely did not grow is no reason for a second,
+    SECOND_LOSS below the old score (a poor visible layer): a score that merely did not grow is no reason for a second,
     longer reading."""
     layer = (conv.get("ocr_pages") or 0) < (conv.get("pages") or 0)
-    worse = old_score is not None and (words_score(md) or 0) < old_score - REDO_LOSS
+    worse = old_score is not None and (words_score(md) or 0) < old_score - SECOND_LOSS
     lost = known_words(md) < QUALITY["ocr_redo_keep"] * old_known
     return old_broken or broken(md) or (layer and (worse or lost))
 

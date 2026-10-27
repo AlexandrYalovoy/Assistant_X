@@ -179,8 +179,8 @@ def test_redo_reads_the_page_images_only_for_a_broken_font_or_lost_words():
     assert ocr_redo.second_reading(md, layer, old_known=known, old_broken=True)  # a broken font of the old text
     assert ocr_redo.second_reading(md, layer, old_known=3 * known)  # the layer lost known words
     assert not ocr_redo.second_reading(md, scan, old_known=3 * known)  # a scan has no layer to blame
-    assert ocr_redo.second_reading(md, layer, old_score=score + ocr_redo.REDO_LOSS + 1, old_known=known)  # poor layer
-    assert not ocr_redo.second_reading(md, layer, old_score=score + 3, old_known=known)
+    assert ocr_redo.second_reading(md, layer, old_score=score + ocr_redo.SECOND_LOSS + 1, old_known=known)  # poor layer
+    assert not ocr_redo.second_reading(md, layer, old_score=score + ocr_redo.SECOND_LOSS / 2, old_known=known)
     assert ocr_redo.best_variant({"pipeline": md, "page images": md}, known) == "pipeline"  # a tie: the first reading
 
 
