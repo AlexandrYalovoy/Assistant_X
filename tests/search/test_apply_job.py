@@ -76,10 +76,12 @@ def _base(tmp_path, missing=0):
     texts.mkdir()
     cards.mkdir()
     old = time.time() - 3600
-    for p in (texts / "N-00001.md", cards / "N-00001.json"):
+    for p in (texts / "N-00001.md", cards / "N-00001.json", tmp_path / "ocr_quality.tsv"):
         p.write_text("=== page 1 ===\n\nx\n", encoding="utf-8")
         os.utime(p, (old, old))
-    return {"db": str(db), "texts_dir": str(texts), "cards_dir": str(cards)}
+    for d in (texts, cards):
+        os.utime(d, (old, old))
+    return {"db": str(db), "texts_dir": str(texts), "cards_dir": str(cards), "catalog": str(tmp_path / "CATALOG.md")}
 
 
 def test_an_up_to_date_base_is_not_recalculated(tmp_path, monkeypatch):
@@ -100,3 +102,20 @@ def test_an_up_to_date_base_is_not_recalculated(tmp_path, monkeypatch):
     new.write_text("=== page 1 ===\n\ny\n", encoding="utf-8")  # a text newer than the base
     assert intake_tools.reindex().startswith("The base recalculation started") and started == ["reindex", "reindex"]
     assert reindex.counts(cfg["db"]) == (10, 0)
+
+
+def test_a_redone_text_or_its_scores_make_the_base_old(tmp_path, monkeypatch):
+    """intake redo replaces a text, its page file and its row of ocr_quality.tsv; remove takes a text out: each needs a
+    recalculation even with no fragment missing."""
+    cfg = _base(tmp_path)
+    reindex.write_last(cfg, time.time() - 900, 80.0, 10, "cuda")
+    assert intake_tools.up_to_date(cfg).startswith("The base is up to date")
+    old = time.time() - 3600
+    for path in (tmp_path / "texts" / "N-00001.pages.json", tmp_path / "ocr_quality.tsv"):
+        path.write_text("{}", encoding="utf-8")
+        assert intake_tools.up_to_date(cfg) == "", path.name
+        os.utime(path, (old, old))
+        os.utime(path.parent, (old, old))
+    assert intake_tools.up_to_date(cfg).startswith("The base is up to date")
+    (tmp_path / "texts" / "N-00001.pages.json").unlink()  # a text taken out: the folder changes
+    assert intake_tools.up_to_date(cfg) == ""

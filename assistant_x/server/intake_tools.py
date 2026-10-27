@@ -966,16 +966,22 @@ def _auto_apply(args, personal):
 
 
 def up_to_date(cfg):
-    """The words "The base is up to date: …" when nothing is to recalculate (no fragment without a vector, no text or
-    card newer than the base), else ""."""
+    """The words "The base is up to date: …" when nothing is to recalculate (no fragment without a vector; no text, page
+    file, card or ocr_quality.tsv newer than the base; no text taken out since), else ""."""
+    from assistant_x.core.common import OCR_SCORES
     from assistant_x.search import reindex as rx
 
     if not os.path.exists(cfg["db"]) or pending_fragments(cfg):
         return ""
     since = max(os.path.getmtime(p) for p in (cfg["db"], cfg["db"] + "-wal") if os.path.exists(p))
-    cards = cfg.get("cards_dir") or ""
-    for name in os.listdir(cards) if os.path.isdir(cards) else ():
-        if name.endswith(".json") and os.path.getmtime(os.path.join(cards, name)) > since:
+    texts, cards = cfg.get("texts_dir") or "", cfg.get("cards_dir") or ""
+    newer = [texts] if os.path.isdir(texts) else []  # the folder changes when a text is taken out
+    newer += [os.path.join(texts, n) for n in (os.listdir(texts) if os.path.isdir(texts) else ())]
+    newer += [os.path.join(cards, n) for n in (os.listdir(cards) if os.path.isdir(cards) else ()) if n.endswith(".json")]
+    if cfg.get("ocr_scores") or cfg.get("catalog"):
+        newer.append(cfg.get("ocr_scores") or os.path.join(os.path.dirname(cfg["catalog"]), OCR_SCORES))
+    for p in newer:
+        if os.path.exists(p) and os.path.getmtime(p) > since:
             return ""
     last = rx.read_last(cfg) or {}
     total = last.get("fragments") or rx.counts(cfg["db"])[0]
