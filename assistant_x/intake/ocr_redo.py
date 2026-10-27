@@ -229,7 +229,7 @@ class Redo:
         k = self.schedule.shard_count(len(read), self.workers) if self.sharding else 1
         if k > 1:
             ranges = self.schedule.shard_ranges(res.get("pages") or 0, read, k)
-            self.shards[tid] = [len(ranges), job]
+            self.shards[tid] = [len(ranges), job, len(ranges)]
             d["ranges"] = d.get("ranges", 0) + len(ranges)
             for a, b in ranges:
                 part = {**job, "pages": [a, b], "memory_mb": self.cfg.worker_memory_mb}
@@ -248,6 +248,7 @@ class Redo:
         if left is None:
             return
         left[0] -= 1
+        say(f"  {tid}: page ranges read {left[2] - left[0]}/{left[2]}")  # a long scan is written only when all are back
         if left[0] <= 0:
             job = self.shards.pop(tid)[1]
             self.push(d, ("convert", d, name, tid, intake_work.convert, job))
@@ -447,8 +448,9 @@ def cmd_redo(cfg, a):
             d["reused"] = True
             reused += 1
         docs.append(d)
-    # the biggest first: a long scan starts early and its page ranges fill the workers, it does not make the tail
-    for i, d in enumerate(sorted(docs, key=lambda d: -d["old_pages"])):
+    # the documents read by an earlier run first (seconds of prep each: they are written at once), then the biggest: a
+    # long scan starts early and its page ranges fill the workers, it does not make the tail
+    for i, d in enumerate(sorted(docs, key=lambda d: (not d.get("reused"), -d["old_pages"]))):
         d["rank"] = i
     t0 = time.time()
     events_path, results_path = cfg.index / "intake_events.tsv", work / "results.jsonl"

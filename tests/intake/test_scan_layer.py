@@ -204,7 +204,7 @@ def _redo_library(cfg, pages):
     (cfg.index / "manifest.tsv").write_text("\n".join(man) + "\n", encoding="utf-8")
 
 
-def test_redo_reads_as_the_intake_and_writes_each_document_when_ready(project, monkeypatch):
+def test_redo_reads_as_the_intake_and_writes_each_document_when_ready(project, monkeypatch, capsys):
     """redo runs prep, the OCR of a long scan in page ranges and convert on the pool as the intake does, with the
     scanned pages of prep; the biggest document first; each text is replaced once its document is read (results.jsonl
     keeps a line a document) and a second run with --reuse takes the finished readings without reading again."""
@@ -257,6 +257,7 @@ def test_redo_reads_as_the_intake_and_writes_each_document_when_ready(project, m
     assert calls[0] == ("prep", "N-00002")  # the biggest first
     shards = [c for c in calls if c[0] == "shard"]
     assert len(shards) == schedule.shard_count(2 * schedule.SHARD_MIN, 4) > 1 and shards[0][1] == "N-00002"
+    assert f"page ranges read {len(shards)}/{len(shards)}" in capsys.readouterr().out
     assert ("convert", "N-00002", 2 * schedule.SHARD_MIN) in calls  # the scanned pages of prep reach the conversion
     assert ("convert", "N-00001", 3) in calls
     for code in pages:
