@@ -11,6 +11,7 @@
                                      clients with the bearer token of mcp_http_token.txt in the PC folder
     assistant-x doctor               where everything is and what is missing
     assistant-x base export|inspect|install|update|remove  base packages (assistant_x.base)
+    assistant-x remove CODE [CODE …] [--why TEXT] [--dry-run]  documents of the library aside (inbox\\_to_delete)
     assistant-x search, check, report, eval, query-log, debug-report, install, lock
 
 Every command works on the workspace found by core/workspace.py: --workspace DIR anywhere on the line (or
@@ -38,6 +39,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "lock": ("assistant_x.core.lock", "who holds the machine lock; a command under it"),
     "skill": ("assistant_x.setup.skill", "write the Claude skill of the profile of the workspace (SKILL.md)"),
     "base": ("assistant_x.base.cli", "base packages: export, inspect, install, update, remove"),
+    "remove": ("assistant_x.intake.remove", "take documents of the library aside (inbox\\_to_delete), codes reserved"),
 }
 MODEL_COMMANDS = ("search", "embed", "eval")  # they load the models: torch and transformers kept quiet
 

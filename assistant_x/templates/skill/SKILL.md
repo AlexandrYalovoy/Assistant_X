@@ -62,6 +62,9 @@ through its tools:
   PDF N, but on the neighbouring …" or "Not found" with the closest place of the page.
 - `intake_list`, `intake_run`, `intake_status`, `intake_card`, `intake_save_meta`, `intake_apply`, `intake_reindex` — the
   intake of the user's documents (the section "How to sort the user's documents").
+- `library_remove(codes, why)` — a document that got into the library by mistake taken aside: the plan and its token
+  first, show it to the user; only after their "yes" `library_remove(codes, confirm=True, token=…)`. Nothing is
+  deleted (the files go to `inbox\_to_delete`), the code is never given again.
 - `base_inspect`, `base_install`, `base_update`, `base_remove`, `base_export`, `base_status`, `base_list` — base packages (the section "Base
   packages"); `search_library` and `list_documents` take `scope` ("all", "own", "package", "personal").
 

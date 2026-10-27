@@ -35,6 +35,9 @@ What the second real intake run showed, fixed.
 - A table cell whose spaces OCR lost gets them back: a run of 17 letters and more splits into the cheapest sequence
   of known words (a linking vowel of a compound, `compound_links` of the packs, is no word; a word broken at a line
   end of the cell is joined first; a split into many three-letter pieces is refused).
+- `assistant-x remove CODE [--why] [--dry-run]` and the MCP tool `library_remove` (a plan with a token, then the
+  confirm): a document of the library taken aside into `inbox\_to_delete`, journaled, its code reserved, its fragments
+  out of the base; a file removed so is no duplicate when it comes back.
 
 ## Unreleased (0.2)
 

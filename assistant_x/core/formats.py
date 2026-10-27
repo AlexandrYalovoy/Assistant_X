@@ -136,12 +136,14 @@ def file_kind(name):
 EVENTS_HEADER = ["date", "source_file", "size", "sha256", "code", "destination", "status"]
 # the status of an event starts with one of these words
 EVENT_DONE, EVENT_DUP, EVENT_REJECTED, EVENT_DELETE, EVENT_ERROR = "done", "duplicate", "rejected", "to delete", "error"
+EVENT_REMOVED = "removed"  # taken out of the library by the user (assistant-x remove): its file is no duplicate after
 EVENT_KINDS = [
     ("done", "accepted"),
     ("duplicate", "duplicate"),
     ("rejected", "rejected"),
     ("to delete", "to delete"),
     ("error", "error"),
+    ("removed", "removed"),
     ("to pdf", "to PDF"),
     ("estimate", "estimate"),
     ("archive", "archive"),

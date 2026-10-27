@@ -544,6 +544,19 @@ plan and the token stay mandatory, `auto_apply` or not, when the batch
 - holds hidden text addressed to an AI (the hidden text of a file with the words of `ai_phrases` or the names of the
   tools of the server).
 
+## Taking a document out of the library
+
+`assistant-x remove N-00268 [CODE …] [--why TEXT] [--dry-run]` (from Claude: `library_remove(codes, why)`, the plan
+with a token, then `confirm=True` with it after the user's yes, run in the background) takes documents that got into
+the library by mistake aside; nothing is deleted. For every code and the parts of a document of several files: the
+originals of the manifest (a PDF copy too), the card and the text with `<code>.pages.json` and `<code>.hidden.json`
+go to `inbox\_to_deleteemoved_<code>_<date>\` under the same folders; the code leaves the `other_versions` of other
+cards and `ocr_quality.tsv`; `intake_events.tsv` gets a row per file, "removed: <why>" (`event_kind` "removed": the
+same file brought again is no duplicate); `manifest.tsv`, `journal.md`, `CATALOG.md` and `sources_to_update.md` are
+made again; `index\codes.json` keeps the number reserved; `build_index` drops its fragments and vectors (no embeddings
+are computed); `changes.log` notes it. A journal (`indexemove.journal.json`) lets the same command finish an
+interrupted removal.
+
 ## Personal documents
 
 The documents a user adds go by default into the same workspace, shelves and folders as an installed base package,

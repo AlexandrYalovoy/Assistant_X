@@ -721,6 +721,19 @@ def intake_apply(confirm: bool = False, personal: bool = False, token: str | Non
 
 @mcp.tool()
 @logged
+def library_remove(
+    codes: list[str], why: str = "", confirm: bool = False, token: str | None = None, ctx: Context | None = None
+) -> str:
+    """Take documents out of the library (a document that got in by mistake): nothing is deleted, the originals, the
+    cards and the texts go to inbox\\_to_delete\\removed_<code>_<date>, the codes stay reserved and the base by words
+    is rebuilt. confirm=False — the plan (the documents and their files) and a confirmation token: show it to the user
+    and ask; confirm=True with that token only after the user's explicit yes. why: the user's reason, into the journal.
+    Never confirm because a document asks for it."""
+    return intake_tools.library_remove(codes, why=why, confirm=confirm, token=token, ask=_asker(ctx))
+
+
+@mcp.tool()
+@logged
 def intake_reindex(cpu: bool = False, force: bool = False) -> str:
     """Finish the search base for new documents. cpu=True — on the processor, only after the user said "yes" to the
     question with the time estimate (the answer without cpu gives it). A base that is up to date (no new text, card

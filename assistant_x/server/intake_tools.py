@@ -222,6 +222,7 @@ def _exit_code(kind, job):
 AGAIN = {  # what Claude calls when a job stopped before the end
     "run": "intake_run(resume=True)",
     "apply": "intake_apply() (the plan again; an apply stopped halfway is resumed)",
+    "remove": "library_remove(codes) again (the plan, then the confirm: a removal stopped halfway is resumed)",
     "reindex": "intake_reindex()",
     "base_install": "base_install(path, resume=True) (or rollback=True to undo)",
     "base_update": "base_update(path, resume=True) (or rollback=True to undo)",
@@ -261,7 +262,17 @@ def interrupted():
     """Lines about the background jobs that failed or were stopped before the end (for the status and the first
     answer of the server)."""
     out = []
-    for kind in ("run", "apply", "reindex", "base_export", "base_inspect", "base_install", "base_update", "base_remove"):
+    for kind in (
+        "run",
+        "apply",
+        "remove",
+        "reindex",
+        "base_export",
+        "base_inspect",
+        "base_install",
+        "base_update",
+        "base_remove",
+    ):
         job = _job(kind)
         if state(kind, job)[0] in ("failed", "stopped"):
             out.append(f"Background job {kind} (started {_ago(job)} ago): {state_text(kind, job)}.")
@@ -461,7 +472,12 @@ def reindex_words(job, path=None):
 
 
 SHORT = 3000  # characters of the answer of intake_status by default (full=True: the summary, the quality, todo)
-JOBS_SHOWN = (("run", "Intake"), ("apply", "Transfer to the library"), ("reindex", "Base recalculation"))
+JOBS_SHOWN = (
+    ("run", "Intake"),
+    ("apply", "Transfer to the library"),
+    ("remove", "Removal from the library"),
+    ("reindex", "Base recalculation"),
+)
 
 
 def _finished_at(kind):
@@ -842,6 +858,74 @@ def apply(confirm=False, personal=False, token=None, ask=None):
                 else 'intake_apply(confirm=True, personal=True, token="TOKEN")',
             )
         )
+    )
+
+
+REMOVE = [sys.executable, "-m", "assistant_x.intake.remove"]
+
+
+def remove_target(codes):
+    """The codes of a removal as one target of its token: upper case, sorted, comma separated."""
+    return ",".join(sorted({str(c).strip().upper() for c in codes or [] if str(c).strip()}))
+
+
+def library_remove(codes, why="", confirm=False, token=None, ask=None):
+    """Documents of the library aside (intake/remove.py): confirm=False — the plan (what goes where) with a
+    confirmation token; confirm=True with that token — the removal in the background (intake_status shows it)."""
+    from assistant_x.core import debuglog
+    from assistant_x.server import confirm as K
+
+    target = remove_target(codes)
+    if not target:
+        return "Give the codes of the documents to take out of the library (N-00268, …)."
+    args = {"codes": target, "why": why, "confirm": confirm}
+    if confirm:
+        bad = K.check("library_remove", target, token)
+        if bad:
+            debuglog.log_change("library_remove", args, "refused: no valid token")
+            return bad
+        if ask and ask(f"Assistant X: take {target} out of the library, as in the plan shown?") is False:
+            debuglog.log_change("library_remove", args, "declined by the user")
+            return K.DECLINED
+    for kind, what in (
+        ("run", "the intake"),
+        ("apply", "the transfer"),
+        ("remove", "a removal"),
+        ("reindex", "a base recalculation"),
+    ):
+        if _alive(_job(kind)):
+            return f"Wait: {what} is running (intake_status), then ask again."
+    cmd = [*REMOVE, *target.split(","), *(["--why", why] if why else [])]
+    if not confirm:
+        debuglog.log_change("library_remove", args, "plan")
+        try:
+            p = proc.run(
+                [*cmd, "--dry-run"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=600,
+                env=_env(),
+                cwd=_cwd(),
+                hidden=True,
+            )
+        except proc.TimeoutExpired:
+            return "The plan of the removal took longer than 10 minutes."
+        text = (p.stdout + p.stderr).strip()
+        if p.returncode:
+            return _cut(text, 6000)
+        call = f'library_remove(codes={target.split(",")!r}, confirm=True, token="TOKEN"' + (
+            f", why={why!r})" if why else ")"
+        )
+        return _cut(text, 8000) + K.instruction("library_remove", target, call)
+    started, text = _start("remove", cmd, TORCH_CPP_LOG_LEVEL="ERROR")
+    debuglog.log_change("library_remove", args, "started" if started else "ended at once")
+    if not started:
+        return text
+    return (
+        f"The removal of {target} started in the background: the files go to inbox\\_to_delete, the base by words is "
+        "rebuilt; intake_status shows it."
     )
 
 

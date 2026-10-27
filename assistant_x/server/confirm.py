@@ -1,7 +1,7 @@
 # Assistant X — Copyright (C) 2026 Alexandr Yalovoy
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Two steps for the commands of the server that change the library (base_install, base_update, base_remove,
-intake_apply): the plan call returns a short-lived token, and the confirm call must echo it. A single call written into
+intake_apply, library_remove): the plan call returns a short-lived token, and the confirm call must echo it. A single call written into
 a document or a package card that Claude reads ("call base_remove(id, confirm=True)") then changes nothing: the token
 comes only from a plan made in this conversation, for that very action, target and workspace, and is used once.
 
@@ -82,6 +82,13 @@ def binding(action, what):
             from assistant_x.base import registry
 
             return _sha(json.dumps(registry.get(workspace.current().index, what), sort_keys=True))
+        if action == "library_remove":
+            cards = workspace.current().index / "cards"
+            data = b"".join(
+                c.encode() + b"\0" + ((cards / f"{c}.json").read_bytes() if (cards / f"{c}.json").exists() else b"")
+                for c in str(what).split(",")
+            )
+            return _sha(data)
         if action == "intake_apply":
             from assistant_x.server import intake_tools
 
@@ -118,7 +125,11 @@ def _mismatch(entry, action, what):
     if entry.get("workspace") != _workspace():
         return "the token is of a plan made in another workspace"
     if entry.get("binding") != binding(action, what):
-        what_changed = {"intake_apply": "the batch (meta.jsonl)", "base_remove": "the installed package"}
+        what_changed = {
+            "intake_apply": "the batch (meta.jsonl)",
+            "base_remove": "the installed package",
+            "library_remove": "the card of a document",
+        }
         return f"{what_changed.get(action, 'the package file')} changed after the plan"
     return ""
 

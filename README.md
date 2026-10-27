@@ -102,6 +102,7 @@ chooses another workspace):
 | --- | --- |
 | `init [FOLDER]`, `doctor` | make a workspace; show where everything is and what is missing |
 | `intake run`, `intake status`, `intake check-meta`, `intake build`, `intake apply [--dry-run]` | the intake of `inbox` ([docs/INTAKE.md](docs/INTAKE.md)) |
+| `remove CODE [--why TEXT] [--dry-run]` | a document of the library taken aside (`inbox\_to_delete`), its code reserved ([docs/INTAKE.md](docs/INTAKE.md)) |
 | `build [--full]`, `embed [--cpu]` | the search base from the cards and texts; the meaning vectors of the new fragments |
 | `search "question"` | a query from the command line |
 | `base export`, `base inspect`, `base install`, `base update`, `base remove` | base packages: a library passed between people ([docs/PACKAGES.md](docs/PACKAGES.md)) |

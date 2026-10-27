@@ -247,7 +247,8 @@ CODE_IN = re.compile(r"\b[A-Z]-\d{5}(?:-\d{2,3})?\b")  # a code in the status of
 def known_hashes(cfg):
     """{first 16 of SHA-256: code or place} of the library (manifest.tsv) and of the events (or the old journal.md).
     Only the events of a file that is in the library count: accepted (its code), or a duplicate of a code; a file
-    that failed, was rejected or sent to delete is no duplicate when it comes again."""
+    that failed, was rejected or sent to delete is no duplicate when it comes again, nor one the user took out of the
+    library later (a "removed" event: assistant-x remove)."""
     from assistant_x.core.card import is_code
     from assistant_x.core.formats import event_kind
 
@@ -258,6 +259,9 @@ def known_hashes(cfg):
         if len(row) < 7 or not re.fullmatch(r"[0-9a-f]{16}", row[3]):
             continue
         kind = event_kind(row[6])
+        if kind == "removed":
+            out.pop(row[3], None)
+            continue
         code = row[4] if is_code(row[4]) else None
         if kind == "duplicate" and not code:
             code = next(iter(CODE_IN.findall(row[6])), None)
