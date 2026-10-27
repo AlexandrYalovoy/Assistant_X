@@ -40,16 +40,18 @@ def close_all():
         _open.popitem()[1].close()
 
 
-def chunks(n, scans):
-    """[[page indexes]] of a document of n pages: runs of text pages of up to TEXT_CHUNK, of scanned ones (scans) of up
-    to OCR_CHUNK."""
-    out, cur, kind = [], [], None
+def chunks(n, scans, pictures=frozenset()):
+    """[[page indexes]] of a document of n pages: runs of text pages of up to TEXT_CHUNK (and up to OCR_CHUNK text pages
+    with a picture, each read by OCR: the page ranges of a scan with a visible layer stay even), of scanned ones (scans)
+    of up to OCR_CHUNK."""
+    out, cur, kind, read = [], [], None, 0
     for s in range(n):
         k = s in scans
-        if cur and (k != kind or len(cur) >= (OCR_CHUNK if kind else TEXT_CHUNK)):
+        if cur and (k != kind or len(cur) >= (OCR_CHUNK if kind else TEXT_CHUNK) or read >= OCR_CHUNK):
             out.append(cur)
-            cur = []
+            cur, read = [], 0
         cur.append(s)
+        read += not k and s in pictures
         kind = k
     if cur:
         out.append(cur)
@@ -177,8 +179,9 @@ def main(argv):
                 if job.get("use_ocr", True)
                 else set()
             )
+            pictures = {p - first for p in job.get("picture_pages") or [] if first <= p < first + n}
             rng = job.get("range")  # a range of pages of a long scan: the chunks that start in it
-            for part in chunks(n, scans):
+            for part in chunks(n, scans, pictures if job.get("use_ocr", True) else set()):
                 if rng and not rng[0] <= first + part[0] <= rng[1]:
                     continue
                 out = f"{cache}/{code}/{first + part[0]:05d}.json"

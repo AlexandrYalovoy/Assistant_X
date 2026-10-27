@@ -62,6 +62,9 @@ def test_chunks_of_text_and_of_scans():
     assert convert_md.chunks(120, set()) == [list(range(0, 50)), list(range(50, 100)), list(range(100, 120))]
     got = convert_md.chunks(14, {3, 4, 5, 6, 7, 8, 9})
     assert got == [[0, 1, 2], [3, 4, 5, 6, 7], [8, 9], [10, 11, 12, 13]]
+    # a scan with a visible layer: text pages with a picture each, read by OCR, go OCR_CHUNK to a chunk
+    assert convert_md.chunks(12, set(), set(range(12))) == [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11]]
+    assert convert_md.chunks(60, set(), {0, 55}) == [list(range(0, 50)), list(range(50, 60))]  # a few pictures
 
 
 def test_no_hidden_check_for_page_images(tmp_path):

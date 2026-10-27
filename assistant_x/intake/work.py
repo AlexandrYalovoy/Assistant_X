@@ -565,6 +565,7 @@ def _convert_jobs(job, pages=None):
         "force_ocr": False,
         "use_ocr": bool(job.get("ocr")),
         "ocr_pages": job.get("scan_pages") or [],
+        "picture_pages": job.get("picture_pages") or [],  # their chunks are short, as OCR reads them
         "label_pdf": str(original if original.exists() else job["pdf"]),
     }
     if pages:
