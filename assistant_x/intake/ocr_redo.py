@@ -70,7 +70,7 @@ def doubling(md):
     if not pages:
         return 0.0, 0.0
     rep = [p.get("repeated", 0.0) for p in pages]
-    return round(sum(r >= ocr_score.DOUBLED for r in rep) / len(rep), 3), round(sum(rep) / len(rep), 3)
+    return round(sum(map(ocr_score.doubled_page, pages)) / len(rep), 3), round(sum(rep) / len(rep), 3)
 
 
 def undoubled(old, new):

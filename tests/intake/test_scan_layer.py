@@ -198,3 +198,14 @@ def test_redo_reads_the_page_images_only_for_a_broken_font_or_lost_words(tmp_pat
     calls.clear()
     ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_score=score + 3, old_known=known)
     assert calls == ["X"]  # a score that merely did not grow
+
+
+def test_a_phrase_repeated_many_times_is_no_doubled_text():
+    """A legal-database text repeats its amendment note after every reference: many repeats, few pairs; a page
+    extracted twice repeats everything exactly twice (round 1 of the pipeline test: 5 false pages in a 2015 GOST)."""
+    note = "(ссылка введена Изменением N 1, введенным в действие Приказом Росстандарта от 07.04.2021 N 191-ст)"
+    refs = [f"ГОСТ {33250 + i}-2015 {s}" for i, s in enumerate(documents.sentences(740, 8))]
+    native = "\n\n".join(f"{r} {note}" for r in refs)
+    clean = " ".join(documents.sentences(741, 4))
+    assert ocr_score.repeated(native) >= ocr_score.DOUBLED and not ocr_score.is_doubled(native)
+    assert ocr_score.is_doubled(f"{clean} {clean}")

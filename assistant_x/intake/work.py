@@ -738,7 +738,7 @@ def ocr_measures(w, tid, md):
     (w / "ocr" / f"{tid}.json").write_text(json.dumps(detail, ensure_ascii=False, indent=0), encoding="utf-8")
     garbled = [p["page"] for p in sc["pages"] if p["words"] >= 20 and p["bad"] / p["words"] > ocr_score.GARBLED]
     mark_pages(w, tid, "garbled", garbled)
-    doubled = [p["page"] for p in sc["pages"] if p.get("repeated", 0) >= ocr_score.DOUBLED]
+    doubled = [p["page"] for p in sc["pages"] if ocr_score.doubled_page(p)]
     mark_pages(w, tid, "doubled", doubled)
     confs = [s["conf"] for s in stats.values() if s.get("conf") is not None]
     lim = ocr_score.QUALITY["ocr_note"]
