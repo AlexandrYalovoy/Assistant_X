@@ -23,6 +23,8 @@ FORMAT_KINDS = ("pdf_text", "pdf_mixed", "pdf_scan", "pdf_no_ocr", "doc", "prese
 # fields of `doc` brief() shows by default, in this order; toc and the file only when asked
 BRIEF_FIELDS = (
     "designation",
+    "adopts",
+    "amends",
     "title",
     "authors",
     "year",
@@ -468,6 +470,7 @@ def search_texts(card):
     for lang in card_langs(doc):
         lines = [
             _in(doc.get("designation"), lang) or _joined(doc.get("designation")),
+            ", ".join(doc.get("adopts") or []),
             _in(doc.get("title"), lang),
             doc.get("scope") or "",
             doc.get("summary") or "",
@@ -494,7 +497,8 @@ def search_text(card):
     """The card as one text of the search: title, designation, scope, summary, keywords, terms, questions, topics,
     in every language the card has (the index gives it as several fragments: search_texts)."""
     doc = card.get("doc") or {}
-    lines = [_joined(doc.get("designation")), _joined(doc.get("title")), doc.get("scope") or "", doc.get("summary") or ""]
+    lines = [_joined(doc.get("designation")), ", ".join(doc.get("adopts") or []), _joined(doc.get("title"))]
+    lines += [doc.get("scope") or "", doc.get("summary") or ""]
     if keywords(doc):
         lines.append("; ".join(keywords(doc)))
     for t in doc.get("terms") or []:

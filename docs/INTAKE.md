@@ -246,7 +246,9 @@ table of the base are made from the cards, nobody edits the first two by hand.
   `publisher`, `edition`, `lang`, `scope` (≤ 300 characters), `summary` (≤ 800), `questions` (≤ 5), `topics` (1–8
   ids), `keywords` (≤ 30 per language), `terms` (≤ 40), `toc` (≤ 300 entries, `pdf_from` only: an entry ends where the
   next one starts), `tables` (≤ 100), `references` (designations only: the base resolves them to codes), `units` and
-  `serial` of a journal issue or proceedings, `other_versions`, `page_offset`, `note`.
+  `serial` of a journal issue or proceedings, `other_versions`, `adopts` (the foreign standards a national one adopts,
+  as its title page names them: `ISO 10424-2:2007`; searched with the designation), `amends` (the designation of the
+  standard an amendment changes), `page_offset`, `note`.
 - `file` — what the code knows of the file: `format` (`kind`, pages, recognized pages, the score 0–1), `library`
   (the place, `/` between folders), `source_name`, `sha256`, `size`, `text`, `pdf_copy`, `hidden_text`, `issues` (what
   is wrong with the source: the sources to update are made from them), `parts`.
@@ -277,6 +279,17 @@ of a standard first), the title and the designation in the language of the docum
 the year, the publisher, the languages, the contents with PDF pages (`search/bookmap.py`), the tables, the
 designations the text refers to, and the articles of a journal issue from its contents page. Claude checks it against
 the text and adds what the code cannot: English, the summary, the topics, the keywords.
+
+The designations of a standard: every number class takes a hyphen, an en dash and an em dash (`GOST 33000—2014` of a
+title page). Of the designations standing as its own on a title page, the national one (`national_standard` of the
+packs) wins over a foreign one printed beside it; a foreign one in parentheses right after it goes to `adopts`. The
+file name gives the designation when the text has none, and its form when it is the same number with the year the
+text left out. The English title of a standard is the line of Latin letters of three words or more nearest to its
+designation on the title page (the word-by-word translation of the title in capitals when there is none). A first
+page starting with the words of an amendment (`amendment` of the packs: "Amendment No. 1", "Corrigendum") gives a
+draft of the genre standard with `amends` = the designation it names: an amendment is never asked about as a new
+version of its base. A guessed contents drops an entry said twice on one page and the service lines of a title page
+(`not_heading` of the packs: "Date of publication").
 
 ## A new version of a document
 

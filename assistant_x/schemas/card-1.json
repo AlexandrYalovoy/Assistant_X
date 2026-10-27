@@ -104,6 +104,9 @@
                "properties": {"designation": {"type": "string", "minLength": 1}}}
     },
     "other_versions": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/code"}},
+    "adopts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1},
+               "description": "the foreign standards a national one adopts (ISO 10424-2:2007), as its title page names them"},
+    "amends": {"type": "string", "minLength": 1, "description": "the designation of the standard an amendment changes"},
     "page_offset": {
      "type": "object", "additionalProperties": false, "required": ["checked", "value"],
      "properties": {"checked": {"type": "boolean"}, "value": {"type": "integer"}},

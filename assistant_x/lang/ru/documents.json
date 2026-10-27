@@ -1,18 +1,18 @@
 {
-  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names; the words before a designation that cite another document, not the document's own (designation_cite_words).",
+  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names; the words before a designation that cite another document, not the document's own (designation_cite_words); the service lines of a title page that are no section heading (not_heading); the first words of an amendment to a standard (amendment).",
   "designations": [
-    "ГОСТ\\s+Р\\s+ИСО\\s*/?\\s*(?:МЭК\\s+)?\\d[\\d.\\-–]*",
-    "ГОСТ\\s+Р\\s+(?:МЭК\\s+|ЕН\\s+)?\\d[\\d.\\-–]*",
-    "ГОСТ\\s+(?:ISO|ИСО|IEC|МЭК|EN|ЕН)\\s*\\d[\\d.\\-–]*",
-    "ГОСТ\\s+\\d[\\d.\\-–]*",
-    "СП\\s+\\d[\\d.\\-–]*",
-    "СНиП\\s+[\\dIVX][\\d.\\-–]*",
-    "СТО\\s+(?:[А-ЯЁA-Z][А-ЯЁA-Za-zа-яё\\-]*(?:\\s+[А-ЯЁA-Za-zа-яё][а-яёa-z\\-]*)?\\s+(?=\\d))?[\\dА-Я][\\w.\\-–]*",
-    "РД[\\s\\-]+\\d[\\d.\\-–]*",
-    "ВСН\\s+\\d[\\d.\\-–/]*",
-    "ОСТ\\s+\\d[\\d.\\-–]*",
-    "ПБ\\s+\\d[\\d.\\-–]*",
-    "ТУ\\s+\\d[\\d.\\-–]*"
+    "ГОСТ\\s+Р\\s+ИСО\\s*/?\\s*(?:МЭК\\s+)?\\d[\\d.\\-–—]*",
+    "ГОСТ\\s+Р\\s+(?:МЭК\\s+|ЕН\\s+)?\\d[\\d.\\-–—]*",
+    "ГОСТ\\s+(?:ISO|ИСО|IEC|МЭК|EN|ЕН)\\s*\\d[\\d.\\-–—]*",
+    "ГОСТ\\s+\\d[\\d.\\-–—]*",
+    "СП\\s+\\d[\\d.\\-–—]*",
+    "СНиП\\s+[\\dIVX][\\d.\\-–—]*",
+    "СТО\\s+(?:[А-ЯЁA-Z][А-ЯЁA-Za-zа-яё\\-]*(?:\\s+[А-ЯЁA-Za-zа-яё][а-яёa-z\\-]*)?\\s+(?=\\d))?[\\dА-Я][\\w.\\-–—]*",
+    "РД[\\s\\-]+\\d[\\d.\\-–—]*",
+    "ВСН\\s+\\d[\\d.\\-–—/]*",
+    "ОСТ\\s+\\d[\\d.\\-–—]*",
+    "ПБ\\s+\\d[\\d.\\-–—]*",
+    "ТУ\\s+\\d[\\d.\\-–—]*"
   ],
   "designation_words": [
     "ГОСТ",
@@ -113,7 +113,20 @@
     "рекомендовано",
     "допущено",
     "isbn",
-    "составител"
+    "составител",
+    "источник публикации",
+    "информация о документе",
+    "текст документа",
+    "по техническому регулированию"
+  ],
+  "not_heading": [
+    "введен в действие",
+    "дата введения",
+    "издание официальное"
+  ],
+  "amendment": [
+    "изменение\\s*(?:№|n)\\s*\\d+",
+    "поправка"
   ],
   "standard_head": [
     "^(межгосударственный|национальный|государственный)?\\s*стандарт"

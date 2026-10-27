@@ -7,7 +7,8 @@ question to the user, and meta.jsonl takes the answer:
     {"replaces": "N-00001"}       the new file takes the code N-00001, the old original goes to inbox\\_to_delete
     {"other_version": "N-00001"}  both stay; the cards name each other (doc.other_versions)
 
-Whether a document is in force is the user's matter: the library keeps the versions the user chose."""
+Whether a document is in force is the user's matter: the library keeps the versions the user chose. An amendment to a
+standard (the "amends" of its draft) is no version of it: it is never paired with its base."""
 
 import re
 from pathlib import Path
@@ -16,17 +17,17 @@ from assistant_x.core.common import tokens
 
 SIMILAR = 0.8  # a title with this share of the words of another one in common (and at least MIN_WORDS words)
 MIN_WORDS = 3
-YEAR_TAIL = re.compile(r"\s*[-–:.]\s*\d{2,4}\s*$")
+YEAR_TAIL = re.compile(r"\s*[-–—:.]\s*\d{2,4}\s*$")
 
 
 def key(designation):
     """The designation without its year and spaces: the same standard in every edition."""
-    return re.sub(r"\s+", "", YEAR_TAIL.sub("", designation or "")).upper().replace("–", "-")
+    return re.sub(r"[–—]", "-", re.sub(r"\s+", "", YEAR_TAIL.sub("", designation or "")).upper())
 
 
 def norm(designation):
     """The designation as written, spaces and dashes evened out: two editions differ here, not in key()."""
-    return re.sub(r"\s+", "", designation or "").upper().replace("–", "-")
+    return re.sub(r"[–—]", "-", re.sub(r"\s+", "", designation or "").upper())
 
 
 def words(title):

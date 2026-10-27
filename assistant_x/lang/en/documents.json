@@ -1,10 +1,10 @@
 {
-  "_comment": "English documents: designations of standards, places of publication and publishers, words that are no title, the head and the end of the title page of a standard, the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing; the designations, publishers and title words of a field are in its profile. Empty on purpose: national_standard (no English standard has the title page in capitals that gost_title reads), not_standards, company_forms (an English company form follows the name), title_words_en, title_phrases, title_letters, translit and designation_latin (an English title and designation are Latin already); the words before a designation that cite another document, not the document's own (designation_cite_words).",
+  "_comment": "English documents: designations of standards, places of publication and publishers, words that are no title, the head and the end of the title page of a standard, the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing; the designations, publishers and title words of a field are in its profile. Empty on purpose: national_standard (no English standard has the title page in capitals that gost_title reads), not_standards, company_forms (an English company form follows the name), title_words_en, title_phrases, title_letters, translit and designation_latin (an English title and designation are Latin already); the words before a designation that cite another document, not the document's own (designation_cite_words); the service lines of a title page that are no section heading (not_heading); the first words of an amendment to a standard (amendment).",
   "designations": [
-    "ISO\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
-    "IEC\\s+\\d+(?:-\\d+)*(?::\\d{4})?",
-    "ASME\\s+(?:B|PTC\\s*)?\\d+(?:\\.\\d+)*[A-Z]?(?:-\\d{4})?",
-    "(?:BS\\s+)?EN\\s+\\d{3,5}(?:-\\d+)*"
+    "ISO\\s+\\d+(?:[-–—]\\d+)*(?::\\d{4})?",
+    "IEC\\s+\\d+(?:[-–—]\\d+)*(?::\\d{4})?",
+    "ASME\\s+(?:B|PTC\\s*)?\\d+(?:\\.\\d+)*[A-Z]?(?:[-–—]\\d{4})?",
+    "(?:BS\\s+)?EN\\s+\\d{3,5}(?:[-–—]\\d+)*"
   ],
   "designation_words": [
     "ISO"
@@ -141,6 +141,14 @@
     ]
   },
   "national_standard": [],
+  "not_heading": [
+    "date of publication",
+    "effective date"
+  ],
+  "amendment": [
+    "amendment\\s+(?:no\\.?\\s*)?\\d+",
+    "corrigendum"
+  ],
   "not_standards": [],
   "designation_cite_words": [
     "according to",

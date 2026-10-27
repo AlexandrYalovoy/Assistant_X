@@ -206,3 +206,68 @@ def test_the_batch_drafts_a_file_as_soon_as_it_is_done(project, monkeypatch):
     per_file = [t for t, append in calls if append]
     assert per_file and all(len(t) == 1 for t in per_file)  # one file at a time, during the batch
     assert calls[-1] == (None, False)  # then the whole file anew
+
+
+# ---------- standards (audit 7) ----------
+
+
+def test_a_national_standard_with_an_em_dash():
+    md = page(
+        1,
+        "МЕЖГОСУДАРСТВЕННЫЙ СТАНДАРТ\n\nГОСТ 33000—2014\n\nТРУБЫ БУРИЛЬНЫЕ\nТехнические условия\n\n"
+        "Drill pipes. Specifications\n\nИздание официальное",
+    )
+    d = metadraft.draft(md, "ГОСТ 33000.pdf")
+    assert d["designation"]["ru"] == "ГОСТ 33000—2014" and d["year"] == 2014 and d["doc_type"] == "standard"
+    assert d["title"]["en"] == "Drill pipes. Specifications"
+    assert metadraft.references("по ГОСТ 1234—80 и ISO 10424—2") == [
+        {"designation": "ГОСТ 1234—80"},
+        {"designation": "ISO 10424—2"},
+    ]
+
+
+def test_a_national_standard_that_adopts_a_foreign_one():
+    md = page(
+        1,
+        "ISO 10424-2:2007\n\nМЕЖГОСУДАРСТВЕННЫЙ СТАНДАРТ\n\nГОСТ 33000-2014\n(ISO 10424-2:2007, NEQ)\n\n"
+        "ОБОРУДОВАНИЕ БУРОВОЕ\nЧасть 2",
+    )
+    d = metadraft.draft(md, "x.pdf")
+    assert d["designation"]["ru"] == "ГОСТ 33000-2014"  # the national one, not the foreign one above it
+    assert d["adopts"] == ["ISO 10424-2:2007"]
+    from assistant_x.core import card as C
+
+    line = {**d, "sec": "N", "title": {"en": "Drilling equipment", "ru": "Оборудование буровое"}, "topics": ["drilling"]}
+    line.update(summary="Drilling equipment.", keywords={"en": ["drilling"]}, designation={"en": "GOST 33000-2014"})
+    card = meta_schema.card_of(line, "N-00001")
+    assert card["doc"]["adopts"] == ["ISO 10424-2:2007"] and not C.validate(card)
+    assert "ISO 10424-2:2007" in C.search_text(card)
+
+
+def test_the_file_name_gives_the_year():
+    md = page(1, "НАЦИОНАЛЬНЫЙ СТАНДАРТ\n\nГОСТ Р 51858\n\nНЕФТЬ\nОбщие технические условия")
+    assert metadraft.draft(md, "ГОСТ Р 51858-2002.pdf")["designation"]["ru"] == "ГОСТ Р 51858-2002"
+    assert metadraft.draft(md, "ГОСТ Р 52000-2005.pdf")["designation"]["ru"] == "ГОСТ Р 51858"  # another number
+    assert metadraft.same_number("ГОСТ 33000", "ГОСТ 33000-2014") and not metadraft.same_number("ГОСТ 3300", "ГОСТ 33000")
+
+
+def test_an_amendment_is_no_version_of_its_base():
+    from assistant_x.intake import versions
+
+    md = page(1, "Изменение № 1 ГОСТ 33000-2014 Трубы бурильные. Технические условия\n\nДата введения 2016-01-01")
+    d = metadraft.draft(md, "Изм 1.pdf")
+    assert d["doc_type"] == "standard" and d["amends"] == "ГОСТ 33000-2014" and "designation" not in d
+    assert d["title"]["ru"].startswith("Изменение № 1")
+    docs = [("N-00001", "Трубы бурильные. Технические условия", "ГОСТ 33000-2014")]
+    assert versions.find(d.get("code_hint"), " ".join(d["title"].values()), docs) is None
+
+
+def test_contents_without_service_lines_and_repeats():
+    assert not metadraft.heading_ok("Дата введения 2016-01-01")
+    assert not metadraft.heading_ok("Введен в действие впервые")
+    pages = [
+        (1, "# 1 Область применения\n\n# 1 Область применения\n\n# 2 Нормативные ссылки"),
+        (2, "# 3 Термины и определения"),
+    ]
+    toc, _ = metadraft.contents(pages)
+    assert [t["title"] for t in toc].count("1 Область применения") <= 1

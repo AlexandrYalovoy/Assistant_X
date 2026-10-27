@@ -32,6 +32,10 @@ YEAR = re.compile(r"(?<![\d.])((?:19|20)\d{2})(?![\d])")
 # "replaces GOST …" on the title page: the designation of the document this one supersedes (a version hint)
 SUPERSEDES = re.compile(f"(?i){lang.alt('supersedes')}")
 SKIP_TITLE = re.compile(rf"(?i)^({lang.alt('not_title')})")
+NOT_HEADING_LINE = re.compile(rf"(?i)^({lang.alt('not_heading')})")  # a service line of a title page, no section
+# the first line of an amendment to a standard ("Amendment No. 1 to …"): the document amends its base, it is no version
+AMENDMENT = re.compile(rf"(?i)^(?:#+\s*)?({lang.alt('amendment')})\b")
+DASHES = " .-–—"
 # the genres the words of the first pages suggest (doc_type_words of the packs and the profile), in the order of the
 # genres of schemas/card-1.json; the first rule that matches wins (a designation of a standard comes before all of them)
 TYPE_ORDER = tuple(t for t in config.doc_types() if t != "other")
@@ -172,9 +176,9 @@ def designations_in(text):
         return []
     out = []
     for m in DESIG_ANY.finditer(text):
-        d = re.sub(r"\s+", " ", m.group(0)).strip(" .-–")
+        d = re.sub(r"\s+", " ", m.group(0)).strip(DASHES)
         if d and designation_number(d):
-            out.append((m.start(), m.start() + len(m.group(0).rstrip(" .-–")), d))
+            out.append((m.start(), m.start() + len(m.group(0).rstrip(DASHES)), d))
     ends = {}
     for s, e, d in out:
         if e not in ends or s < ends[e][0]:
@@ -192,28 +196,96 @@ def own_designation(pages):
     """The designation of the document itself, or None: on its first two pages, standing at the start of a line
     (alone, with the words of its title, or after a head line in capitals such as "NATIONAL STANDARD") and not cited
     ("according to GOST …", the end of the line before). A book that cites a standard in its preface is no
-    standard (audit 6, M-021)."""
+    standard (audit 6, M-021). On a page with a national designation (national_standard of the packs) and a foreign one
+    (the standard it adopts, ISO 10424-2:2007), the national one."""
     for page in pages[:2]:
-        prev = ""
-        for raw in page.split("\n"):
-            line = tidy(plain(raw)).strip(" \t>")
-            if not line:
-                continue
-            found = designations_in(line)
-            if found:
-                start, _, d = found[0]
-                before = line[:start].strip(' «"(-–:')
-                head = not before or GOST_HEAD.match(before) or (len(before.split()) <= 5 and before.upper() == before)
-                if head and not CITE_BEFORE.search(before or prev):
-                    return d
-            prev = line
+        found = own_on_page(page)
+        if found:
+            return next((d for d in found if d.startswith(NATIONAL)), found[0]) if NATIONAL else found[0]
     return None
+
+
+def own_on_page(page):
+    """The designations standing as the document's own on one page, in order (own_designation)."""
+    out, prev = [], ""
+    for raw in page.split("\n"):
+        line = tidy(plain(raw)).strip(" \t>")
+        if not line:
+            continue
+        found = designations_in(line)
+        if found:
+            start, _, d = found[0]
+            before = line[:start].strip(' «"(-–:')
+            head = not before or GOST_HEAD.match(before) or (len(before.split()) <= 5 and before.upper() == before)
+            if head and not CITE_BEFORE.search(before or prev):
+                out.append(d)
+        prev = line
+    return out
+
+
+def adopts(pages, own):
+    """The foreign standards a national one adopts: the designations in parentheses right after its own on the first
+    two pages ("GOST 33000-2014 (ISO 10424-2:2007, NEQ)")."""
+    if not own:
+        return []
+    out = []
+    text = plain("\n".join(pages[:2]))
+    for m in re.finditer(re.escape(own) + r"[\s.,]*\(([^()\n]{3,160})\)", text):
+        out += [d for _, _, d in designations_in(m.group(1)) if not (NATIONAL and d.startswith(NATIONAL))]
+    return list(dict.fromkeys(out))
+
+
+def same_number(a, b):
+    """Two designations of one document, one perhaps without its year: the same words before the number and the digit
+    groups of the shorter at the start of the longer ("GOST 33000" and "GOST 33000-2014")."""
+    if not a or not b:
+        return False
+    pa, pb = re.split(r"\d", a, 1)[0].split(), re.split(r"\d", b, 1)[0].split()
+    ga, gb = re.findall(r"\d+", a), re.findall(r"\d+", b)
+    short, long_ = sorted((ga, gb), key=len)
+    return [w.upper() for w in pa] == [w.upper() for w in pb] and bool(short) and long_[: len(short)] == short
+
+
+def amendment_of(pages):
+    """(the first line, the designation it amends) of an amendment to a standard ("Amendment No. 1 GOST …"), or None:
+    the first lines of the first page start with the words of an amendment and name a designation."""
+    lines = [x.strip() for x in plain(pages[0] if pages else "").split("\n") if x.strip()][:4]
+    for i, line in enumerate(lines):
+        if AMENDMENT.match(line):
+            for nxt in lines[i : i + 3]:
+                found = designations_in(nxt)
+                if found:
+                    return line.lstrip("# ").strip(), found[0][2]
+            return None
+    return None
+
+
+LATIN_LINE = re.compile(r"^[A-Za-z][A-Za-z0-9 ,.;:()'/&-]+$")
+
+
+def en_title_line(pages, desig):
+    """The English title of a standard as its title page prints it: a line of Latin letters only, of three words or
+    more, nearest to the line of the designation (before or after it); "" when there is none."""
+    if not pages or not desig:
+        return ""
+    lines = [tidy(plain(x)).strip(" .:-–—") for x in pages[0].split("\n")]
+    lines = [x for x in lines if x]
+    at = next((i for i, x in enumerate(lines) if desig in x), None)
+    if at is None:
+        return ""
+    for k in sorted(range(len(lines)), key=lambda i: abs(i - at)):
+        x = lines[k]
+        if k == at or abs(k - at) > 8 or designations_in(x) or SKIP_TITLE.match(x):
+            continue
+        if LATIN_LINE.match(x) and len(re.findall(r"[A-Za-z]{2,}", x)) >= 3:
+            return x[0].upper() + x[1:].lower() if x.upper() == x else x
+    return ""
 
 
 def year_of(text, desig=None):
     now = datetime.date.today().year
     if desig:
-        m = re.search(r"[-–:.](\d{4})$|[-–](\d{2})$", desig)
+        m = re.search(r"[-–—:.](\d{4})$|[-–—](\d{2})$", desig)
         if m:
             y = int(m.group(1) or m.group(2))
             y = y if y > 1000 else (1900 + y if y > now % 100 else 2000 + y)
@@ -377,7 +449,9 @@ def heading_ok(title):
 
     t = title.strip()
     # a service line of a title page; one word alone is a section ("Introduction", "Preface")
-    if not t or NOT_HEADING.search(t) or "=" in t or (SKIP_TITLE.match(t) and len(t.split()) > 1):
+    if not t or NOT_HEADING.search(t) or NOT_HEADING_LINE.match(t) or "=" in t:
+        return False
+    if SKIP_TITLE.match(t) and len(t.split()) > 1:
         return False
     c = textmap.CHAPTER_RX.match(t)
     if c and not WORDS2_RX.search(t[c.end() :]):
@@ -414,6 +488,12 @@ def contents(pages, given=None):
     ][:300]
     if guessed and toc:
         toc = _chapter_titles(toc, pages)
+        seen = set()  # an entry said twice on one page (a running head, a title read twice) is one entry
+        toc = [
+            t
+            for t in toc
+            if (t["pdf_from"], t["title"].lower()) not in seen and not seen.add((t["pdf_from"], t["title"].lower()))
+        ]
         kept = [t for t in toc if heading_ok(t["title"])]
         noisy = len(kept) < TOC_MIN or len({t["pdf_from"] for t in kept}) == 1 or len(kept) < TOC_KEEP * len(toc)
         toc = [] if noisy else kept
@@ -447,15 +527,17 @@ def draft(md, rel="", profile=None, given=None):
     pages = pages_of(md)
     text = plain("\n".join(pages))
     ext = Path(rel).suffix.lower().lstrip(".")
-    desig = own_designation(pages)
-    if not desig:  # the file name often carries the designation
-        desig = designation(Path(rel).stem.replace("_", " "))
+    amends = amendment_of(pages)
+    desig = own_designation(pages) if not amends else None
+    named = designation(Path(rel).stem.replace("_", " "))  # the file name often carries the designation
+    if not desig or (named and named != desig and same_number(named, desig) and len(named) > len(desig)):
+        desig = named if not amends else None  # the form of the file name carries the year
     yr = year_of(text, desig)
-    doc_type = doc_type_of(text + "\n" + Path(rel).stem, desig, ext)
+    doc_type = "standard" if amends else doc_type_of(text + "\n" + Path(rel).stem, desig, ext)
     langs = text_lang(md)
     lg = langs[0] if langs else "en"
     gost = gost_title(pages) if desig and desig.startswith(NATIONAL) else ""
-    title = gost or title_of(pages, desig) or desig or ""
+    title = (amends[0] if amends else "") or gost or title_of(pages, desig) or desig or ""
     out = {
         "tid": None,
         "sec": shelf_of(doc_type, profile),
@@ -466,10 +548,18 @@ def draft(md, rel="", profile=None, given=None):
         "lang": langs,
         "draft": True,
     }
+    printed = en_title_line(pages, desig) if desig else ""
     en = en_title(gost) if gost else ""
     if en:
         out["en"] = en
         out["title"]["en"] = en.replace("-", " ")
+    if printed and lg != "en":  # the English title the standard prints itself is better than a word by word one
+        out["title"]["en"] = printed
+        out["en"] = re.sub(r"[^a-z0-9]+", "-", printed.lower()).strip("-")[:80]
+    if amends:
+        out["amends"] = amends[1]
+    if desig and adopts(pages, desig):
+        out["adopts"] = adopts(pages, desig)
     if desig:
         latin = translit(desig)
         out["code_hint"] = desig
@@ -610,7 +700,8 @@ def write_drafts(work, state, tids=None, index=None, profile=None, append=False)
         d["tid"] = r["tid"]
         if r.get("ocr_score") is not None:  # recognition score 0-100 (tools/ocr_score.py), for Claude to see
             d["ocr_score"] = r["ocr_score"]
-        hit = versions.find(d.get("code_hint"), " ".join((d.get("title") or {}).values()), docs) if docs else None
+        title = " ".join((d.get("title") or {}).values())
+        hit = versions.find(d.get("code_hint"), title, docs) if docs and not d.get("amends") else None
         if hit:
             d["version_of"] = hit[0]
             d.setdefault("question", []).append(versions.question(*hit))

@@ -19,6 +19,10 @@ What the second real intake run showed, fixed.
   allows (`workers` 16 at most by default, `cpu_share_idle` 0.8); the disk slows the work only at the computer and only
   by its latency (`% Idle Time` and `Avg. Disk sec/Transfer` instead of `% Disk Time`); `balance.log` gets a line of
   the load every minute and `summary.md` the mean load; the time left goes by the cost of the files.
+- Drafts of standards: designations with an em dash, the national designation before a foreign one on the title page,
+  the adopted foreign standards in the new card field `adopts`, the year from the file name of the same number, the
+  English title printed on the title page, an amendment drafted with `amends` (never a version of its base), contents
+  without repeated entries and service lines; the headers of an exported legal text are no title.
 
 ## Unreleased (0.2)
 
