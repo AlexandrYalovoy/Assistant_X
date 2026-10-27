@@ -138,3 +138,63 @@ def test_redo_accepts_a_text_no_longer_doubled(tmp_path):
     assert ocr_redo.verdict(r, tmp_path, 10).startswith("recognized again: text replaced — no longer doubled")
     r["doubled"] = r["old_doubled"]
     assert "text kept" in ocr_redo.verdict(r, tmp_path, 10)
+
+
+def test_redo_counts_known_words_once_per_page(tmp_path):
+    """A text doubled word by word and phrase by phrase (a scan's layer interleaved with its recognition, as in run 2a:
+    mean repeated share 0.3-0.5) keeps no more known words than its clean recognition; a text that lost words is kept."""
+    clean = [" ".join(documents.sentences(720 + i, 3)) for i in range(6)]
+
+    def interleave(s):
+        ws = s.split()
+        return " ".join(w for pair in zip(ws, ws) for w in pair)
+
+    old = "".join(f"=== page {i} ===\n\n{interleave(s) if i % 2 else s + ' ' + s}\n\n" for i, s in enumerate(clean, 1))
+    new = "".join(f"=== page {i} ===\n\n{s}\n\n" for i, s in enumerate(clean, 1))
+    assert ocr_redo.known_words(old) == ocr_redo.known_words(new) > 0
+    (tmp_path / "X-00002.md").write_text(old, encoding="utf-8")
+    r = {
+        "code": "X-00002",
+        "old": ocr_redo.words_score(old),
+        "new": ocr_redo.words_score(new),
+        "known": ocr_redo.known_words(new),
+        "old_known": ocr_redo.known_words(old),
+        "pages": 6,
+        "variant": "pipeline",
+        "old_doubled": (0.3, 0.3),  # partly doubled: the halving of the old rule (1 - mean/2) kept such texts
+        "doubled": (0.0, 0.0),
+    }
+    assert ocr_redo.verdict(r, tmp_path, 10).startswith("recognized again: text replaced — no longer doubled")
+    half = "".join(f"=== page {i} ===\n\n{' '.join(s.split()[: len(s.split()) // 2])}\n\n" for i, s in enumerate(clean, 1))
+    r["known"] = ocr_redo.known_words(half)
+    assert "fewer known words" in ocr_redo.verdict(r, tmp_path, 10)
+
+
+def test_redo_reads_the_page_images_only_for_a_broken_font_or_lost_words(tmp_path, monkeypatch):
+    clean = " ".join(documents.sentences(730, 4))
+    texts = {"X": f"=== page 1 ===\n\n{clean}\n\n", "X_img": f"=== page 1 ===\n\n{clean}\n\n"}
+    calls = []
+
+    def variant(base, tid, imgocr):
+        calls.append(tid)
+        return texts[tid], {"pages": 1, "ocr_pages": 0}
+
+    monkeypatch.setattr(ocr_redo, "_variant", variant)
+    pdf = tmp_path / "X.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n")
+    known = ocr_redo.known_words(texts["X"])
+    r = ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=known)
+    assert calls == ["X"] and r["variant"] == "pipeline"  # a clean layer text that kept its words: one reading
+    calls.clear()
+    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=known, old_broken=True)
+    assert calls == ["X", "X_img"]  # a broken font of the old text: the page images too
+    calls.clear()
+    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_known=3 * known)
+    assert calls == ["X", "X_img"]  # the layer lost known words
+    calls.clear()
+    score = ocr_redo.words_score(texts["X"])
+    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_score=score + ocr_redo.REDO_LOSS + 1, old_known=known)
+    assert calls == ["X", "X_img"]  # a poor visible layer: well below the old score
+    calls.clear()
+    ocr_redo.redo_one("X", str(pdf), str(tmp_path / "w"), {}, old_score=score + 3, old_known=known)
+    assert calls == ["X"]  # a score that merely did not grow

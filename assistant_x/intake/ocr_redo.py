@@ -13,9 +13,9 @@ clean but nearly empty text is no gain).
     --dry-run                                                 recognise and score, change nothing
 
 Old and new texts are compared by the word part of the score (tools/ocr_score.py without the Tesseract confidence:
-the old texts have none). A document with a text layer (or a broken font: U+FFFD, Latin Extended-B) whose new text
-still falls short is tried once more with the page images recognised instead of the layer (as intake.py does for a
-broken font encoding). Every document gets a
+the old texts have none). A document with a broken font (U+FFFD, Latin Extended-B), or with a text layer whose new
+text lost known words, is tried once more with the page images recognised instead of the layer (as the intake does
+for a broken font encoding). Known words count once per page, so a doubled old text is not "richer". Every document gets a
 row in index/intake_events.tsv ("recognized again: …", why the text was or was not replaced); a replaced one gets
 its new row in ocr_quality.tsv (source "redo"). The work goes to intake/work/redo/<date>_<time>/; the library PDF is
 copied there, library is only read. After replacements: build_index.py and embed.py.
@@ -54,7 +54,8 @@ def library_pdf(cfg, code):
 
 
 UNDOUBLED_DROP = 0.3  # the share of doubled pages falls by this much: the text is no longer doubled
-UNDOUBLED_MEAN = 0.1  # … or the mean share of repeated 3-grams falls from above ocr_score.DOUBLED to below this
+UNDOUBLED_MEAN = 0.1  # … or the mean share of repeated 3-grams falls by this much, to below this
+REDO_LOSS = 5  # a new text this much below the old score by words is worse: the page images are read, it is not taken
 
 
 def words_score(md):
@@ -72,12 +73,13 @@ def doubling(md):
 
 def undoubled(old, new):
     """True when the new text is no longer doubled as the old one was ((share, mean) of doubling())."""
-    return old[0] - new[0] >= UNDOUBLED_DROP or (old[1] > ocr_score.DOUBLED and new[1] < UNDOUBLED_MEAN)
+    return old[0] - new[0] >= UNDOUBLED_DROP or (old[1] - new[1] >= UNDOUBLED_MEAN and new[1] < UNDOUBLED_MEAN)
 
 
 def known_words(md):
-    """Counted words of a text that are not errors."""
-    return sum(p["words"] - p["bad"] for p in ocr_score.score_text(md)["pages"])
+    """Known words of a text, each once per page (ocr_score.known_distinct): a doubled old text does not count its
+    words twice against its clean recognition."""
+    return ocr_score.known_distinct(md)
 
 
 def broken(md):
@@ -101,8 +103,11 @@ def _variant(base, tid, imgocr):
     return md.read_text(encoding="utf-8"), {**conv, "pages": res.get("pages"), "ocr_pages": res.get("ocr_pages")}
 
 
-def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=False, old_doubled=(0.0, 0.0)):
-    """Recognise one document; the main process decides. {'code', 'new', 'variant', 'md', 'detail', 'why', …}"""
+def redo_one(code, pdf, work, base, old_score=None, old_known=0, old_broken=False):
+    """Recognise one document; the main process decides. {'code', 'new', 'variant', 'md', 'detail', 'why', …}
+    The page images are read as a second variant only when a font is broken (old or new text), or the new text of a
+    document with a text layer lost known words or fell REDO_LOSS below the old score (a poor visible layer): a score
+    that merely did not grow is no reason for a second, longer reading."""
     t0 = time.time()
     w = Path(work) / code
     (w / "src").mkdir(parents=True, exist_ok=True)
@@ -121,9 +126,9 @@ def redo_one(code, pdf, work, base, old_score, gain, old_known=0, old_broken=Fal
 
     best = ("pipeline", md, conv, code)
     out["variants"]["pipeline"] = words_score(md)
-    has_layer = (conv.get("ocr_pages") or 0) < (conv.get("pages") or 0) or old_broken or broken(md)
-    short = (out["variants"]["pipeline"] or 0) < (old_score or 0) + gain and not undoubled(old_doubled, doubling(md))
-    if (not rank("pipeline", md)[0] or short) and has_layer:
+    layer = (conv.get("ocr_pages") or 0) < (conv.get("pages") or 0)
+    worse = old_score is not None and (out["variants"]["pipeline"] or 0) < old_score - REDO_LOSS
+    if old_broken or broken(md) or (layer and (worse or not rank("pipeline", md)[0])):
         img_src = w / "src" / f"{code}_img.pdf"  # prep of a variant takes the file under its own name
         if not img_src.exists():
             shutil.copy2(src, img_src)
@@ -232,7 +237,7 @@ def cmd_redo(cfg, a):
     t0 = time.time()
     with ProcessPoolExecutor(n_workers, initializer=_init, initargs=(env,)) as ex:
         futs = {
-            ex.submit(redo_one, code, str(pdf), str(work), base, old_s, gain, old_k, broken(old), old_d): (
+            ex.submit(redo_one, code, str(pdf), str(work), base, old_s, old_k, broken(old)): (
                 code,
                 pdf,
                 old_s,
@@ -315,14 +320,12 @@ def verdict(r, texts, gain):
     if r["pages"] != old_pages:
         return f"recognized again: text kept — {r['pages']} pages, but the previous text has {old_pages}"
     old_d, new_d = tuple(r.get("old_doubled") or (0.0, 0.0)), tuple(r.get("doubled") or (0.0, 0.0))
-    # a doubled text counts its words twice: the known words it would have once (half of its repeated 3-grams fewer)
-    old_known = r["old_known"] * (1 - old_d[1] / 2) if undoubled(old_d, new_d) else r["old_known"]
-    if r["known"] < QUALITY["ocr_redo_keep"] * old_known:
+    if r["known"] < QUALITY["ocr_redo_keep"] * r["old_known"]:  # known words count once per page: doubling aside
         return (
             f"recognized again: text kept — the new one has fewer known words ({r['known']} against "
             f"{r['old_known']}), score {fmt(old_s)} → {fmt(new_s)}"
         )
-    if new_s < (old_s or 0) + gain and undoubled(old_d, new_d):
+    if new_s < (old_s or 0) + gain and undoubled(old_d, new_d) and new_s >= (old_s or 0) - REDO_LOSS:
         return (
             f"recognized again: text replaced — no longer doubled: doubled pages {old_d[0]:.0%} → {new_d[0]:.0%}, "
             f"score by words {fmt(old_s)} → {fmt(new_s)} ({r['variant']})"

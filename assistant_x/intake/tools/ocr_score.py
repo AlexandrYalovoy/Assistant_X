@@ -445,6 +445,21 @@ def repeated(text):
     return round(sum(count[g] >= 2 for g in grams) / len(grams), 3)
 
 
+def known_distinct(md, vocab=None):
+    """Distinct known words of each page of a text, summed over the pages. A text extracted twice (a scan's visible layer
+    and an invisible copy of its recognition) counts each of its words once, as its clean recognition does."""
+    vocab = vocab or load_vocab()
+    total = 0
+    for _, text in pages_of(md) or [(1, md)]:
+        seen = set()
+        for m in TOKEN.finditer(clean(text)):
+            t = m.group(0)
+            if kind(t) == "word" and (w := norm(t)) not in seen and known(w, vocab):
+                seen.add(w)
+        total += len(seen)
+    return total
+
+
 def score_text(md, conf=None, vocab=None):
     """{'score', 'words', 'nonword', 'pages': [{page, words, bad, score, repeated, ...}]} of a Markdown text with page
     marks.
