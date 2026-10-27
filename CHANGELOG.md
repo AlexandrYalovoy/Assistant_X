@@ -29,6 +29,9 @@ What the second real intake run showed, fixed.
 - A short `intake_status` (3 000 characters at most; `full=True` for the summary and the quality), jobs that ended before
   the batch left out, the harmless warnings of the model libraries out of the job tails, no fixed "Next" line in
   `summary.md`, a progress line every 5 minutes when nothing changes, `PYTHONUTF8=1` in the Claude Desktop entry.
+- "Low closeness" also when half the words of a question are in none of the best results, with those words; the
+  closeness threshold calibrated on the journal of the PC; the second server of one window no longer blames "another
+  window".
 
 ## Unreleased (0.2)
 

@@ -73,11 +73,21 @@ CPU_PENDING = (
     "the answer is not here."
 )
 OTHER_HOLDER = " (another Claude window or tab holds the video card)"
+SAME_WINDOW = " (the first server of this window loads the models)"
 WEAK = 0.5  # the closeness of the best fragment below which the library may not cover a question ([search] weak)
+# without [search] weak the threshold is calibrated on the journal of this PC: the 10th percentile of the closeness of
+# the questions answered so far (CALIBRATE_MIN of them at least), within WEAK_BOUNDS
+CALIBRATE_MIN, WEAK_BOUNDS, WEAK_PERCENTILE = 30, (0.35, 0.6), 0.1
+MISSING_SHARE = 0.5  # the share of the content words of a question none of the best results has: the library lacks it
+MISSING_TOP = 5  # the results looked at for the words of the question
 RERANK_WEAK = 0.3  # the reranker's certainty of its best fragment below which it agrees ([search] rerank_weak)
 LOW_CLOSENESS = (
     "Low closeness ({close:.2f}): the library may not cover this question — say so to the user before answering from "
     "general knowledge."
+)
+LOW_WORDS = (
+    "Low closeness: the library has nothing on «{words}» (none of the best results has these words of the question) — "
+    "say so to the user before answering from general knowledge."
 )
 NO_DENSE = (
     'Found by words only: {why}. The failure was logged; run "assistant-x doctor", and if that does not help, '
@@ -123,9 +133,31 @@ def holder_alive():
         return True
 
 
+def holder_pid():
+    """The pid written in the lock of the models, or 0."""
+    try:
+        with open(LOCK_FILE, encoding="utf-8") as f:
+            return int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0
+
+
+def same_window(pid):
+    """Is the holder of the lock a server of the same client process (its parent is ours): two servers of one window."""
+    try:
+        import psutil
+
+        return psutil.Process(pid).ppid() == os.getppid()
+    except Exception:  # noqa: BLE001 — gone or no psutil: not known to be the same window
+        return False
+
+
 def cpu_pending():
-    """The note of a light instance whose model still loads; it names another window only when one holds the lock."""
-    return CPU_PENDING.format(why=OTHER_HOLDER if holder_alive() else "")
+    """The note of a light instance whose model still loads: it names another window only when a live server of
+    another client process holds the lock; one of the same client is the first server of this window."""
+    if not holder_alive():
+        return CPU_PENDING.format(why="")
+    return CPU_PENDING.format(why=SAME_WINDOW if same_window(holder_pid()) else OTHER_HOLDER)
 
 
 def full_mode():
@@ -295,7 +327,8 @@ def search_library(
         + f", found {len(res)}: "
         + ", ".join(f"{r['code']}:{r['page']}" for r in res[:5])
     )
-    pending = "\n".join(x for x in (start_notice(), common.stale_note(lib().cfg), search_note(stats, light)) if x)
+    note = search_note(stats, light, query, res)
+    pending = "\n".join(x for x in (start_notice(), common.stale_note(lib().cfg), note) if x)
     pending = f"{pending}\n\n" if pending else ""
     if not res:
         return pending + "Nothing found. Try other terms or remove the filters."
@@ -336,9 +369,10 @@ DENSE_PENDING = (
 )
 
 
-def search_note(stats, light):
-    """The lines above the results when they come from the words alone, and why; and how many fragments have no
-    meaning vector yet (an interrupted recalculation)."""
+def search_note(stats, light, query="", res=None):
+    """The lines above the results when they come from the words alone, and why; the low closeness of the best
+    results (by meaning, or by the words of the question none of them has); and how many fragments have no meaning
+    vector yet (an interrupted recalculation)."""
     gap = common.vector_gap_note(*stats["unvectored"]) if stats.get("unvectored") else ""
     if stats.get("dense_error"):
         why = NO_DENSE.format(why=stats["dense_error"])
@@ -348,17 +382,76 @@ def search_note(stats, light):
         why = cpu_pending() if light else DENSE_PENDING
     else:
         why = ""
-    return "\n".join(x for x in (why, low_closeness(stats), gap) if x)
+    return "\n".join(x for x in (why, low_closeness(stats) or missing_note(query, res), gap) if x)
+
+
+def _synonyms():
+    """The synonym groups of the search (the profile's and the library's), [] without a loaded library."""
+    return list(getattr(_lib, "syn", None) or []) if _lib is not None else []
+
+
+def missing_words(query, res, groups=()):
+    """The content words of the question (stop words aside, stemmed as in the word index) that none of the best
+    MISSING_TOP results has, neither by itself nor by a synonym; as they are written in the question."""
+    from assistant_x.core.common import TOKEN_RX, STOP, stem_word, tokens
+
+    words = {}
+    for m in TOKEN_RX.finditer(query or ""):
+        w = m.group(0)
+        if w.lower() not in STOP and not w[0].isdigit() and len(w) >= 3:
+            words.setdefault(stem_word(w), w)
+    if not words or not res:
+        return [], 0
+    texts = [set(tokens(r.get("text") or "")) for r in res[:MISSING_TOP]]
+    seen = set().union(*texts)
+    missing = []
+    for st, w in words.items():
+        alts = {a for g in groups if any(alt == (st,) for alt in g) for alt in g for a in alt}
+        if st not in seen and not (alts & seen):
+            missing.append(w)
+    return missing, len(words)
+
+
+def missing_note(query, res):
+    """LOW_WORDS when half the content words of the question are in none of the best results, else ""."""
+    missing, n = missing_words(query, res, _synonyms())
+    return LOW_WORDS.format(words=", ".join(missing)) if n and len(missing) >= MISSING_SHARE * n else ""
+
+
+@functools.lru_cache(maxsize=1)
+def calibrated_weak():
+    """The 10th percentile of the closeness of the questions the journal of this PC answered (CALIBRATE_MIN at least)
+    within WEAK_BOUNDS, or None: computed once per server start."""
+    try:
+        from assistant_x.search import query_log
+
+        calls = query_log.parse([debuglog.calls_path() + ".1", debuglog.calls_path()])
+    except Exception:  # noqa: BLE001 — no journal: the default
+        return None
+    close = sorted(
+        c["close"] for c in calls if c["tool"] == "search_library" and c["ok"] and c["close"] is not None and c["found"]
+    )
+    if len(close) < CALIBRATE_MIN:
+        return None
+    value = close[int(WEAK_PERCENTILE * (len(close) - 1))]
+    return round(min(WEAK_BOUNDS[1], max(WEAK_BOUNDS[0], value)), 3)
+
+
+def weak_threshold(cfg):
+    """[search] weak when the user set it, else the threshold calibrated on this PC, else WEAK."""
+    if cfg.get("weak") is not None:
+        return float(cfg["weak"])
+    return calibrated_weak() or WEAK
 
 
 def low_closeness(stats):
     """The note of a search whose best fragment is far from the question (the cosine of the meaning search below
-    [search] weak) and that the reranker, when it ran, does not find sure either: the library may not cover it."""
+    weak_threshold) and that the reranker, when it ran, does not find sure either: the library may not cover it."""
     close = stats.get("dense_top")
     if close is None:
         return ""
     cfg = lib().cfg if _lib is not None else {}
-    weak = float(cfg.get("weak", WEAK))
+    weak = weak_threshold(cfg)
     rerank_weak = float(cfg.get("rerank_weak", RERANK_WEAK))
     if close >= weak or (stats.get("rerank_top") is not None and stats["rerank_top"] >= rerank_weak):
         return ""

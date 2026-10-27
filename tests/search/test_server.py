@@ -373,3 +373,41 @@ def test_low_closeness_note(server, stats, low):
 
 def test_low_closeness_in_the_instructions():
     assert '"Low closeness"' in mcp_server.INSTRUCTIONS
+
+
+def test_low_closeness_by_the_words_of_the_question():
+    """M-031: a question on what the library does not have shows near cosines; its words in none of the best results
+    say it plainly."""
+    res = [{"text": "Давление насыщения нефти газом определяют по пробам пластовой нефти."}] * 3
+    missing, n = mcp_server.missing_words("рецепт борща со сметаной", res)
+    assert n == 3 and missing == ["рецепт", "борща", "сметаной"]
+    assert mcp_server.search_note({}, False, "рецепт борща со сметаной", res).startswith(
+        "Low closeness: the library has nothing on «рецепт, борща, сметаной»"
+    )
+    assert mcp_server.search_note({}, False, "давление насыщения пластовой нефти", res) == ""
+    from assistant_x.core.common import tokens
+
+    groups = [[tuple(tokens("дебит")), tuple(tokens("нефти"))]]  # a synonym in the results counts as the word
+    assert mcp_server.missing_words("дебит", res, groups)[0] == []
+
+
+def test_the_threshold_is_calibrated_on_the_journal(monkeypatch, tmp_path):
+    from assistant_x.search import query_log
+
+    calls = [{"tool": "search_library", "ok": True, "close": 0.30 + i / 100, "found": 5} for i in range(40)]
+    monkeypatch.setattr(query_log, "parse", lambda paths: calls)
+    mcp_server.calibrated_weak.cache_clear()
+    try:
+        assert mcp_server.calibrated_weak() == 0.35  # the 10th percentile 0.33, within 0.35..0.6
+        assert mcp_server.weak_threshold({}) == 0.35 and mcp_server.weak_threshold({"weak": 0.55}) == 0.55
+        monkeypatch.setattr(query_log, "parse", lambda paths: calls[:10])
+        mcp_server.calibrated_weak.cache_clear()
+        assert mcp_server.calibrated_weak() is None and mcp_server.weak_threshold({}) == mcp_server.WEAK
+    finally:
+        mcp_server.calibrated_weak.cache_clear()
+
+
+def test_a_server_of_the_same_window_is_no_other_window(monkeypatch):
+    monkeypatch.setattr(mcp_server, "holder_alive", lambda: True)
+    monkeypatch.setattr(mcp_server, "same_window", lambda pid: True)
+    assert mcp_server.SAME_WINDOW in mcp_server.cpu_pending() and mcp_server.OTHER_HOLDER not in mcp_server.cpu_pending()

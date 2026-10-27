@@ -160,6 +160,13 @@ repeat the query in 10 s".
 The same summary is part of the debug report. Entries without the closeness and the number of
 matches count only in the overall figures.
 
+"Low closeness" above the results of `search_library` says the library may not cover a question. Two tests: the
+closeness of the best fragment by meaning below the threshold (and the reranker not sure either), or half the content
+words of the question (stop words aside, stemmed as in the word index, a synonym counting as the word) in none of the
+5 best results ("the library has nothing on «…»"). The threshold is `[search] weak` when it is set; else, once the
+journal of this PC holds 30 answered questions, the 10th percentile of their closeness, within 0.35–0.6 (computed once
+per server start); else 0.5.
+
 ## How it works
 
 - The base (schema 3) holds the text of every page exactly as `index\texts\<code>.md` has it (the table `pages`,
