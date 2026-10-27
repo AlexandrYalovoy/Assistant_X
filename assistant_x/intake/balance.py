@@ -56,7 +56,9 @@ OPTIONS = {
 FREE, ACTIVE = "free", "at the computer"
 DISK_LAT_MS = 50  # the mean latency of a disk transfer from which the user at the computer feels the disk
 DISK_EMERGENCY_MS = 200  # … from which a disk 90 % busy is an emergency
-WORKER_SHARE = 3  # a worker takes a third of its memory cap on average: the regulator watches the memory live
+# a worker takes about a quarter of its memory cap: the regulator watches the memory live. Run 2a3 (11 workers of the
+# redo, 3072 MB cap): 370-520 MB a worker with its Tesseract, peaks of 650 MB, 2-2.8 GB for the page images of a scan
+WORKER_SHARE = 4
 THREADS_MAX = 4  # threads of a worker when fewer tasks than cores share the PC (a process stays near 10 threads)
 _nt = os.name == "nt"
 

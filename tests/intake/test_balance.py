@@ -25,7 +25,7 @@ def test_budget_from_the_pc():
     o = balance.options({})
     b = balance.budget(PC24, o, cap=8, worker_mb=3072)  # a worker is one core; the cap of the settings: 8
     assert b == {"workers": 8, "threads": 1, "free": 8, "active": 8}
-    assert balance.budget(PC24, o, cap=0)["workers"] == 15  # memory: (20 - 4.8) GB / 1 GB = 15 (22 CPUs past the reserve)
+    assert balance.budget(PC24, o, cap=0)["workers"] == 20  # memory: (20 - 4.8) GB / 0.75 GB = 20 (22 CPUs past the reserve)
     small = balance.budget(PC4, o, cap=8)  # 5 GB free past the reserve of 4: one worker
     assert small == {"workers": 1, "threads": 1, "free": 1, "active": 1}
     weak = balance.budget(PC24, balance.options({"profile": "weak"}), cap=8)
