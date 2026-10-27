@@ -82,13 +82,15 @@ def preread(doc, pages, language):
         os.rmdir(tmp)
 
 
-def markdown(path, shift, pages, force_ocr, use_ocr=True, scans=()):
+def markdown(path, shift, pages, force_ocr, use_ocr=True, scans=None):
     """({page: Markdown}, {page: OCR measures}) of the pages (from 0) of a PDF; page numbers shifted by shift + 1.
-    scans: the pages (from 0) read by OCR, read first in one Tesseract process."""
+    scans: the pages (from 0) prep counts as scans, read first in one Tesseract process; another page OCR is asked for
+    (a text page with a picture) gets one sparse reading (ocr_page.SCAN_PAGES). None: not known, every page is a scan."""
     import pymupdf4llm
 
     hook = ocr_page.exec_ocr if use_ocr and ocr_page.tesseract_exe() else None
     ocr_page.reset()
+    ocr_page.SCAN_PAGES = None if scans is None or force_ocr else set(scans)
     doc = open_pdf(path)
     if hook and (force_ocr or scans):
         preread(doc, [p for p in pages if force_ocr or p in scans], lang.tesseract())

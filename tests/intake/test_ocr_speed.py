@@ -106,7 +106,7 @@ def test_batched_reading_is_the_page_by_page_one(tmp_path, monkeypatch):
         documents.picture_page(doc, "\n".join(documents.sentences(300 + i, 5)), seed=i)
     doc.save(pdf)
     ocr_page.DOCS.clear()
-    one, s1 = convert_md.markdown(str(pdf), 0, [0, 1, 2], False, True, set())
+    one, s1 = convert_md.markdown(str(pdf), 0, [0, 1, 2], False, True, None)
     convert_md.close_all()
     ocr_page.DOCS.clear()
     batched, s2 = convert_md.markdown(str(pdf), 0, [0, 1, 2], False, True, {0, 1, 2})

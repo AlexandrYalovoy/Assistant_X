@@ -540,7 +540,9 @@ def prep(job: Job) -> Prep:
     texts = [p.get_text(flags=pymupdf.TEXTFLAGS_TEXT | pymupdf.TEXT_DEHYPHENATE) for p in doc]
     # the scanned pages: convert reads them by OCR even when a stamp or a header gives them some text layer
     scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area)]
-    res.update(ocr_pages=len(scans), scan_pages=scans)
+    # the other pages with a picture: OCR reads the picture once (ocr_page.beside_layer), the order of the work counts it
+    pictures = sum(bool(p.get_images()) for i, p in enumerate(doc) if i + 1 not in set(scans))
+    res.update(ocr_pages=len(scans), scan_pages=scans, image_pages=pictures)
     fp = dupcheck.fingerprint("\n".join(texts[:30]))
     res.update(pdf=str(pdf), fp=sorted(fp), phrases=len(fp), prep_seconds=round(time.time() - t0, 1))
     # plain text of the text layer: the fallback of assemble_md for pages the layout analysis loses
@@ -747,6 +749,7 @@ def ocr_measures(w, tid, md):
         "ocr_conf": round(sum(confs) / len(confs), 1) if confs else None,
         "ocr_retried": sum(len(s.get("tried", {})) > 1 for s in stats.values()),
         "ocr_rotated": sum(bool(s.get("rotate")) for s in stats.values()),
+        "ocr_seconds": round(sum(s.get("seconds") or 0 for s in stats.values()), 1),
         "ocr_garbled_pages": len(garbled),
         "ocr_doubled_pages": len(doubled),
         "ocr_layer_kept": sum(s.get("layer") == "kept" for s in stats.values()),

@@ -45,6 +45,7 @@ class Prep(TypedDict, total=False):
     phrases: int
     ocr_pages: int
     scan_pages: list
+    image_pages: int  # the other pages with a picture: one OCR reading each (schedule.cost)
     prep_seconds: float
 
 
@@ -62,6 +63,7 @@ class Convert(TypedDict, total=False):
     no_ocr_pages: int  # scan pages left without OCR (no Tesseract)
     convert_seconds: float
     ocr_score: float  # the recognition score (work.ocr_measures)
+    ocr_seconds: float  # the seconds of OCR of its pages (the sum of ocr_page.STATS)
     ocr_nonword: float
     ocr_low_pages: int
     ocr_conf: float

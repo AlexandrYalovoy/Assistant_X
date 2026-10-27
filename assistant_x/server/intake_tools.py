@@ -374,6 +374,8 @@ def batch_words(data):
     """The state of a batch (intake status --json) in words: "34 of 41 done; in work T0002 (conversion 390/1136 pages)…;
     about 40 min left"."""
     head = f"{data['done']} of {data['total']} files done"
+    if data.get("ocr_seconds"):
+        head += f" (OCR {data['ocr_seconds']} s)"
     work = []
     for x in data["running"]:
         if not x.get("active"):
@@ -383,6 +385,8 @@ def batch_words(data):
             what += f" {x['progress'][0]}/{x['progress'][1]} pages"
         elif x.get("pages"):
             what += f", {x['pages']} pages"
+        if x.get("ocr_seconds"):
+            what += f", OCR {x['ocr_seconds']} s"
         work.append(f"{x['tid']} ({what})")
     waiting = sum(not x.get("active") for x in data["running"]) + len(data["queued"])
     parts = [head]

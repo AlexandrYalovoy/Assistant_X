@@ -10,6 +10,9 @@ What the second real intake run showed, fixed.
   the layer has its words (only a caption or a stamp the layer lacks is added); a page whose every phrase appears twice
   gets the flag `doubled` (listed by the quality report, weighed less by the search), a line repeated word for word is
   dropped, and `intake redo` replaces a text that is no longer doubled.
+- The picture on a text page is read once (sparse text, no orientation check, no retries) and kept only when it adds
+  8 words the layer lacks; the retries stay for scans; a page with a picture costs a second more in the order of the
+  work; the OCR seconds of a file show in the status.
 
 ## Unreleased (0.2)
 

@@ -389,6 +389,13 @@ the flag `doubled` (weighed like `garbled` by the search), a document with more 
 fall by 30 points of the page share (or whose mean share falls from above 0.4 to below 0.1) while it keeps its known
 words. A line or a sentence that repeats the one before it word for word is dropped at the assembly.
 
+A page prep does not count as a scan but pymupdf4llm sends to OCR (a text page with a picture: a diagram, a photo
+with labels) gets one reading in the sparse text mode (`--psm 11`), without the rotation check and the retries, and
+it is kept only when it adds 8 words the text layer lacks (`convert_md` gives `ocr_page.SCAN_PAGES` the scans of the
+document; the retries stay for them). The order of the work counts such a page a second more than a text page
+(`schedule.cost`, the `image_pages` of prep); the seconds of OCR of every file are summed (`ocr_seconds`) and shown by
+`intake status --json` and `intake_status`.
+
 A page costs about 2.5 s instead of 2 s with the built-in Tesseract (+0.5 s for the rotation check); a weak one 6–15 s.
 Per document, so the outputs stay the same (`tools\ocr_page.py`, checked on the golden corpus byte for byte):
 

@@ -312,7 +312,7 @@ class Batch:
                 """A conversion after prep: in page ranges (a long scan) or whole, into the ready tasks by its cost."""
                 row = self.state.get(tid)
                 pages, scans = row.get("pages") or 0, len(job.get("scan_pages") or []) if job.get("ocr") else 0
-                c = schedule.cost(pages, scans)
+                c = schedule.cost(pages, scans, row.get("image_pages") if job.get("ocr") else 0)
                 self.state.update(tid, cost=c)
                 k = schedule.shard_count(scans, workers) if sharding and fn is intake_work.convert else 1
                 if k > 1:

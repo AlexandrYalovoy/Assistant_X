@@ -4,8 +4,8 @@
 tested by itself.
 
 - The cost of a file is its estimated seconds after prep: its text pages and its scanned pages at the speeds measured
-  on the first real batch (audit 6: a text page 0.2–1 s, a scanned one 2.5–9 s). Cheap tasks go first: a small file
-  never waits behind a big scan (M-011).
+  on the first real batch (audit 6: a text page 0.2–1 s, a scanned one 2.5–9 s), a text page with a picture a second
+  more (its one OCR reading). Cheap tasks go first: a small file never waits behind a big scan (M-011).
 - A heavy task (a long estimate, a thick document, a file that needed a bigger memory cap) gets its memory cap by
   pages (Batch.memory_for). Heavy tasks run side by side while their caps fit into the free memory of the PC (psutil,
   minus the reserve of balance.py, 70 % of it), re-evaluated at every admission; one worker stays for light tasks while
@@ -18,6 +18,7 @@ import heapq, itertools, math
 
 # seconds per page measured on the first real batch (audit 6): a text page, a scanned page read by OCR
 TEXT_SECONDS, SCAN_SECONDS = 0.5, 3.3
+PICTURE_SECONDS = 1.0  # more for a text page with a picture: one sparse OCR reading of it (audit 7)
 HEAVY_SECONDS = 900  # an estimate from which a task is heavy (15 min of one worker)
 HEAVY_SHARE = 0.7  # the share of the free memory (past the reserve) the caps of heavy tasks may take together
 SHARD_MIN = 60  # scanned pages from which the OCR of a document is cut into ranges
@@ -25,10 +26,12 @@ SHARD_PAGES = 40  # scanned pages of a range at least (a range is a task: fewer 
 SHARD_MODES = ("auto", "off")
 
 
-def cost(pages, scans=0):
-    """Estimated seconds of the conversion of a document of `pages` pages, `scans` of them scanned."""
+def cost(pages, scans=0, image_pages=0):
+    """Estimated seconds of the conversion of a document of `pages` pages, `scans` of them scanned and `image_pages`
+    of the others with a picture."""
     scans = min(scans or 0, pages or 0)
-    return round(((pages or 0) - scans) * TEXT_SECONDS + scans * SCAN_SECONDS, 1)
+    pictures = min(image_pages or 0, (pages or 0) - scans)
+    return round(((pages or 0) - scans) * TEXT_SECONDS + scans * SCAN_SECONDS + pictures * PICTURE_SECONDS, 1)
 
 
 def heavy(cost_s, pages, thick):

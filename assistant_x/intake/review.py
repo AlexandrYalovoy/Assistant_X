@@ -114,6 +114,8 @@ def status_data(work, state, started=None, now=None):
             item["progress"] = [int(p.get("done") or 0), int(p["total"])]
         if r.get("pages"):
             item["pages"] = r["pages"]
+        if ocr_seconds(work, r["tid"]):
+            item["ocr_seconds"] = ocr_seconds(work, r["tid"])
         running.append(item)
     queued = [r["tid"] for r in rows if r["status"] == "queued"]
     errors = [
@@ -143,7 +145,19 @@ def status_data(work, state, started=None, now=None):
         "queued": queued,
         "errors": errors,
         "eta_seconds": eta,
+        "ocr_seconds": round(sum(r.get("ocr_seconds") or 0 for r in done)),
     }
+
+
+def ocr_seconds(work, tid):
+    """The seconds of OCR of the pages of a file read so far (the measures convert_md writes for every chunk)."""
+    total = 0.0
+    for f in (Path(work) / "cache" / tid / "ocr").glob("*.json"):
+        try:
+            total += sum(float(s.get("seconds") or 0) for s in json.loads(f.read_text(encoding="utf-8")).values())
+        except (OSError, ValueError, AttributeError, TypeError):
+            continue
+    return round(total)
 
 
 def cmd_status(cfg, a):

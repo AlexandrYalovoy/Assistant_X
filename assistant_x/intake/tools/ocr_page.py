@@ -21,6 +21,9 @@ with a picture) is read once (no orientation check, no retries): when LAYER_KEEP
 already in the layer, the recognition is dropped (STATS "layer": "kept"); else only the recognised words the layer does
 not have are put on the page (a figure caption, a stamp: "layer": "added"). The layer is often shifted from the glyphs
 under it, so the blanked image still shows them: an invisible copy of the whole page would double every phrase.
+A page prep does not count as a scan (SCAN_PAGES, set by convert_md for each document: a text page with a picture)
+gets the same single reading in the sparse text mode (psm 11), kept only when it adds MIN_WORDS words the layer
+lacks: the labels of a figure, not a second copy of the text.
 
 Speed, the outputs unchanged: the orientation is checked on the first OSD_SAMPLE pages of a document; when they agree,
 the other pages take it (a page whose first reading is weak is checked again itself). The retry of weak pages is chosen
@@ -46,6 +49,7 @@ RETRY_SAMPLE, RETRY_SHARE = 10, 0.7  # weak pages after which a retry variant th
 LAYER_KEEP = 0.7  # share of the recognised words already in the legible layer from which the recognition is dropped
 WORD_RX = re.compile(r"[^\W_]+")
 STATS, OVERRIDE, PLAIN = {}, {}, {}
+SCAN_PAGES = None  # the pages (from 0) of the document prep counts as scans; None: not known, every page is one
 DOCS = {}  # document -> {"osd": [(rotate, confidence)], "wins": [retry variant that won]}: kept between chunks
 PRE = {}  # page number from 0 -> (the PNG of the page, its reading by prerecognise)
 _tess = None
@@ -403,9 +407,10 @@ def new_words(words, layer):
     return [w for w in words if not set(norm_words(w[4])) <= layer]
 
 
-def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None):
-    """One reading of a page with a legible layer: dropped when the layer already has LAYER_KEEP of its distinct words,
-    else only the words the layer lacks are put on the page."""
+def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None, min_new=1):
+    """One reading of a page with a legible layer (or a picture on a text page): dropped when the layer already has
+    LAYER_KEEP of its distinct words or the reading adds fewer than min_new words, else only the words the layer
+    lacks are put on the page."""
     pre = PRE.pop(page.number, None)
     with open(png, "rb") as f:
         same = pre is not None and pre[0] == f.read()
@@ -413,10 +418,10 @@ def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None):
     seen = set(norm_words(best["text"]))
     share = len(seen & layer) / len(seen) if seen else 1.0
     st = {"tokens": best["m"]["tokens"], "layer_share": round(share, 2)}
-    if share >= LAYER_KEEP:
+    add = new_words(best["words"], layer) if share < LAYER_KEEP else []
+    if len(add) < min_new:
         st["layer"] = "kept"
     else:
-        add = new_words(best["words"], layer)
         insert_words(page, add, *best["size"])
         lines = {}
         for w in add:
@@ -448,8 +453,10 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         g.save(png)
         dpi = round(pix.width / page.rect.width * 72)  # get_pixmap lowers the dpi of a big page (a drawing sheet)
         drawing = ocr_score.is_drawing(page.parent.page_count, page.rect.width * page.rect.height)
-        if len(layer) >= MIN_WORDS:
-            beside_layer(page, png, dpi, language, tmp, set(layer), psm=11 if drawing else None, t0=t0)
+        picture = SCAN_PAGES is not None and page.number not in SCAN_PAGES  # a text page with a picture
+        if len(layer) >= MIN_WORDS or picture:
+            psm = 11 if drawing or picture else None
+            beside_layer(page, png, dpi, language, tmp, set(layer), psm, t0, MIN_WORDS if picture else 1)
             return
         if drawing:
             # a drawing gets one sparse-text pass; turning and retrying did not raise its score (177 of 288 in redo)
