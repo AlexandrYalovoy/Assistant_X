@@ -589,9 +589,10 @@ def intake_run(night: bool = False, resume: bool = False) -> str:
 
 @mcp.tool()
 @logged
-def intake_status() -> str:
-    """Progress of the intake and of the base recalculation; after the intake — the summary, quality and files without a card."""
-    return intake_tools.status()
+def intake_status(full: bool = False) -> str:
+    """Progress of the intake, of the transfer into the library and of the base recalculation, and the next step, in a
+    short answer. full=True — also the summary of the batch, its quality report and the files without a card."""
+    return intake_tools.status(full=full)
 
 
 @mcp.tool()

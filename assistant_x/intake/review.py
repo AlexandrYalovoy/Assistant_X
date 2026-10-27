@@ -80,9 +80,6 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"Tesseract {'present' if intake_cfg.can_ocr(cfg) else 'MISSING (scans without OCR, marked)'}",
         f"- {quality_report.summary_line(quality)}" if quality else "- Quality: no documents done",
         f"- Time: {seconds / 60:.1f} min" + (f"; {load}" if (load := load_of(work)) else ""),
-        "",
-        "Next (Claude): check meta_draft.jsonl and write meta.jsonl (a line per file), "
-        "then `assistant-x intake build` and `assistant-x intake apply --dry-run`, `assistant-x intake apply`.",
     ]
     for title, items in (("Errors", errors), ("Skipped", skipped), ("Duplicates", dups)):
         if items:
@@ -143,6 +140,7 @@ def status_data(work, state, started=None, now=None):
         "queued": queued,
         "errors": errors,
         "eta_seconds": eta,
+        "started": started,
         "ocr_seconds": round(sum(r.get("ocr_seconds") or 0 for r in done)),
     }
 

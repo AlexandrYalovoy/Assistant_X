@@ -38,6 +38,7 @@ def load_fp(work, tid):
 
 STAGES = {"prep": "preparation", "convert": "conversion to Markdown"}
 POLL = 10  # seconds the batch waits for a task before it looks at which tasks a worker holds
+QUIET_LINE = 300  # seconds between two progress lines of the batch when nothing changed
 
 
 def lost_why(stage, e):
@@ -433,7 +434,7 @@ class Batch:
                     self.ex = self.pool()
                 busy = {t for _, t in inflight.values()} | {it[1] for *_, it in ready.heap} | set(shards)
                 ready_n = total - len(queue) - len(busy)
-                if ready_n != shown[0] or time.time() - shown[1] >= 60:  # on change, else once a minute
+                if ready_n != shown[0] or time.time() - shown[1] >= QUIET_LINE:  # on change, else every 5 minutes
                     say(f"  {ready_n}/{total} files, {time.time() - t0:.0f} s")
                     shown = (ready_n, time.time())
         finally:

@@ -151,7 +151,8 @@ texts and card drafts. You write the cards from the drafts; the move into the li
 1. `intake_list` — what lies there and how much. A big folder (hundreds of files) — suggest sorting it overnight:
    `intake_run(night=True)`; otherwise `intake_run()`. A repeat after a failure or on the next day —
    `intake_run(resume=True)`.
-2. `intake_status` — not more often than every few minutes: the progress, then the summary and the quality. List the
+2. `intake_status` — not more often than every few minutes: the progress and the next step in a short answer; when the
+   batch is done, `intake_status(full=True)` once for the summary and the quality. List the
    errors and skipped files to the user with the reason.
 3. `intake_card()` — a line per file (pages, OCR score, the guessed section, designation, title); for doubtful ones
    `intake_card(tids=["T0003", …])` with the headings and the start of the text. The draft is guessed by regexes:

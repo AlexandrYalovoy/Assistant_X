@@ -887,7 +887,12 @@ def register_desktop(py, dry):
                 continue
         servers = conf.setdefault("mcpServers", {})
         old = servers.get(SERVER) or {}
-        new = dict(old, command=py, args=SERVE, env=dict(old.get("env") or {}, HF_HUB_OFFLINE="1", AX_WORKSPACE=P.ROOT))
+        new = dict(
+            old,
+            command=py,
+            args=SERVE,
+            env=dict(old.get("env") or {}, HF_HUB_OFFLINE="1", PYTHONUTF8="1", AX_WORKSPACE=P.ROOT),
+        )
         if old == new:
             say(f"   {path}: already set up")
             continue

@@ -26,6 +26,9 @@ What the second real intake run showed, fixed.
 - `intake_apply(confirm=True)` starts the transfer as one background job (build, apply, the base recalculation) and
   answers at once; `intake_status` shows its stage. `intake_reindex()` leaves a base that is up to date alone and says
   when it was last recalculated (`reindex_last.json`); `force=True` runs it anyway.
+- A short `intake_status` (3 000 characters at most; `full=True` for the summary and the quality), jobs that ended before
+  the batch left out, the harmless warnings of the model libraries out of the job tails, no fixed "Next" line in
+  `summary.md`, a progress line every 5 minutes when nothing changes, `PYTHONUTF8=1` in the Claude Desktop entry.
 
 ## Unreleased (0.2)
 

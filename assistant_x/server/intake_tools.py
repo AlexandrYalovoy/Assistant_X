@@ -114,8 +114,21 @@ def _tail(kind, n=TAIL):
     return "\n".join([x for x in lines if not NOISE.search(x)][-n:])
 
 
-# lines of a log that tell Claude nothing: progress bars, Python warnings and the source line they quote
-NOISE = re.compile(r"\d+%\|[^|]*\||\bit/s\]|^\s*warnings\.warn\(|(?:User|Future|Deprecation|Runtime)Warning:")
+# lines of a log that tell Claude nothing: progress bars, Python warnings and the source line they quote, and the known
+# harmless warnings of the model libraries (torch's C++ log "W1027 … redirects.py", a tokenizer told twice): one list
+HARMLESS = (
+    r"\d+%\|[^|]*\|",
+    r"\bit/s\]",
+    r"^\s*warnings\.warn\(",
+    r"(?:User|Future|Deprecation|Runtime)Warning:",
+    r"^[WI]\d{4} .*redirects\.py",
+    r"NOTE: Redirects are currently not supported",
+    r"huggingface/tokenizers: The current process just got forked",
+    r"To disable this warning, you can either:",
+    r"Avoid using `tokenizers` before the fork",
+    r"Explicitly set the environment variable TOKENIZERS_PARALLELISM",
+)
+NOISE = re.compile("|".join(HARMLESS))
 
 
 def _exit_path(kind):
@@ -447,30 +460,49 @@ def reindex_words(job, path=None):
     return f"Step: {stage}{n}."
 
 
-def status():
-    out = []
-    for kind, what in (("run", "Intake"), ("apply", "Transfer to the library"), ("reindex", "Base recalculation")):
-        job = _job(kind)
-        if not job:
-            continue
-        alive = _alive(job)
-        tail = _tail(kind, 8 if alive else 25)
-        head = f"## {what}: {state_text(kind, job)} (started {_ago(job)} ago)"
-        if kind in ("reindex", "apply"):
-            step = reindex_words(job, apply_progress_path() if kind == "apply" else None) if alive else ""
-            out.append(head + (f"\n{step}" if step else "") + f"\n{tail}")
-        else:
-            out.append(head + (f"\n{tail}" if not alive else ""))
-        if kind in ("reindex", "apply") and not alive and "--cpu" in tail:
-            out.append(CPU_QUESTION)
-    from assistant_x.server import base_tools
+SHORT = 3000  # characters of the answer of intake_status by default (full=True: the summary, the quality, todo)
+JOBS_SHOWN = (("run", "Intake"), ("apply", "Transfer to the library"), ("reindex", "Base recalculation"))
 
-    journals = base_tools.open_journals()
-    if journals:
-        out.append("## Interrupted base change\n" + "\n".join(journals))
-    gap = vector_note()
-    if gap and not _alive(_job("reindex")):
-        out.append("## Search base\n" + gap)
+
+def _finished_at(kind):
+    """When the wrapper wrote the exit code of the job of kind (the time of its exit file), or None."""
+    try:
+        return os.path.getmtime(_exit_path(kind))
+    except OSError:
+        return None
+
+
+def job_line(kind, what, job, since=None):
+    """One line of a background job for the status, or "" for a job that finished before the batch started (since).
+    A finished recalculation tells what it did ("Base recalculation: finished 8 h ago in 14 min, 82286 fragments,
+    113/s")."""
+    s, _ = state(kind, job)
+    end = _finished_at(kind) if s == "finished" else None
+    if s == "finished" and since and end and end < since:
+        return ""
+    if s != "finished":
+        return f"{what}: {state_text(kind, job)} (started {_ago(job)} ago)."
+    line = f"{what}: finished"
+    if end:
+        line += f" {_minutes(time.time() - end)} ago in {_minutes(end - job['started'])}".replace("about ", "")
+    if kind == "reindex":
+        from assistant_x.core.common import load_config
+        from assistant_x.search import reindex as rx
+
+        try:
+            last = rx.read_last(load_config()) or {}
+        except Exception:  # noqa: BLE001 — the line without the numbers
+            last = {}
+        if last.get("fragments"):
+            line += f", {last['fragments']} fragments" + (f", {last['per_second']:g}/s" if last.get("per_second") else "")
+    return line + "."
+
+
+def status(full=False):
+    """The state of the intake in at most SHORT characters: the batch (done, in work with the stage, pages and OCR
+    seconds, waiting, errors, the time left), the background jobs (a finished one only when it ended after the batch
+    started), the next step. full=True adds summary.md, intake_quality.md and the files without a card."""
+    out = []
     rc, text = _intake("status", "--json")
     data = None
     if rc == 0:
@@ -478,11 +510,38 @@ def status():
             data = json.loads(text.strip().splitlines()[-1])
         except (ValueError, IndexError):
             data = None
-    out.append("## Batch\n" + (batch_words(data) if data else text if rc == 0 else "no batches yet"))
+    since = (data or {}).get("started")
+    for kind, what in JOBS_SHOWN:
+        job = _job(kind)
+        if not job:
+            continue
+        alive = _alive(job)
+        line = job_line(kind, what, job, since)
+        if not line:
+            continue
+        if alive and kind in ("reindex", "apply"):
+            step = reindex_words(job, apply_progress_path() if kind == "apply" else None)
+            line += f" {step}" if step else ""
+        tail = "" if alive or state(kind, job)[0] == "finished" else _tail(kind, 8)
+        out.append(line + (f"\n{tail}" if tail else ""))
+        if kind in ("reindex", "apply") and not alive and "--cpu" in _tail(kind, 25):
+            out.append(CPU_QUESTION)
+    from assistant_x.server import base_tools
+
+    journals = base_tools.open_journals()
+    if journals:
+        out.append("## Interrupted base change\n" + "\n".join(journals))
+    gap = vector_note()
+    if gap and not _alive(_job("reindex")) and not _alive(_job("apply")):
+        out.append("Search base: " + gap)
+    out.insert(0, "Batch: " + (batch_words(data) if data else text if rc == 0 else "no batches yet"))
     work = _last_work()
     running = _alive(_job("run"))
     if work and data:
         out.append(next_step(work, data, running, _alive(_job("reindex")) or _alive(_job("apply"))))
+    if not full:
+        more = " The summary, the quality and the files without a card: intake_status(full=True)." if work else ""
+        return _short("\n".join(out), SHORT - len(more)) + more
     if work and not running:
         for name in ("summary.md", "intake_quality.md"):
             p = os.path.join(work, name)
@@ -491,6 +550,20 @@ def status():
         rc, todo = _intake("todo")
         out.append("## Without a card (todo)\n" + _cut(todo, 3000))
     return _cut("\n\n".join(out), 16000)
+
+
+def _short(text, n):
+    """The text in n characters at most: the lines that fit, then how many lines were left out."""
+    if len(text) <= n:
+        return text
+    lines, out, used = text.split("\n"), [], 0
+    for i, line in enumerate(lines):
+        if used + len(line) + 1 > n - 60:
+            out.append(f"… {len(lines) - i} more lines: intake_status(full=True)")
+            break
+        out.append(line)
+        used += len(line) + 1
+    return "\n".join(out)
 
 
 def vector_note():
@@ -788,7 +861,7 @@ def start_apply(personal=False, auto=False):
     if os.path.exists(prog):
         os.remove(prog)
     cmd = [sys.executable, "-m", "assistant_x.intake.apply_job", *(["--personal"] if personal else [])]
-    started, text = _start("apply", cmd, AX_PROGRESS=prog)
+    started, text = _start("apply", cmd, AX_PROGRESS=prog, TORCH_CPP_LOG_LEVEL="ERROR")
     if not started:
         return f"The transfer did not start: {text}"
     n = batch_documents(_last_work())
@@ -852,7 +925,7 @@ def reindex(cpu=False, force=False):
     if os.path.exists(prog):
         os.remove(prog)
     cmd = [sys.executable, "-m", "assistant_x.search.reindex"] + (["--cpu"] if cpu else [])
-    started, text = _start("reindex", cmd, AX_PROGRESS=prog)
+    started, text = _start("reindex", cmd, AX_PROGRESS=prog, TORCH_CPP_LOG_LEVEL="ERROR")
     if started:
         est = embed_estimate(cpu)
         return (

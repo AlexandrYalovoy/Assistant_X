@@ -418,6 +418,13 @@ document; the retries stay for them). The order of the work counts such a page a
 (`schedule.cost`, the `image_pages` of prep); the seconds of OCR of every file are summed (`ocr_seconds`) and shown by
 `intake status --json` and `intake_status`.
 
+`intake_status` answers in 3 000 characters at most: the batch (done, in work with the stage, the pages and the OCR
+seconds, waiting, errors with the reason, the time left), a line per background job (a finished one only when it
+ended after the batch started: "Base recalculation: finished 8 h ago in 14 min, 82286 fragments, 113/s") and the next
+step; `intake_status(full=True)` adds `summary.md`, `intake_quality.md` and the files without a card. The known
+harmless warnings of the model libraries are left out of the job tails (`HARMLESS` of `server/intake_tools.py`), and
+the batch prints its progress line on a change or every 5 minutes.
+
 A page costs about 2.5 s instead of 2 s with the built-in Tesseract (+0.5 s for the rotation check); a weak one 6–15 s.
 Per document, so the outputs stay the same (`tools\ocr_page.py`, checked on the golden corpus byte for byte):
 
