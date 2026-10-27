@@ -13,6 +13,8 @@ What the second real intake run showed, fixed.
 - The picture on a text page is read once (sparse text, no orientation check, no retries) and kept only when it adds
   8 words the layer lacks; the retries stay for scans; a page with a picture costs a second more in the order of the
   work; the OCR seconds of a file show in the status.
+- A file that failed, was rejected or sent to delete is no duplicate when it comes again: only the events of a file
+  in the library (accepted, or a duplicate of a code) count, and a duplicate always names a code.
 
 ## Unreleased (0.2)
 

@@ -237,3 +237,30 @@ def test_document_of_two_files_gets_parts_in_its_card(project):
     assert part["format"]["kind"] == "pdf_scan" and (work / "out" / "texts" / "N-00002-02.md").exists()
     assert intake_apply.apply(cfg, work, date="2026-10-25") == 0
     assert (cfg.library / "01_Standards" / "N-00002_Separators" / "N-00002-02_Trials.pdf").exists()
+
+
+def test_a_failed_file_is_no_duplicate_when_it_comes_again(project):
+    from assistant_x.core import journal
+    from assistant_x.intake.prepare import known_hashes, sha256
+
+    root, cfg = project
+    sha = sha256(cfg.inbox / "text.pdf")[:16]
+    events = cfg.index / "intake_events.tsv"
+    row = ["2026-10-27", "inbox\\text.pdf", 100, sha, "—", "—", "error: the PDF does not open: broken xref"]
+    journal.append_events(events, [row])
+    assert sha not in known_hashes(cfg)
+    work = cfg.work / "2026-10-28"
+    work.mkdir(parents=True)
+    state = State(work / "state.sqlite")
+    intake.prepare(cfg, state)
+    intake.register(cfg, state)
+    tid = state.by_rel("text.pdf")["tid"]
+    intake.Batch(cfg, work, state, 0).hash_all()
+    assert state.get(tid)["status"] == "queued"  # processed in this batch
+    journal.append_events(events, [[*row[:4], "N-00012", "library\\N\\text.pdf", "done"]])
+    journal.append_events(events, [[*row[:4], "—", "inbox\\_duplicates\\", "duplicate of N-00013 (same content)"]])
+    assert known_hashes(cfg)[sha] == "N-00013"  # a code, never the text of an error
+    state.update(tid, sha256=None)
+    intake.Batch(cfg, work, state, 0).hash_all()
+    assert state.get(tid)["status"] == "dup" and state.get(tid)["dup_of"] == "N-00013"
+    state.close()

@@ -241,14 +241,28 @@ def letters(cfg, st, events, problems, dry=False):
 # ---------- duplicates ----------
 
 
+CODE_IN = re.compile(r"\b[A-Z]-\d{5}(?:-\d{2,3})?\b")  # a code in the status of an event ("duplicate of N-00012 …")
+
+
 def known_hashes(cfg):
-    """{first 16 of SHA-256: code or place} of the library (manifest.tsv) and of the events (or the old journal.md)."""
+    """{first 16 of SHA-256: code or place} of the library (manifest.tsv) and of the events (or the old journal.md).
+    Only the events of a file that is in the library count: accepted (its code), or a duplicate of a code; a file
+    that failed, was rejected or sent to delete is no duplicate when it comes again."""
+    from assistant_x.core.card import is_code
+    from assistant_x.core.formats import event_kind
+
     out = {}
     for row in journal.read_events(cfg.index / "intake_events.tsv") or journal.parse_journal(
         (cfg.index / "journal.md").read_text(encoding="utf-8") if (cfg.index / "journal.md").exists() else ""
     ):
-        if re.fullmatch(r"[0-9a-f]{16}", row[3]):
-            out[row[3]] = row[4] if row[4] != "—" else row[6]
+        if len(row) < 7 or not re.fullmatch(r"[0-9a-f]{16}", row[3]):
+            continue
+        kind = event_kind(row[6])
+        code = row[4] if is_code(row[4]) else None
+        if kind == "duplicate" and not code:
+            code = next(iter(CODE_IN.findall(row[6])), None)
+        if kind in ("accepted", "duplicate") and code:
+            out[row[3]] = code
     man = cfg.index / "manifest.tsv"
     if man.exists():
         for line in man.read_text(encoding="utf-8").splitlines()[1:]:
