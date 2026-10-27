@@ -409,7 +409,12 @@ for every page of 30 words and more the share of its word 3-grams that occur twi
 the flag `doubled` (weighed like `garbled` by the search), a document with more than 10 % of such pages is listed in
 `intake_quality.md` ("re-extract the text"), and `assistant-x intake redo` replaces a library text whose doubled pages
 fall by 30 points of the page share (or whose mean share falls from above 0.4 to below 0.1) while it keeps its known
-words. A line or a sentence that repeats the one before it word for word is dropped at the assembly.
+words. A line or a sentence that repeats the one before it word for word is dropped at the assembly. In the rows of a Markdown
+table a run of 17 letters and more that is no word (a cell whose spaces OCR lost) is split into the cheapest sequence
+of words of the vocabulary (a word form 1, a stop word of one or two letters 1.6, a word known by its stem 2.5, a form
+of three letters 3; a linking vowel of a compound, `compound_links` of the packs, is no word), a word broken at a line
+end of the cell joined first; a split with more than a quarter of three-letter pieces is refused. A word of five
+letters and more in small caps that OCR read in both cases ("INhIBITORS") takes the case of most of its letters.
 
 A page prep does not count as a scan but pymupdf4llm sends to OCR (a text page with a picture: a diagram, a photo
 with labels) gets one reading in the sparse text mode (`--psm 11`), without the rotation check and the retries, and

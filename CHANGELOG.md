@@ -32,6 +32,9 @@ What the second real intake run showed, fixed.
 - "Low closeness" also when half the words of a question are in none of the best results, with those words; the
   closeness threshold calibrated on the journal of the PC; the second server of one window no longer blames "another
   window".
+- A table cell whose spaces OCR lost gets them back: a run of 17 letters and more splits into the cheapest sequence
+  of known words (a linking vowel of a compound, `compound_links` of the packs, is no word; a word broken at a line
+  end of the cell is joined first; a split into many three-letter pieces is refused).
 
 ## Unreleased (0.2)
 

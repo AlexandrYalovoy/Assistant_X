@@ -73,6 +73,9 @@ def read_pages(path):
 # and more is the mark (an abbreviation with an ending, "GOSTu", has no such capital)
 CASE_FIX = "".join(lang.letters("lower")[c] for c in lang.active() if lang.get(c, "mixed_case_fix"))
 MIXED_RX = re.compile(rf"\b[{CASE_FIX}]{{5,}}\b", re.I) if CASE_FIX else None
+# a run of letters in a table cell long enough to be words glued together (the cell lost its spaces to OCR)
+GLUED_RX = re.compile(rf"[^\W\d_]{{{ocr_score.GLUED},}}")
+HYPHEN_BR = re.compile(r"(?<=[^\W\d_])-<br>(?=[^\W\d_])")
 # the line of a narrow table cell that ends inside a phrase, the next one going on in lower case: one cell, one line
 CELL_BREAK = re.compile(r"(?<=[^\W\d_])<br>(?=[^\W\d_])")
 
@@ -83,6 +86,23 @@ def fix_case(word):
         return word
     up = sum(c.isupper() for c in word)
     return word.upper() if up >= len(word) - up else word[0] + word[1:].lower()
+
+
+def unglue_cells(md):
+    """In the rows of a Markdown table, a run of GLUED letters and more that splits into known words
+    (ocr_score.segment) gets its spaces back: a cell whose spaces OCR lost. Only where a vocabulary judges the words."""
+    if "|" not in md:
+        return md
+    out = []
+    for line in md.split("\n"):
+        if line.lstrip().startswith("|") and GLUED_RX.search(line):
+            # a word broken at the end of a line of the cell (going on in lower case), first made whole
+            line = HYPHEN_BR.sub(lambda m: "" if line[m.end() : m.end() + 1].islower() else m.group(0), line)
+            vocab = ocr_score.load_vocab()
+            if ocr_score.judged_by_vocab(vocab):
+                line = GLUED_RX.sub(lambda m: " ".join(ocr_score.segment(m.group(0), vocab) or [m.group(0)]), line)
+        out.append(line)
+    return "\n".join(out)
 
 
 def join_cells(md):
@@ -127,7 +147,7 @@ def tidy(md):
     md = re.sub(r"</?mark>", "", md)
     if MIXED_RX is not None:
         md = MIXED_RX.sub(lambda m: fix_case(m.group(0)), md)
-    md = drop_repeats(join_cells(md))
+    md = drop_repeats(unglue_cells(join_cells(md)))
     return re.sub(r"\n{3,}", "\n\n", md).strip("\n")
 
 

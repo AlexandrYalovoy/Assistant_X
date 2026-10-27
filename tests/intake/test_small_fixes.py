@@ -48,3 +48,28 @@ def test_profile_hint(tmp_path, monkeypatch):
     assert intake_tools.profile_hint(["a.pdf", "b.pdf", "c.pdf", "d.pdf", "e.pdf"]) == ""
     monkeypatch.setattr(config, "load", lambda *a, **k: (None, {"profile": "oil-gas-ru"}))
     assert intake_tools.profile_hint(names) == ""  # the profile is in use already
+
+
+# ---------- glued cells and small caps (audit 7, M-016, M-032) ----------
+
+
+def test_a_glued_cell_gets_its_spaces_back():
+    row = "|28.Криогенныйкомпрессор|Компрессор,вкоторомсжимаемыйгазхотябынаоднойиз стадийциклаимееткриогеннуютемпературу|"
+    assert (
+        assemble_md.tidy(row)
+        == "|28.Криогенный компрессор|Компрессор,в котором сжимаемый газ хотя бы на одной из стадий цикла имеет криогенную температуру|"
+    )
+    broken = "|Совокупностьэлементовкомпрессора,обеспечивающихпо-<br>вышениедавленияиперемешениегазавопределенноминтервале|"
+    assert "обеспечивающих повышение давления и" in assemble_md.tidy(broken)
+    assert (
+        assemble_md.tidy("| газоперекачивающий | нефтегазоконденсатный |")
+        == "| газоперекачивающий | нефтегазоконденсатный |"
+    )
+    text = "Компрессор,вкоторомсжимаемыйгазхотябынаоднойиз"  # outside a table: left as it is
+    assert assemble_md.tidy(text) == text
+
+
+def test_a_word_in_small_caps_is_one_case():
+    assert assemble_md.tidy("| ИНгИбИТОРЫ КОРРОЗИИ | ДЛЯ НЕФТЕПРОМЫСЛОВОгО ОбОРУДОВАНИЯ |") == (
+        "| ИНГИБИТОРЫ КОРРОЗИИ | ДЛЯ НЕФТЕПРОМЫСЛОВОГО ОБОРУДОВАНИЯ |"
+    )

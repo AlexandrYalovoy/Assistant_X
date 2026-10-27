@@ -263,6 +263,56 @@ def glued(t, long_ones=True, vocab=None):
     return splits(0, 0)
 
 
+SHORT_WORDS = None  # the stop words of one or two letters (prepositions, conjunctions): the glue of a glued phrase
+# the cost of a piece of a glued token (segment): a word form of the vocabulary, a stop word of one or two letters, a word
+# known by its stem only (a broken ending reads as a word by its stem: it costs more), a form of three letters
+COST_FORM, COST_SHORT, COST_STEM, COST_THREE = 1.0, 1.6, 2.5, 3.0  # a form of three letters: rarely glued
+SPLIT_SHORT = 0.25  # the share of pieces of SPLIT_MIN letters (stop words aside) a split may have
+LINKS = frozenset(x for code in lang.active() for x in lang.get(code, "compound_links", []))  # no words of their own
+
+
+def segment(t, vocab):
+    """The words a glued token is made of (a table cell whose spaces OCR lost), each piece a word form of the
+    vocabulary, a stop word of one or two letters (not a linking vowel of a compound, compound_links of the packs) or a
+    longer word known by its stem; the cheapest split (COST_*), of two pieces at least. None when the token is no GLUED
+    letters long, is a word itself or does not split so. The pieces keep the case of the token."""
+    global SHORT_WORDS
+    w = norm(t)
+    if len(w) < GLUED or len(w) != len(t) or re.search(f"[{HY}]", w) or known(w, vocab):
+        return None
+    if SHORT_WORDS is None:
+        from assistant_x.core.common import STOP
+
+        SHORT_WORDS = frozenset(x for x in STOP if len(x) <= 2) - LINKS
+    forms = (vocab[0], seed()[0])
+    best = [None] * (len(w) + 1)
+    best[0] = (0.0, ())
+    for i in range(len(w)):
+        if best[i] is None:
+            continue
+        for j in range(i + 1, min(len(w), i + 40) + 1):
+            piece = w[i:j]
+            if len(piece) >= SPLIT_MIN and (piece in forms[0] or piece in forms[1]):
+                cost = COST_FORM if len(piece) > SPLIT_MIN else COST_THREE
+            elif piece in SHORT_WORDS:
+                cost = COST_SHORT
+            elif len(piece) >= STEM_MIN and known(piece, vocab):
+                cost = COST_STEM
+            else:
+                continue
+            cand = (best[i][0] + cost, best[i][1] + (j,))
+            if best[j] is None or cand[0] < best[j][0]:
+                best[j] = cand
+    if best[-1] is None or len(best[-1][1]) < 2:
+        return None
+    cuts = (0, *best[-1][1])
+    pieces = [t[a:b] for a, b in zip(cuts, cuts[1:])]
+    # a split into many words of three letters is a token cut anyhow (a word broken at the line end in it): left as it is
+    if sum(len(p) == SPLIT_MIN and norm(p) not in SHORT_WORDS for p in pieces) > SPLIT_SHORT * len(pieces):
+        return None
+    return pieces
+
+
 def known(w, vocab):
     words, stems = vocab
     sw, ss = seed()
