@@ -67,7 +67,9 @@ def _shifted_pdf(path, words=60, inside=()):
     doc = pymupdf.open()
     page = doc.new_page()
     for i in range(words):  # a text layer off the page box: every word above the page
-        page.insert_text((20 + (i % 10) * 50, -50 - (i // 10) * 15), f"слово{i}", fontsize=10, fontname="helv")
+        page.insert_text(
+            (20 + (i % 10) * 50, -50 - (i // 10) * 15), f"word{i}", fontsize=10, fontname="helv"
+        )  # helv has Latin letters only
     for k, t in enumerate(inside):
         page.insert_text((60, 100 + 20 * k), t, fontsize=12, fontname="helv")
     doc.save(path)

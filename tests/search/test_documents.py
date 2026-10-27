@@ -28,3 +28,6 @@ def test_hidden_text_found_in_trap(mini):
     assert not any("Normal visible" in text for _, text in hits)
     normal = pymupdf.open(os.path.join(lib, "01_Standards", "N-00001_Test-Well-Rate-Standard.pdf"))
     assert all(hidden.check(p) == [] for p in normal)
+    marks = pymupdf.open()  # a legal-database export: a footnote mark "1" in a 1 pt font on every page, no letters
+    marks.new_page().insert_text((72, 72), "1", fontsize=1)
+    assert hidden.check(marks[0]) == []

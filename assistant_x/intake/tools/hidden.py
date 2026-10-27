@@ -46,7 +46,7 @@ def check(page):
     out, scan = [], None
     for s in page.get_texttrace():
         text = "".join(chr(c[0]) for c in s["chars"]).strip()
-        if not text:
+        if not any(ch.isalpha() for ch in text):  # a digit or a sign in a tiny font (a footnote mark) says nothing
             continue
         r = fitz.Rect(s["bbox"])
         why = None
