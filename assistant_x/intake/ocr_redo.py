@@ -29,7 +29,7 @@ text replaced as soon as its last reading is back (a stopped run keeps what it f
 folder has a line a document). After replacements: build_index.py and embed.py.
 """
 
-import datetime, hashlib, heapq, itertools, json, os, shutil, time
+import datetime, hashlib, heapq, itertools, json, os, re, shutil, time
 from concurrent.futures import FIRST_COMPLETED, wait
 from pathlib import Path
 
@@ -466,6 +466,10 @@ def cmd_redo(cfg, a):
             apply_text(texts, code, r, aside, rows, date)
             ocr_score.write_tsv(tsv, rows)
             replaced += 1
+        if not a.dry_run and (texts / f"{code}.md").exists():
+            dropped = clear_doubled_issue(cfg.index / "cards", code, (texts / f"{code}.md").read_text(encoding="utf-8"))
+            if dropped:
+                say(f"    the card no longer says the text is doubled ({dropped} issue)")
         if not a.dry_run:
             journal.append_events(events_path, [event(cfg, date, code, r)])
         results[code] = r
@@ -533,6 +537,29 @@ def apply_text(texts, code, r, aside, rows, date):
         old_info.unlink()
     detail = json.loads(Path(r["detail"]).read_text(encoding="utf-8")) if r.get("detail") else ocr_score.score_text(new_md)
     rows[code] = ocr_score.row_of(code, detail, "redo", date)
+
+
+# an issue of a card that says the text is doubled (written with the card at the intake; the issues are in English)
+DOUBLED_ISSUE = re.compile(r"appears twice|doubled", re.I)
+
+
+def clear_doubled_issue(cards, code, md):
+    """Drop the issues "the text is doubled" from the card of a code whose text md is no longer doubled (run 2a4: 125
+    cards kept the issue after their text was replaced, and every hit of those documents warned of it). Returns how
+    many were dropped."""
+    from assistant_x.core import card
+
+    path = Path(cards) / f"{code}.json"
+    if not path.exists() or doubling(md)[0] >= UNDOUBLED_MEAN:
+        return 0
+    c = card.load(path)
+    issues = (c.get("file") or {}).get("issues") or []
+    keep = [i for i in issues if not DOUBLED_ISSUE.search(str(i.get("what", "")))]
+    if len(keep) == len(issues):
+        return 0
+    c["file"]["issues"] = keep
+    card.dump(c, path)
+    return len(issues) - len(keep)
 
 
 def event(cfg, date, code, r):
