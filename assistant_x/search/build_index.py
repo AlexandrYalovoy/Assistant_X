@@ -299,6 +299,15 @@ def main():
     ap.add_argument("--full", action="store_true")
     ap.add_argument("--no-check", action="store_true", help="do not check the cards and texts before building")
     a = ap.parse_args()
+    from assistant_x.core import lock
+
+    # one heavy task at a time: a build in the middle of a redo read texts being replaced (run 2a3); a build started by
+    # the holder of the lock (reindex, apply) passes through
+    with lock.heavy_task("build", wait=True):
+        return build(a)
+
+
+def build(a):
     cfg = load_config(a.config)
     if not a.no_check:  # a broken card or a missing text must not reach the search silently
         from assistant_x.search import check_index

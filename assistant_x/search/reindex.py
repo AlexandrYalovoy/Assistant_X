@@ -80,6 +80,13 @@ def main(argv=None):
     if {"-h", "--help"} & set(argv):  # the options only: --help once built the base in the middle of a redo
         print(__doc__)
         return 0
+    from assistant_x.core import lock
+
+    with lock.heavy_task("reindex", wait=True):  # build_index and embed under it pass through
+        return _run(argv, gpu_guard, load_config)
+
+
+def _run(argv, gpu_guard, load_config):
     py, started = sys.executable, time.time()
     write_progress("build_index")
     rc = proc.call([py, "-m", "assistant_x.search.build_index"])

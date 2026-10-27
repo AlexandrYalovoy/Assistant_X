@@ -128,3 +128,22 @@ def test_reindex_help_builds_nothing(monkeypatch, capsys):
     """--help of the recalculation shows its options; it once built the base in the middle of a running redo."""
     monkeypatch.setattr(reindex.proc, "call", lambda *a, **k: pytest.fail("a step was started"))
     assert reindex.main(["--help"]) == 0 and "--cpu" in capsys.readouterr().out
+
+
+def test_reindex_runs_under_the_machine_lock(monkeypatch):
+    """The recalculation waits for a heavy task (a redo) instead of building beside it; its steps pass through."""
+    import contextlib
+
+    from assistant_x.core import lock
+
+    seen = []
+
+    @contextlib.contextmanager
+    def held(task, wait=False, **kw):
+        seen.append((task, wait))
+        yield
+
+    monkeypatch.setattr(lock, "heavy_task", held)
+    monkeypatch.setattr(reindex, "write_progress", lambda *a: None)
+    monkeypatch.setattr(reindex.proc, "call", lambda cmd, **kw: 1)  # the build fails: nothing more runs
+    assert reindex.main([]) == 1 and seen == [("reindex", True)]
