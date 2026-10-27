@@ -271,3 +271,16 @@ def test_contents_without_service_lines_and_repeats():
     ]
     toc, _ = metadraft.contents(pages)
     assert [t["title"] for t in toc].count("1 Область применения") <= 1
+
+
+def test_a_legal_database_export_quotes_the_amendment_line():
+    """Round 1 of the pipeline test: the export of a legal database puts its header first and the amendment line in
+    quotes; its web address is no English title."""
+    md = (
+        "=== page 1 ===\n\nДокумент предоставлен Консультант Дата сохранения: 21.10.2026\n\n"
+        '"Изменение N 1 ГОСТ 12.2.063-2015 "Арматура трубопроводная. Общие требования безопасности"\n\n'
+        "**www.example.ru**\n\nСтраница 1 из 11\n"
+    )
+    d = metadraft.draft(md, "Изменение N 1 ГОСТ 12.2.063-2015.pdf")
+    assert d["amends"] == "ГОСТ 12.2.063-2015" and d["doc_type"] == "standard"
+    assert d["title"]["ru"].startswith("Изменение N 1 ГОСТ 12.2.063-2015") and "en" not in d["title"]

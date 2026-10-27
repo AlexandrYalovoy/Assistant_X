@@ -34,7 +34,7 @@ SUPERSEDES = re.compile(f"(?i){lang.alt('supersedes')}")
 SKIP_TITLE = re.compile(rf"(?i)^({lang.alt('not_title')})")
 NOT_HEADING_LINE = re.compile(rf"(?i)^({lang.alt('not_heading')})")  # a service line of a title page, no section
 # the first line of an amendment to a standard ("Amendment No. 1 to …"): the document amends its base, it is no version
-AMENDMENT = re.compile(rf"(?i)^(?:#+\s*)?({lang.alt('amendment')})\b")
+AMENDMENT = re.compile(rf"(?i)^(?:#+\s*)?[\"'«“„]?({lang.alt('amendment')})\b")  # quoted by a legal database too
 DASHES = " .-–—"
 # the genres the words of the first pages suggest (doc_type_words of the packs and the profile), in the order of the
 # genres of schemas/card-1.json; the first rule that matches wins (a designation of a standard comes before all of them)
@@ -255,7 +255,7 @@ def amendment_of(pages):
             for nxt in lines[i : i + 3]:
                 found = designations_in(nxt)
                 if found:
-                    return line.lstrip("# ").strip(), found[0][2]
+                    return line.lstrip("# \"'«“„").strip(), found[0][2]
             return None
     return None
 
@@ -277,7 +277,7 @@ def en_title_line(pages, desig):
         x = lines[k]
         if k == at or abs(k - at) > 8 or designations_in(x) or SKIP_TITLE.match(x):
             continue
-        if LATIN_LINE.match(x) and len(re.findall(r"[A-Za-z]{2,}", x)) >= 3:
+        if LATIN_LINE.match(x) and len(re.findall(r"[A-Za-z]{2,}", x)) >= 3 and len(x.split()) >= 3:  # no web address
             return x[0].upper() + x[1:].lower() if x.upper() == x else x
     return ""
 
@@ -538,6 +538,7 @@ def draft(md, rel="", profile=None, given=None):
     lg = langs[0] if langs else "en"
     gost = gost_title(pages) if desig and desig.startswith(NATIONAL) else ""
     title = (amends[0] if amends else "") or gost or title_of(pages, desig) or desig or ""
+    title = title.lstrip(" \"'«»“”„.,:;–—-")  # the rest of a quoted designation line: ". Interstate standard. …"
     out = {
         "tid": None,
         "sec": shelf_of(doc_type, profile),
