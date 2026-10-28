@@ -518,7 +518,7 @@ def unit_text(unit):
 
 
 def format_line(fmt):
-    """The format of a file in words, for Claude and the reports: 'PDF scan (OCR, errors possible), 48 pages'."""
+    """The format of a file in words, for the assistant and the reports: 'PDF scan (OCR, errors possible), 48 pages'."""
     fmt = fmt or {}
     kind, n = fmt.get("kind"), fmt.get("pages")
     pages = "? pages" if not n else "1 page" if n == 1 else f"{n} pages"
@@ -613,7 +613,7 @@ LABELS = {
 
 
 def brief(card, fields=None):
-    """Compact text of a card for Claude. Without fields: everything of `doc` but the table of contents; fields: only
+    """Compact text of a card for the assistant. Without fields: everything of `doc` but the table of contents; fields: only
     these keys of `doc` ('toc' among them), 'file' for the file block, 'issues' for the problems of the source."""
     doc = card.get("doc") or {}
     file = card.get("file") or {}

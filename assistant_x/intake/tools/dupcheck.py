@@ -20,7 +20,7 @@ MIN_CHARS = 80
 # share of the candidate's phrases found in a library text: another scan of the same book gives ~50 %,
 # different books 0-2 %. From "auto" the intake (process.Batch.dup_verdict) marks a candidate a duplicate by itself
 # (apply moves it to _duplicates) only when it is the same edition: "same" of the phrases, page counts within
-# "pages_apart" of each other and no other year in the designation; another edition stays a suspect for Claude.
+# "pages_apart" of each other and no other year in the designation; another edition stays a suspect for the assistant.
 THRESHOLDS = {"partial": 0.08, "dup": 0.30, "auto": 0.60, "same": 0.90, "pages_apart": 0.10}
 TESSERACT = os.environ.get("TESSERACT") or "tesseract"
 MARK = re.compile(rf"(?:^|\n)=== (?:{PAGE_WORDS}) \d+ ===\n")

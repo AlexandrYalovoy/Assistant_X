@@ -1,9 +1,11 @@
 # Assistant X
 
 Your own knowledge base with an expert on top: Assistant X keeps your documents (PDF, DOC/DOCX, PPTX, scans) as
-searchable texts on your computer and lets Claude read, cross-check and cite them page by page through an MCP server.
-Search by words and by meaning, page images of the originals, tables of contents of books, a quality warning for weak
-scans. Everything runs locally; the documents never leave the PC.
+searchable texts on your computer and lets your AI assistant read, cross-check and cite them page by page through
+an MCP server: Claude (Desktop and Code), Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio with any local
+model, and any other MCP client. Search by words and by meaning, page images of the originals, tables of contents of
+books, a quality warning for weak scans. The library and its search run locally; what reaches the model is only what
+it reads from the library to answer (with a local model in LM Studio nothing leaves the PC).
 
 Version 0.3, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
 field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer. License: GNU AGPL-3.0-or-later; the data folders also CC-BY-4.0 (see License below).
@@ -29,10 +31,11 @@ field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer.
 | [`pyproject.toml`](pyproject.toml) | the package `assistant-x`: dependencies and extras `dense`, `intake`, `dml`, `export`, `dev` |
 | [`Setup.bat`](Setup.bat), [`intake.bat`](intake.bat), [`assistant-x.bat`](assistant-x.bat) | double-click: install; the intake of `inbox`; any command (`assistant-x.bat help`) |
 | [`scripts/`](scripts) | thin .bat files: debug report, library report, query log, intake installation, media |
-| [`assistant_x/templates/skill/`](assistant_x/templates/skill) | the Claude skill `assistant-x` (switched on by "AX:"): `assistant-x skill` writes it for the profile of the workspace into `<workspace>/skill/SKILL.md` |
+| [`assistant_x/templates/skill/`](assistant_x/templates/skill) | the skill `assistant-x` (switched on by "AX:") from one core: SKILL.md for Claude and for the agents (Codex, DeepSeek Harness), the short rules of the tool `library_guide`; `assistant-x skill` writes it for the profile of the workspace |
+| [`assistant_x/clients/`](assistant_x/clients) | the apps `assistant-x connect` knows: where each keeps its MCP servers and skills |
 | [`assistant_x/schemas/`](assistant_x/schemas) | the JSON Schema of the document cards (`card-1.json`) |
 | [`tests/`](tests) | the tests ([`tests/base`](tests/base), [`tests/search`](tests/search), [`tests/intake`](tests/intake), [`tests/corpus`](tests/corpus), and the top of `tests`: see Tests) |
-| [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
+| [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the apps ([`CLIENTS.md`](docs/CLIENTS.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
 | [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md) | what comes next, what changed |
 | [`LICENSE`](LICENSE), [`LICENSES/`](LICENSES), [`NOTICE`](NOTICE), [`CLA.md`](CLA.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | the licenses, the notices of the author and of the third-party components, the contributor agreement, how to contribute, the code of conduct |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, and what the product guarantees about untrusted documents and packages |
@@ -68,14 +71,18 @@ the PC, in `%LOCALAPPDATA%\AssistantX\models`). Keep your own copy of `library` 
 - **Memory:** 8 GB of RAM recommended (the models and the intake of scans take several GB).
 - **Video card:** optional. NVIDIA (CUDA), AMD or Intel with its own memory (DirectML) make the search by meaning
   faster; without one it runs on the processor.
-- **Claude:** Claude Desktop or Claude Code, with MCP servers (and skills, for the "AX:" key) available in your plan.
-  The library also works from the command line without Claude ("Without Claude" below).
+- **An app with MCP:** Claude Desktop or Claude Code; Codex (CLI, IDE) or the ChatGPT desktop app; DeepSeek
+  Harness; LM Studio with a model that can call tools; or any MCP client (stdio, or streamable HTTP with
+  `assistant-x serve --http`). The library also works from the command line alone ("Without an app" below).
+- **Where your text goes:** the search runs on your PC, but the pages the model reads to answer go to the provider of
+  that model (Anthropic, OpenAI, DeepSeek). For confidential documents use a local model in LM Studio.
 
 ## Getting started (Windows)
 
 1. [`Setup.bat`](Setup.bat) — finds or installs Python, installs the packages and the program, makes the workspace
-   `Documents\Assistant X` with the profile `general`, connects the server to Claude Desktop and Claude Code, writes
-   the skill and runs a self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
+   `Documents\Assistant X` with the profile `general`, connects the library to every app it finds (Claude Desktop,
+   Claude Code, Codex, DeepSeek Harness, LM Studio: `assistant-x connect auto`), writes the skills and runs a
+   self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` with `MODELS.json`, `programs\`) everything of the program goes to
    `%LOCALAPPDATA%\AssistantX` — `app\<version>`, the environment `venv`, the models (checked against `MODELS.json`),
    the programs of the intake — and the workspace holds your data only; `Setup.bat --base E:\base\x.axbase` installs
@@ -86,12 +93,15 @@ the PC, in `%LOCALAPPDATA%\AssistantX\models`). Keep your own copy of `library` 
    intake, locks, tokens) can be moved: set `AX_MACHINE_DIR` to another folder before [`Setup.bat`](Setup.bat) and keep it set.
 2. [`scripts\install_intake.bat`](scripts/install_intake.bat) (`assistant-x setup-intake`) — LibreOffice, Tesseract (the languages of the packs: rus+eng by default), 7-Zip and DjVuLibre for the
    intake, without administrator rights.
-3. The skill: zip the folder `skill` of the workspace (it holds `SKILL.md`) and upload it in Claude → Settings →
-   Capabilities → Skills. Restart Claude Desktop (the icon by the clock → Quit, then open it again).
-4. Put documents into `inbox` of the workspace and write to Claude "AX: sort my documents" (or double-click
-   [`intake.bat`](intake.bat) and let Claude write the cards afterwards).
-5. Ask Claude, starting the message with "AX:". The answers cite `[code, p. printed, PDF N]`. `assistant-x.bat doctor`
-   shows where everything is and what is missing.
+3. Claude Desktop only: zip the folder `skill` of the workspace (it holds `SKILL.md`) and upload it in Claude →
+   Settings → Capabilities → Skills, then restart Claude Desktop (the icon by the clock → Quit, then open it again).
+   Codex, Claude Code and DeepSeek Harness got their skill from `connect`; in LM Studio any model learns the rules from
+   the tool `library_guide`.
+4. Put documents into `inbox` of the workspace and write to your assistant "AX: sort my documents" (or double-click
+   [`intake.bat`](intake.bat) and let the assistant write the cards afterwards).
+5. Ask, starting the message with "AX:" (or "connect to the library"). The answers cite `[code, p. printed, PDF N]`.
+   `assistant-x.bat doctor` shows where everything is and what is missing, `assistant-x connect --check` whether every
+   app reaches the library.
 
 ## Commands at a glance
 
@@ -106,11 +116,13 @@ chooses another workspace):
 | `build [--full]`, `embed [--cpu]` | the search base from the cards and texts; the meaning vectors of the new fragments |
 | `search "question"` | a query from the command line |
 | `base export`, `base inspect`, `base install`, `base update`, `base remove` | base packages: a library passed between people ([docs/PACKAGES.md](docs/PACKAGES.md)) |
-| `serve [--http]` | the MCP server (Claude starts it itself) |
-| `setup-intake`, `download-models`, `skill` | the programs of the intake; the models; the Claude skill |
-| `report`, `query-log`, `debug-report` | the state of the library; what Claude asked; a report to pass on when something fails |
+| `connect APP\|auto`, `connect --list`, `connect --check`, `disconnect APP` | connect the apps of this PC ([docs/CLIENTS.md](docs/CLIENTS.md)) |
+| `mcp [--tools reader] [--compact]`, `service` | the stdio bridge every app starts; the library service it talks to (both started by themselves) |
+| `serve [--http]` | the MCP server in the process of the app (the fallback), or over HTTP for other clients |
+| `setup-intake`, `download-models`, `skill` | the programs of the intake; the models; the skill |
+| `report`, `query-log`, `debug-report` | the state of the library; what the apps asked; a report to pass on when something fails |
 
-### Without Claude
+### Without an app
 
 The intake runs from the command line too: `assistant-x intake run` makes the texts and `meta_draft.jsonl` in
 `.assistant_x\work\<date>`; write `meta.jsonl` there by hand from the draft (one JSON line per file: [docs/INTAKE.md](docs/INTAKE.md),
@@ -120,10 +132,13 @@ The intake runs from the command line too: `assistant-x intake run` makes the te
 ## Troubleshooting
 
 - **"Found by words only"** or "N of M fragments have no meaning vectors": the embeddings are missing or still
-  loading. Wait 10–20 s after the start of Claude; otherwise run `assistant-x embed` (or ask Claude for
+  loading. Wait 10–20 s after the start of the library; otherwise run `assistant-x embed` (or ask the assistant for
   `intake_reindex`), and `assistant-x doctor` names a missing model (`assistant-x download-models`).
 - **A base install, update or removal was interrupted** (the PC switched off): `assistant-x base install PACKAGE
-  --resume` goes on, `--rollback` undoes it (the same for `update` and `remove`); Claude reports it in its status.
+  --resume` goes on, `--rollback` undoes it (the same for `update` and `remove`); the assistant reports it in its
+  status.
+- **An app does not see the library**: `assistant-x connect --check` makes the handshake and a search through the
+  entry of every app and says which part fails; `assistant-x connect APP` writes the entry again.
 - **The intake apply was interrupted**: `assistant-x intake apply --resume`.
 - **"the machine lock is busy"**: another heavy task runs (`assistant-x lock` says which); wait, or add `--wait`.
 - **Anything else**: `assistant-x debug-report` makes a file to pass on to whoever helps you (read it first: it
@@ -145,7 +160,7 @@ installation by Setup.bat. `[dense]` brings the search by meaning (torch; on Win
 so for an NVIDIA card install the CUDA build from download.pytorch.org first — without it the card is not used and
 `embed` asks about the processor), `[intake]` the intake of your own documents; without them the search goes by words.
 `assistant-x init` makes the workspace (`--profile oil-gas-ru` for the oil and gas profile), `assistant-x doctor` shows
-what is missing. Then connect the server to Claude (below).
+what is missing. Then `assistant-x connect auto` connects the apps (below).
 
 ### Linux and macOS
 
@@ -156,27 +171,31 @@ tesseract tesseract-lang p7zip djvulibre` (macOS); `assistant-x setup-intake --n
 paths into `assistant_x.local.toml`. The tests (all but the slow ones) run in CI on Linux and Windows with Python 3.11
 ([`.github/workflows/tests.yml`](.github/workflows/tests.yml)); macOS and newer Python versions are not tested yet.
 
-### Connect to Claude by hand
+### Connect your apps
 
-Setup.bat does this itself. By hand, Claude Desktop: add to `claude_desktop_config.json` (Windows:
-`%APPDATA%\Claude\`, macOS: `~/Library/Application Support/Claude/`, Linux: `~/.config/Claude/`) the section below,
-with the path of the Python of your environment and of your workspace, then restart Claude Desktop:
+`assistant-x connect auto` (Setup.bat runs it) writes the entry of the library into every app it finds; `assistant-x
+connect APP` one app (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`), `--full` gives an app every tool,
+`assistant-x disconnect APP` takes it out. A copy of the settings file is kept beside it, the entries of others stay.
+Every entry starts the same light bridge, `<python> -m assistant_x.server.bridge`, which talks to one library service
+on 127.0.0.1: the models are loaded once for all the apps. By hand (any MCP client that starts a program):
 
 ```json
 {
   "mcpServers": {
     "assistant-x": {
-      "command": "C:\\Users\\you\\AppData\\Local\\AssistantX\\venv\\Scripts\\python.exe",
-      "args": ["-m", "assistant_x.server.mcp_server"],
-      "env": {"HF_HUB_OFFLINE": "1", "AX_WORKSPACE": "C:\\Users\\you\\Documents\\Assistant X"}
+      "command": "C:\\Users\\you\\AppData\\Local\\AssistantX\\venv\\Scripts\\pythonw.exe",
+      "args": ["-m", "assistant_x.server.bridge", "--tools", "reader"],
+      "env": {"AX_WORKSPACE": "C:\\Users\\you\\Documents\\Assistant X", "PYTHONUTF8": "1", "HF_HUB_OFFLINE": "1"}
     }
   }
 }
 ```
 
-Claude Code: `claude mcp add assistant-x -s user -e HF_HUB_OFFLINE=1 -e AX_WORKSPACE=<workspace> -- <python> -m
-assistant_x.server.mcp_server`. Other MCP clients over HTTP: `assistant-x serve --http [--port 8765]` (every request
-needs the bearer token of `mcp_http_token.txt` in the PC folder: [SECURITY.md](SECURITY.md)).
+`--tools reader` gives the 8 reading tools (search, pages, contents, page image, quote check, card, list, the guide);
+without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
+models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
+`assistant-x serve --http [--port 8765]` (every request needs the bearer token of `mcp_http_token.txt` in the PC folder:
+[SECURITY.md](SECURITY.md)).
 
 ## Tests
 

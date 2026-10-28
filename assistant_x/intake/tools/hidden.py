@@ -1,7 +1,7 @@
 # Assistant X — Copyright (C) 2026 Alexandr Yalovoy
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Find text in a PDF that a reader does not see but text extraction picks up (a way to plant instructions
-for Claude): white or near-white text on a light background, text in a tiny font, transparent text,
+for the assistant): white or near-white text on a light background, text in a tiny font, transparent text,
 invisible text (render mode 3) on a page that is not a scan, text outside the page.
 The invisible OCR layer of a scanned page is normal and is not counted.
 Usage: python -m assistant_x.intake.tools.hidden <file.pdf> [--clean <out.pdf>] [--json <report.json>]

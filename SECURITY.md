@@ -51,8 +51,11 @@ format, archives in the inbox, base packages received from other people. These a
   conversion), Tesseract and DjVuLibre as separate programs; text hidden from a reader (white text, tiny fonts) is cut
   out of the search text and reported.
 - **The search server** (MCP) reads the library and returns text; page images are confined to the library folder.
-  Over HTTP (`assistant-x serve --http`) it listens on 127.0.0.1 only, every request needs the bearer token of
-  `%LOCALAPPDATA%\AssistantX\mcp_http_token.txt`, and a Host or Origin other than 127.0.0.1 or localhost is refused.
+  Over HTTP (the library service `assistant-x service` the apps reach through their stdio bridge, and
+  `assistant-x serve --http`) it listens on 127.0.0.1 only, every request needs the bearer token of
+  `%LOCALAPPDATA%\AssistantX\mcp_http_token.txt` (the bridge reads it itself: no app setting holds it), and a Host or
+  Origin other than 127.0.0.1 or localhost is refused. Every tool carries its annotations (read only, destructive), so
+  an app asks the user before a change; DeepSeek Harness and LM Studio get the reading tools only by default.
   The commands that change the library (`base_install`, `base_update`, `base_remove`, `intake_apply`) need two steps:
   the plan, then a confirmation that echoes the token of that plan. The token is random, valid 30 minutes, used once,
   and bound to the action, its target, the workspace and what the plan was made of (the package file by its manifest

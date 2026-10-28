@@ -963,7 +963,7 @@ def ocr_share(fmt):
 
 
 def quality_note(stats, fmt="", hidden="", ocr_score=None):
-    """Short warning for Claude next to a found fragment, or '' when the text is fine.
+    """Short warning for the assistant next to a found fragment, or '' when the text is fine.
     hidden: the hidden text of the card in words (file.hidden_text: intake or intake/tools/hidden_scan.py --apply);
     ocr_score: the recognition score 0-100 of the text (index/ocr_quality.tsv), noted below QUALITY["ocr_note"]."""
     out = []

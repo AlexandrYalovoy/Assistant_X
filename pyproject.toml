@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "assistant-x"
 dynamic = ["version"]  # assistant_x.__version__: the one place of the version
-description = "A local knowledge base of your own documents (PDF to texts, cards, keyword and semantic search) served to Claude over MCP"
+description = "A local knowledge base of your own documents (PDF to texts, cards, keyword and semantic search) for Claude, ChatGPT/Codex, DeepSeek Harness, LM Studio and any MCP client"
 readme = "README.md"
 license = "AGPL-3.0-or-later"  # SPDX (PEP 639); the data folders also under CC-BY-4.0: NOTICE
 license-files = ["LICENSE", "LICENSES/*", "NOTICE"]  # the AGPL, the CC-BY-4.0 of the data folders, the notices

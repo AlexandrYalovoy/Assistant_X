@@ -4,7 +4,7 @@ r"""assistant-x base inspect: what installing a base package into this workspace
 
     assistant-x base inspect PACKAGE [--keep own|package] [--json OUT.json] [--no-verify]
 
-The report (also as JSON, for Claude: the questions to put to the user are in "questions"):
+The report (also as JSON, for the assistant: the questions to put to the user are in "questions"):
   problems        what stops the install: another card schema or text format, damaged files, cards that do not pass
                   the languages, shelves and topics of this workspace, an intake batch built but not applied, paths
                   over 255 characters without long paths in Windows, too little disk space
@@ -160,7 +160,7 @@ def code_plan(own, pkg_codes, high, keep=None, codes="default", lineage=()):
     codes are the next free numbers above both sides and the marks of index/codes.json (mapping). A reference package
     (codes "reference": its codes are the same for everyone who installs it) recommends "package" and takes it when no
     one chose; a default one recommends nothing, and then keeper stays None: the install asks for --keep. An empty
-    workspace takes the codes of the package, no choice. Facts only, for Claude to put to the user in their language.
+    workspace takes the codes of the package, no choice. Facts only, for the assistant to put to the user in their language.
 
     A number never comes back (core/card.py, index/codes.json): a package code at or below the mark of its letter
     that no document here has now was given to a document since removed, and an old citation of it must not name
@@ -418,7 +418,7 @@ def matches(cfg, pkg, pcards, own):
 
 
 def questions(report):
-    """The questions for the user as data, for Claude to put in the user's language: [{id, kind, options, default,
+    """The questions for the user as data, for the assistant to put in the user's language: [{id, kind, options, default,
     recommended, …facts}] (no sentences for the user here). Only who keeps the codes is asked: duplicates and
     editions are merged by the rule (classify) and told in the report."""
     out = []

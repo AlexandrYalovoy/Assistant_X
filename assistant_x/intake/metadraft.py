@@ -743,7 +743,7 @@ def write_drafts(work, state, tids=None, index=None, profile=None, append=False)
         given = read_outline(pages_path(md))  # the bookmarks or heading styles of the file
         d = draft(md.read_text(encoding="utf-8") if md.exists() else "", r["rel"], profile, given)
         d["tid"] = r["tid"]
-        if r.get("ocr_score") is not None:  # recognition score 0-100 (tools/ocr_score.py), for Claude to see
+        if r.get("ocr_score") is not None:  # recognition score 0-100 (tools/ocr_score.py), for the assistant to see
             d["ocr_score"] = r["ocr_score"]
         title = " ".join((d.get("title") or {}).values())
         hit = versions.find(d.get("code_hint"), title, docs) if docs and not d.get("amends") else None
