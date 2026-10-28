@@ -52,15 +52,15 @@ def test_an_older_folder_is_taken_over_once(pc):
     old = older(local / "AssistantX")
     store = older(local / "Packages" / "Claude_pzs8sxrjxfjjc" / "LocalCache" / "Local" / "AssistantX", models=False)
     (store / "model_fingerprints.json").write_text("{}", encoding="utf-8")
-    assert workspace.legacy_machine_dirs() == [old, store]
+    assert workspace.legacy_machine_dirs() == [store, old]  # the Store copy first: its path is the same on both sides
     done = workspace.migrate_machine_dir()
     new = home / ".assistant_x"
     assert json.loads((new / "connections.json").read_text(encoding="utf-8")) == {"lmstudio": {}}
     assert (new / "model_fingerprints.json").exists() and not (new / "mcp_http_token.txt").exists()
     assert (new / "models" / "bge-m3" / "config.json").exists() and os.path.realpath(new / "models") == os.path.realpath(
         old / "models"
-    )
-    assert os.path.realpath(new / "venv") == os.path.realpath(old / "venv")  # the first older folder wins
+    )  # the Store copy has none: from the older folder
+    assert os.path.realpath(new / "venv") == os.path.realpath(store / "venv")  # the first folder that has one wins
     assert any("models" in d for d in done) and json.loads((new / "migrated.json").read_text(encoding="utf-8"))["from"]
     assert workspace.migrate_machine_dir() == []  # once
     assert old.exists() and (old / "models" / "bge-m3").exists()  # nothing of the older folder is moved or deleted
