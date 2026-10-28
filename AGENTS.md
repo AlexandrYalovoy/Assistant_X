@@ -4,7 +4,7 @@
 ## For agents that work on this repository or install it
 
 - The user asks you to install or connect Assistant X: follow [INSTALL_FOR_AI.md](INSTALL_FOR_AI.md) (version
-  0.5.2); install the latest release (https://github.com/AlexandrYalovoy/Assistant_X/releases/latest), never `main`.
+  0.5.3); install the latest release (https://github.com/AlexandrYalovoy/Assistant_X/releases/latest), never `main`.
 - The apps and their settings files: [docs/CLIENTS.md](docs/CLIENTS.md); `assistant-x connect APP|auto` writes the
   entry, `assistant-x connect --check` checks it.
 - Something does not work: `assistant-x doctor --json` and `assistant-x connect --check --json` give every known
