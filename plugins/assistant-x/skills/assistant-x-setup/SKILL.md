@@ -5,7 +5,7 @@ description: "Install and connect Assistant X, the local library of the user's d
 
 # Install and connect Assistant X
 
-<!-- Made by assistant-x gen-docs from assistant_x/templates/docs/setup-SKILL.md (version 0.5). -->
+<!-- Made by assistant-x gen-docs from assistant_x/templates/docs/setup-SKILL.md (version 0.4.1). -->
 
 Assistant X keeps the user's documents as searchable texts on their PC and serves them over MCP. This plugin brings
 only this guide: the program itself is installed from its latest release, and `assistant-x connect` then writes the

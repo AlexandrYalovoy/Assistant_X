@@ -49,7 +49,7 @@ LM Studio (or in DeepSeek Harness and Codex pointed at LM Studio).
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.
 
-## The tools (0.5)
+## The tools (0.4.1)
 
 | Tool | What it does | Set | Changes the library |
 | --- | --- | --- | --- |
