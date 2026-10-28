@@ -186,5 +186,9 @@
   "title_phrases": {},
   "title_letters": "",
   "translit": {},
-  "designation_latin": {}
+  "designation_latin": {},
+  "standard_head_loose": [
+    "international",
+    "american national"
+  ]
 }

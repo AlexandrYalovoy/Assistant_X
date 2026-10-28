@@ -46,6 +46,7 @@ def test_quality_values_unchanged():
         "ocr_replace": 50,
         "ocr_redo_gain": 10,
         "ocr_redo_keep": 0.8,
+        "ocr_second": 90,
     }
 
 
