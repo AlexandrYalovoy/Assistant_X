@@ -109,7 +109,10 @@ def test_rerank_auto_on_every_question_on_a_video_card(lib, monkeypatch, tmp_pat
     assert lib.want_rerank("перечисли все", 8)
     monkeypatch.setattr(lib, "_reranker", None)
     monkeypatch.setattr(lib, "no_wait", False)
-    monkeypatch.setattr(lib, "_cuda", False)  # on a CPU it takes seconds per question: only rerank = true
+    monkeypatch.setattr(lib, "_cuda", False)  # on a CPU: the first rerank_cpu_top candidates (Q3: 2.6 s, MRR 0.70)
+    monkeypatch.setattr(lib, "dml", lambda: None)
+    assert lib.want_rerank("перечисли все", 20)
+    monkeypatch.setitem(lib.cfg, "rerank_cpu_top", 0)  # off on a CPU unless rerank = true
     assert not lib.want_rerank("перечисли все", 20)
     monkeypatch.setitem(lib.cfg, "rerank", True)
     assert lib.want_rerank("перечисли все", 20)

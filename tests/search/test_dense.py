@@ -203,6 +203,27 @@ def test_rerank_refines_the_fused_order(dense, monkeypatch):
     assert len(seen) >= len(plain) and all(d.splitlines()[0] in titles for _, d in seen)  # the title first
 
 
+def test_on_a_processor_the_reranker_reads_the_first_candidates_only(dense, monkeypatch):
+    """Q3, measured on 40 control questions of the author's library on the processor: no reranking MRR 0.591 (0.18 s),
+    the first 8 candidates 0.703 (2.6 s), 12 the same 0.703 (4.6 s), the whole pool on a video card 0.734. On a processor
+    the reranker reads rerank_cpu_top candidates (8); the others keep their order behind them."""
+    q = "газового фактора сепаратора"
+    dense.search(q, k=6, rerank=True)  # the reranker loaded
+    seen = []
+    monkeypatch.setattr(dense._reranker, "predict", lambda pairs, **k: seen.append(len(pairs)) or np.zeros(len(pairs)))
+    monkeypatch.setattr(dense, "_cuda", False)
+    monkeypatch.setattr(dense, "dml", lambda: None)
+    plain = [(r["code"], r["page"]) for r in dense.search(q, k=6, rerank=False)]
+    out = dense.search(q, k=6, rerank=True)
+    assert seen and seen[-1] <= 8 and len(out) == len(plain)
+    monkeypatch.setitem(dense.cfg, "rerank_cpu_top", 3)
+    dense.search(q, k=6, rerank=True)
+    assert seen[-1] <= 3
+    monkeypatch.setattr(dense, "_cuda", True)  # on a video card: the whole pool
+    dense.search(q, k=6, rerank=True)
+    assert seen[-1] > 8 or seen[-1] == len(plain)
+
+
 def test_a_page_and_a_document_once(dense):
     res = dense.search("обводнённости продукции сепаратора", k=10, max_per_doc=1)
     assert len({r["code"] for r in res}) == len(res)

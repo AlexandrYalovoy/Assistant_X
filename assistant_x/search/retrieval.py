@@ -55,6 +55,7 @@ POOL = 50  # the candidates before the merging of pages and documents (and the r
 MAX_PER_DOC = 3  # pages of one document in an answer, unless the other documents leave places free (M-080)
 RERANK_WEIGHT = 1.0  # final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight
 RERANK_CHARS = 2000  # what the reranker reads of a fragment at most (it truncates at its max_length anyway)
+RERANK_CPU_TOP = 8  # candidates the reranker reads on a processor (Q3: the whole pool takes seconds there)
 EXACT_ROWS = 100_000  # a filter letting fewer fragments through: exact search over them, even with a FAISS index
 SCORE_STEP = 20_000  # rows scored at once: a block of float32 vectors stays below ~100 MB
 MIN_DESIG_KEY = 5  # shorter designations ("API") are no exact match
@@ -444,9 +445,9 @@ class Library:
 
     # ---------- reranking ----------
     def want_rerank(self, query=None, k=None):
-        """ "rerank" of assistant_x.toml: true / false, or "auto" (the default): every question on a video card (CUDA
-        or DirectML, ~0.1 s for the pool) with the model lying in models/; on a processor it takes seconds per
-        question, so there only with rerank = true. While the background warm-up of the MCP server is still loading
+        """ "rerank" of assistant_x.toml: true / false, or "auto" (the default): every question with the model lying in
+        models/, on a video card (CUDA or DirectML, ~0.5 s for the pool) and on a processor over the first
+        rerank_cpu_top candidates (~2.6 s). While the background warm-up of the MCP server is still loading
         the model, the question goes without it. (The question and k no longer matter: kept for the callers.)"""
         if self.cfg.get("rerank", False) != "auto":
             return bool(self.cfg.get("rerank", False))
@@ -455,11 +456,21 @@ class Library:
         return self._reranker is not None or not self.no_wait
 
     def may_rerank(self):
-        """True when reranking is on, or "auto" on a video card with the model in models/ (warm_up loads it then)."""
+        """True when reranking is on, or "auto" with the model in models/ (warm_up loads it then): on a video card, and
+        on a processor too while rerank_cpu_top is above 0 (the reranker then reads that many candidates)."""
         mode = self.cfg.get("rerank", False)
         if mode == "auto":
-            return (self.has_cuda() or bool(self.dml())) and os.path.isdir(self.cfg.get("rerank_model") or "")
+            here = self.on_card() or self.cpu_top() > 0
+            return here and os.path.isdir(self.cfg.get("rerank_model") or "")
         return bool(mode)
+
+    def on_card(self):
+        return self.device_override != "cpu" and (self.has_cuda() or bool(self.dml()))
+
+    def cpu_top(self):
+        """The candidates the reranker reads on a processor ([search] rerank_cpu_top, RERANK_CPU_TOP): measured on 40
+        control questions, 8 gave MRR 0.703 in 2.6 s (none: 0.591; the whole pool on a card: 0.734)."""
+        return int(self.cfg.get("rerank_cpu_top", RERANK_CPU_TOP))
 
     def has_cuda(self):
         if self._cuda is None:
@@ -494,6 +505,9 @@ class Library:
         import numpy as np
 
         model = self.reranker()
+        rest = []
+        if not self.on_card() and self.cpu_top() > 0:  # on a processor: the first candidates only, the rest behind
+            order, rest = order[: self.cpu_top()], order[self.cpu_top() :]
         pairs = [
             (query, model_text(rows[i]["title"], rows[i]["heading"], rows[i]["model_src"])[:RERANK_CHARS]) for i in order
         ]
@@ -504,7 +518,7 @@ class Library:
         final = {i: fused[i] / top + weight / (1 + np.exp(-x)) for i, x in zip(order, logits)}
         if stats is not None and len(logits):  # how sure the reranker is of its best fragment (the low closeness note)
             stats["rerank_top"] = round(float(1 / (1 + np.exp(-logits.max()))), 3)
-        return sorted(order, key=lambda i: -final[i])
+        return sorted(order, key=lambda i: -final[i]) + rest
 
     # ---------- all together ----------
     def search(self, query, k=10, dense=None, rerank=None, max_per_doc=None, stats=None, max_cards=None, **flt):

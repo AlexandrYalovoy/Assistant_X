@@ -20,7 +20,8 @@ PROFILES = Path(__file__).resolve().parent.parent / "profiles"
 SEARCH = {
     "embed_model": "bge-m3",  # a folder in the models folder, or a HuggingFace name (BAAI/bge-m3)
     "rerank_model": "bge-reranker-v2-m3",
-    "rerank": "auto",  # "auto": every question on a video card (search/retrieval.want_rerank)
+    "rerank": "auto",  # "auto": every question (search/retrieval.want_rerank)
+    "rerank_cpu_top": 8,  # on a processor the reranker reads this many candidates (0: none unless rerank = true)
     "rerank_weight": 1.0,  # the reranker's share in the final score, beside the normalized hybrid one
     "max_seq_length": 1024,  # tokens the embedding model reads of a fragment and of a question
     # on a processor bge-m3 in int8 ONNX when models/onnx/bge-m3/model.int8.onnx is there: faster, but its vectors are

@@ -9,6 +9,8 @@ The open items of the observation journal.
 - The models of the PC no longer stay in the folder of the Microsoft Store app of Claude Desktop (which removing or
   resetting the app would delete): any command moves them into %USERPROFILE%\.assistant_x when nothing holds them, and
   doctor names the state until then.
+- A PC without a video card reranks too: the reranker reads the first 8 candidates (rerank_cpu_top). On 40 control
+  questions the page came first 24 times instead of 18 (MRR 0.70 instead of 0.59) for 2.6 s a question.
 
 ## 0.5.3 — 2026-10-28
 
