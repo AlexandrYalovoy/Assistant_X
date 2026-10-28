@@ -7,8 +7,11 @@
     assistant-x intake run|build|apply|status|...   the intake of inbox (assistant_x.intake.pipeline)
     assistant-x build [--full]       build the search base from index (assistant_x.search.build_index)
     assistant-x embed [--wait|--cpu] embeddings of the new fragments (assistant_x.search.embed)
-    assistant-x serve [--http]       the MCP server for Claude (assistant_x.server.mcp_server); --http: local
-                                     clients with the bearer token of mcp_http_token.txt in the PC folder
+    assistant-x mcp [--tools reader|all] [--compact]  the stdio bridge an app starts (assistant_x.server.bridge): it
+                                     starts the library service of the workspace and talks to it
+    assistant-x service              the library service: one MCP server on 127.0.0.1 for every app of the PC
+    assistant-x serve [--http]       the MCP server in the process of the app (assistant_x.server.mcp_server); --http:
+                                     local clients with the bearer token of mcp_http_token.txt in the PC folder
     assistant-x doctor               where everything is and what is missing
     assistant-x base export|inspect|install|update|remove  base packages (assistant_x.base)
     assistant-x remove CODE [CODE …] [--why TEXT] [--dry-run]  documents of the library aside (inbox\\_to_delete)
@@ -25,14 +28,16 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "intake": ("assistant_x.intake.pipeline", "the intake of inbox: run, build, apply, status, ..."),
     "build": ("assistant_x.search.build_index", "build the search base from index"),
     "embed": ("assistant_x.search.embed", "embeddings of the new fragments"),
-    "serve": ("assistant_x.server.mcp_server", "the MCP server for Claude (stdio; --http for other clients)"),
+    "mcp": ("assistant_x.server.bridge", "the stdio bridge an app starts: it talks to the library service"),
+    "service": ("assistant_x.server.service", "the library service: one MCP server on 127.0.0.1 for every app"),
+    "serve": ("assistant_x.server.mcp_server", "the MCP server in the process of the app (stdio; --http)"),
     "search": ("assistant_x.search.retrieval", "a query from the command line"),
     "check": ("assistant_x.search.check_index", "check the cards (the schema, the profile) and the texts"),
     "report": ("assistant_x.search.library_report", "the state of the library"),
     "eval": ("assistant_x.search.eval", "the control questions of the workspace"),
-    "query-log": ("assistant_x.search.query_log", "what Claude asked and how long it took"),
+    "query-log": ("assistant_x.search.query_log", "what the apps asked and how long it took"),
     "debug-report": ("assistant_x.setup.debug_report", "a report to pass on when something fails"),
-    "install": ("assistant_x.setup.install", "the Python environment and the connection to Claude"),
+    "install": ("assistant_x.setup.install", "the Python environment and the connection to the apps"),
     "setup-intake": ("assistant_x.setup.setup_intake", "LibreOffice, Tesseract, 7-Zip and DjVuLibre for the intake"),
     "download-models": ("assistant_x.setup.download_models", "the embedding and reranking models from HuggingFace"),
     "prepare-media": ("assistant_x.setup.prepare_media", "the packages of an offline installation (build PC)"),
@@ -69,8 +74,11 @@ HELP = {  # the commands whose module has no argparse of its own: their help, sh
         "Where everything of the workspace is and what is missing; exit code 1 when the workspace is broken or not made."
     ),
     "serve": (
-        "usage: assistant-x serve [--http [--port N]]\n\n"
-        "The MCP server of the library. Without options: stdio, as Claude Desktop and Claude Code start it.\n"
+        "usage: assistant-x serve [--tools reader|all] [--compact] [--http [--port N]]\n\n"
+        "The MCP server of the library in the process of the app (the apps start assistant-x mcp, the bridge to the\n"
+        "library service; serve is the fallback). Without options: stdio.\n"
+        "  --tools      reader: only the 8 reading tools; all (default): every tool\n"
+        "  --compact    short descriptions and answers for small local models\n"
         "  --http       streamable HTTP on 127.0.0.1 (http://127.0.0.1:N/mcp), every request with the bearer token\n"
         "               of mcp_http_token.txt in the PC folder\n"
         "  --port N     the port of --http (default 8765)"

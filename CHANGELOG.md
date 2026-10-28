@@ -11,6 +11,11 @@ The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop
   instructions, the tool descriptions and the answers name no app. `page_image` puts a text beside the picture for a
   model that sees no images. `serve --tools reader` gives only the 8 reading tools, `--compact` one-sentence
   descriptions and answers cut at 6 000 characters for small local models.
+- One library service for every app of the PC: `assistant-x service` serves the workspace over streamable HTTP on
+  127.0.0.1 (the token of the machine folder, DNS rebinding protection), loads the models once and exits after 30
+  minutes without a request. The apps start `assistant-x mcp`, a light stdio bridge: it answers the handshake at
+  once, starts the service hidden when it is not running (and again when it is gone), reads the token itself and
+  passes the messages both ways; `--tools reader` and `--compact` there. `assistant-x serve` stays as the fallback.
 
 ## 0.3 — 2026-10-28
 
