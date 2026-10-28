@@ -1,3 +1,5 @@
+English | [Русский](CHANGELOG.ru.md)
+
 # Changes of Assistant X
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
@@ -11,6 +13,9 @@ The open items of the observation journal.
   doctor names the state until then.
 - A PC without a video card reranks too: the reranker reads the first 8 candidates (rerank_cpu_top). On 40 control
   questions the page came first 24 times instead of 18 (MRR 0.70 instead of 0.59) for 2.6 s a question.
+- The documents for people have Russian twins (README.ru.md, CHANGELOG.ru.md, docs/*.ru.md and the rest), with a line
+  to switch the language at the top; gen-docs makes INSTALL_FOR_AI.ru.md and docs/CLIENTS.ru.md from Russian templates,
+  and a test keeps every pair together (headings, code blocks, links, versions).
 
 ## 0.5.3 — 2026-10-28
 

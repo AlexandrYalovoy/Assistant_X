@@ -8,6 +8,8 @@ the tools of the server, the commands of the command line and the version only, 
     INSTALL_FOR_AI.md      what an agent (Codex, Claude Code, DeepSeek Harness) does when told "connect this tool"
     AGENTS.md              the section between the assistant-x markers (the rest of the file is the people's)
     docs/CLIENTS.md        the apps, their settings files, tool sets and skills
+    INSTALL_FOR_AI.ru.md, docs/CLIENTS.ru.md    their Russian twins: the templates *.ru.md, the strings of the tables
+                           in templates/docs/ru.json (one per app, tool, command and known failure: a missing one fails)
 
 tests/test_gen_docs.py fails when a committed file differs from what this makes; hooks/pre-commit runs it."""
 
@@ -39,37 +41,77 @@ def tools():
     ]
 
 
-def apps_table():
+def ru():
+    """The Russian strings of the tables (templates/docs/ru.json)."""
+    import json
+
+    return json.loads((TEMPLATES / "ru.json").read_text(encoding="utf-8"))
+
+
+def _rule(header):
+    return "| " + " | ".join("---" for _ in header.strip("|").split("|")) + " |"
+
+
+def apps_table(lang="en"):
     from assistant_x import clients
 
-    rows = ["| App | `connect` name | Settings written | Tool set | Skill |", "| --- | --- | --- | --- | --- |"]
+    r = ru() if lang == "ru" else None
+    head = r["headers"]["apps"] if r else "| App | `connect` name | Settings written | Tool set | Skill |"
+    rows = [head, _rule(head)]
     for name in clients.APPS:
         a = clients.app(name)
-        ts = a.TOOLSET + (", compact" if a.COMPACT else "")
-        rows.append(f"| {a.TITLE} | `{a.NAME}` | {a.SETTINGS} | {ts} | {a.SKILL} |")
+        s = r["apps"][name] if r else {"TITLE": a.TITLE, "SETTINGS": a.SETTINGS, "SKILL": a.SKILL}
+        ts = a.TOOLSET + ((", " + r["toolsets"]["compact"] if r else ", compact") if a.COMPACT else "")
+        rows.append(f"| {s['TITLE']} | `{a.NAME}` | {s['SETTINGS']} | {ts} | {s['SKILL']} |")
     return "\n".join(rows)
 
 
-def tools_table():
+def tools_table(lang="en"):
     from assistant_x.server import toolsets
 
-    rows = ["| Tool | What it does | Set | Changes the library |", "| --- | --- | --- | --- |"]
+    r = ru() if lang == "ru" else None
+    head = r["headers"]["tools"] if r else "| Tool | What it does | Set | Changes the library |"
+    rows = [head, _rule(head)]
+    words = (
+        r["change"]
+        if r
+        else {"no": "no", "destructive": "yes, after the user's yes to a plan", "work": "writes its own work files"}
+    )
     for name, _title, about, read, destructive in tools():
-        change = "no" if read else "yes, after the user's yes to a plan" if destructive else "writes its own work files"
+        change = words["no"] if read else words["destructive"] if destructive else words["work"]
+        about = r["tools"][name] if r else about
         rows.append(f"| `{name}` | {about} | {'reader' if name in toolsets.READER else 'all'} | {change} |")
     return "\n".join(rows)
 
 
-def commands_table():
+def commands_table(lang="en"):
     from assistant_x.cli import main as cli
 
-    rows = ["| Command | What it does |", "| --- | --- |", "| `init [FOLDER]` | make a workspace |"]
-    rows.append("| `doctor [--json]` | where everything is and what is missing (`--json`: codes and fixes) |")
-    rows += [f"| `{k}` | {v[1]} |" for k, v in cli.COMMANDS.items()]
+    r = ru() if lang == "ru" else None
+    head = r["headers"]["commands"] if r else "| Command | What it does |"
+    say = (lambda k, en: r["commands"][k]) if r else (lambda k, en: en)
+    rows = [head, _rule(head), f"| `init [FOLDER]` | {say('init', 'make a workspace')} |"]
+    rows.append(
+        f"| `doctor [--json]` | {say('doctor', 'where everything is and what is missing (`--json`: codes and fixes)')} |"
+    )
+    rows += [f"| `{k}` | {say(k, v[1])} |" for k, v in cli.COMMANDS.items()]
     return "\n".join(rows)
 
 
-def values():
+def problems_table(lang="en"):
+    from assistant_x.core import problems
+
+    if lang != "ru":
+        return problems.markdown()
+    r = ru()
+    rows = [r["headers"]["problems"], _rule(r["headers"]["problems"])]
+    for code in problems.PROBLEMS:
+        message, fix = r["problems"][code]
+        rows.append(f"| `{code}` | {message} | {fix.replace('|', '/')} |")
+    return "\n".join(rows)
+
+
+def values(lang="en"):
     from assistant_x import __version__
     from assistant_x.server import toolsets
 
@@ -77,10 +119,10 @@ def values():
         "version": __version__,
         "repo": REPO,
         "latest": f"{REPO}/releases/latest",
-        "apps_table": apps_table(),
-        "tools_table": tools_table(),
-        "commands_table": commands_table(),
-        "troubleshooting": __import__("assistant_x.core.problems", fromlist=["markdown"]).markdown(),
+        "apps_table": apps_table(lang),
+        "tools_table": tools_table(lang),
+        "commands_table": commands_table(lang),
+        "troubleshooting": problems_table(lang),
         "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER),
         "apps": ", ".join(f"`{n}`" for n in __import__("assistant_x.clients", fromlist=["APPS"]).APPS),
     }
@@ -167,13 +209,15 @@ def plugin_files(v):
 
 def targets():
     """{path: text} of every file this makes."""
-    v = values()
+    v, v_ru = values(), values("ru")
     agents = ROOT / "AGENTS.md"
     old = agents.read_text(encoding="utf-8") if agents.exists() else ""
     return {
         ROOT / "INSTALL_FOR_AI.md": render("INSTALL_FOR_AI.md", v),
+        ROOT / "INSTALL_FOR_AI.ru.md": render("INSTALL_FOR_AI.ru.md", v_ru),
         agents: agents_md(old, v),
         ROOT / "docs" / "CLIENTS.md": render("CLIENTS.md", v),
+        ROOT / "docs" / "CLIENTS.ru.md": render("CLIENTS.ru.md", v_ru),
         **plugin_files(v),
     }
 

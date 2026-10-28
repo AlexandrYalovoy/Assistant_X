@@ -1,3 +1,5 @@
+English | [Русский](PACKAGES.ru.md)
+
 # Base packages
 
 A base package is a library made by one workspace and installed into another: the cards, the texts, the originals

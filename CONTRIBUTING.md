@@ -1,3 +1,5 @@
+English | [Русский](CONTRIBUTING.ru.md)
+
 # Contributing to Assistant X
 
 Thank you for wanting to help. Proposals, questions and bug reports are welcome as issues; code, documentation,
@@ -22,7 +24,11 @@ copy for reading and cloning). Everyone taking part follows the [Code of Conduct
 ## The rules of the repository
 
 - Everything in the repository is US English: code, comments, messages, documentation. Words that match documents
-  (patterns, synonyms, stop words of a language pack or profile) stay in the language of the documents.
+  (patterns, synonyms, stop words of a language pack or profile) stay in the language of the documents. Each
+  document for people (README, CHANGELOG, ROADMAP, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, INSTALL_FOR_AI, docs/)
+  has a Russian twin `name.ru.md`: change both in one commit; `tests/test_docs_pairs.py` checks that their headings,
+  code blocks, links and versions agree. The generated ones come from `assistant_x/templates/docs` (`*.ru.md` and
+  `ru.json`) through `assistant-x gen-docs`.
 - A new source file starts with the two header lines of the others:
   `# Assistant X — Copyright (C) 2026 Alexandr Yalovoy` and `# SPDX-License-Identifier: AGPL-3.0-or-later`
   (add your own copyright line under them if you like).

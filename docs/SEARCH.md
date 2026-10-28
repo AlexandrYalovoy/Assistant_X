@@ -1,3 +1,5 @@
+English | [Русский](SEARCH.ru.md)
+
 # Assistant X search
 
 The local search through which Claude works with the library: by words with stemming and a dictionary of

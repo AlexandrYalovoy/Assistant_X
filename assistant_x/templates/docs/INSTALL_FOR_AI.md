@@ -1,3 +1,5 @@
+English | [Русский](INSTALL_FOR_AI.ru.md)
+
 # Install Assistant X — instructions for an AI agent
 
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/INSTALL_FOR_AI.md: edit that file. -->

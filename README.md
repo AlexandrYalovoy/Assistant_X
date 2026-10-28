@@ -1,3 +1,5 @@
+English | [Русский](README.ru.md)
+
 # Assistant X
 
 Your own knowledge base with an expert on top: Assistant X keeps your documents (PDF, DOC/DOCX, PPTX, scans) as

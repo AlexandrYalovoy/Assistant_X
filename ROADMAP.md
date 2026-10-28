@@ -1,3 +1,5 @@
+English | [Русский](ROADMAP.ru.md)
+
 # Roadmap
 
 Version 0.5.3 is an open prototype, for Windows and Linux (0.1 was the first) ([CHANGELOG.md](CHANGELOG.md) says what it does). What is done and

@@ -1,3 +1,5 @@
+English | [Русский](CLIENTS.ru.md)
+
 # The apps of Assistant X
 
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/CLIENTS.md: edit that file. -->

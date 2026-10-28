@@ -1,8 +1,10 @@
+English | [Русский](GLOSSARY.ru.md)
+
 # Glossary
 
 The English terms Assistant X uses everywhere (code, messages, documentation), with their Russian equivalents for the
-users who work in Russian. The repository is English only; Russian is kept only as data for Russian documents (the
-last section).
+users who work in Russian. The code, the tests and the rules for the models are English only; the documents for people
+have Russian twins (name.ru.md); elsewhere Russian is kept only as data for Russian documents (the last section).
 
 ## Terms
 
