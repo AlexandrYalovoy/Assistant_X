@@ -14,7 +14,7 @@ connects through its stdio bridge (assistant-x mcp, server/bridge.py), which sta
 - It exits after --idle minutes without a request (default 30): the video memory is free again for a local model.
 - The bridge starts it hidden (core/proc.py, no console window); its log is service-<id>.log beside the lock."""
 
-import argparse, hashlib, json, os, socket, sys, threading, time
+import argparse, hashlib, json, logging, os, socket, sys, threading, time
 
 from assistant_x.core import lock, workspace
 
@@ -125,6 +125,15 @@ def refresh():
         print(f"library service: the skills were not refreshed: {e}", file=sys.stderr)
 
 
+def log_level():
+    """The level of the libraries' lines in the service log: AX_LOG_LEVEL (DEBUG, INFO, WARNING…; WARNING when unset or
+    unknown). DEBUG logs every request of every app: for a debug run, not every day."""
+    from assistant_x.core import env
+
+    name = str(env.get("LOG_LEVEL") or "WARNING").upper()
+    return name if name in ("DEBUG", "INFO", "WARNING", "ERROR") else "WARNING"
+
+
 def main(argv=None):
     from assistant_x import __version__
     from assistant_x.core import env
@@ -146,9 +155,9 @@ def main(argv=None):
     from assistant_x.core import debuglog
     from assistant_x.server import mcp_server as S
 
-    import logging
-
-    logging.getLogger("mcp").setLevel(logging.WARNING)  # no line per session in the log of the service
+    level = log_level()
+    for name in ("mcp", "sentence_transformers"):  # no line per session or per model file unless asked for
+        logging.getLogger(name).setLevel(level)
     token, token_path = S.http_token()
     health = {"version": __version__, "pid": os.getpid(), "workspace": str(workspace.find())}
     app = Activity(S.mcp_app(port), health)
@@ -156,7 +165,7 @@ def main(argv=None):
     debuglog.log_call("service start", 0, True, {"pid": os.getpid(), "port": port, "models": first})
     if first:
         threading.Thread(target=S._warm_up, daemon=True).start()
-    server = uvicorn.Server(uvicorn.Config(S.bearer(app, token), log_level="warning", lifespan="on"))
+    server = uvicorn.Server(uvicorn.Config(S.bearer(app, token), log_level=level.lower(), lifespan="on"))
 
     def watch():
         while not server.should_exit:

@@ -47,6 +47,21 @@ class Bridge:
         self._up_lock = threading.Lock()
         self.calls = {}  # id -> tool name of a tools/call in work (for --tools and --compact on its answer)
         self.lists = set()  # ids of tools/list requests in work
+        self.trace = None  # AX_LOG_LEVEL=DEBUG: bridge-<id>.log beside the service log, a line per message
+        if service.log_level() == "DEBUG":
+            self.trace = service.files(root)["log"].replace("service-", "bridge-")
+
+    def note(self, msg, seconds, outcome):
+        if not self.trace:
+            return
+        what = msg.get("method") or "response"
+        name = ((msg.get("params") or {}).get("name") or "") if what == "tools/call" else ""
+        line = f"{time.strftime('%Y-%m-%d %H:%M:%S')}\tpid {os.getpid()}\t{what} {name}\tid {msg.get('id')}\t{seconds:.3f} s\t{outcome}\n"
+        try:
+            with open(self.trace, "a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError:
+            pass
 
     # ---------- output ----------
 
@@ -363,9 +378,12 @@ class Bridge:
             t.join(timeout=CALL_TIMEOUT)
 
     def _safe(self, msg):
+        t = time.monotonic()
         try:
             self.handle(msg)
+            self.note(msg, time.monotonic() - t, "ok")
         except Exception as e:  # noqa: BLE001 — one message failed: the client gets an error, the bridge goes on
+            self.note(msg, time.monotonic() - t, f"error: {e}")
             if "id" in msg and "method" in msg:
                 self.error(msg["id"], -32603, f"Bridge error: {e}")
 

@@ -23,6 +23,9 @@ Fixes and hardening after 0.5.
   questions of a base package, not only search hits and read_pages; library_remove counts as a tool word.
 - connect --check no longer says in order when the search of an app answers by words only for want of a model (a model
   still loading is fine).
+- AX_LOG_LEVEL (DEBUG, INFO, WARNING, ERROR) sets the level of the service log; at DEBUG every bridge writes a line per
+  message into bridge-<id>.log beside it, for a debug run. By default the service log no longer gets the INFO lines of
+  sentence_transformers.
 
 ## 0.5 — 2026-10-28
 

@@ -152,6 +152,27 @@ def test_an_idle_service_exits(place, mini, monkeypatch):
     assert service.read_info(mini["root"]) is None
 
 
+def test_a_debug_run_logs_every_message(place, mini, monkeypatch):
+    """AX_LOG_LEVEL=DEBUG: the bridge writes a line per message beside the service log, the service logs its
+    libraries at DEBUG; unset or unknown is WARNING."""
+    monkeypatch.setenv("AX_LOG_LEVEL", "nonsense")
+    assert service.log_level() == "WARNING"
+    monkeypatch.setenv("AX_LOG_LEVEL", "debug")
+    assert service.log_level() == "DEBUG"
+    a = App("--tools", "reader")
+    place.append(a)
+    a.hello()
+    assert "result" in a.ask("tools/call", {"name": "search_library", "arguments": {"query": "обводнённости"}})
+    trace = service.files(mini["root"])["log"].replace("service-", "bridge-")
+    end = time.monotonic() + 10
+    while time.monotonic() < end and not (
+        os.path.exists(trace) and "search_library" in open(trace, encoding="utf-8").read()
+    ):
+        time.sleep(0.2)
+    lines = open(trace, encoding="utf-8").read().splitlines()
+    assert any("tools/call search_library" in x and x.endswith("ok") for x in lines), lines
+
+
 def test_the_bridge_answers_with_its_own_handshake_first():
     """Before the service runs, initialize is answered by the bridge: a known protocol is kept, an unknown one gets
     the default."""
