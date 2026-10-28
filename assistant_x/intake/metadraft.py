@@ -100,6 +100,8 @@ def drop_repeats(tokens):
 GOST_HEAD = re.compile(f"(?i){lang.alt('standard_head')}")  # the line before the title of a national standard
 GOST_END = re.compile(f"(?i){lang.alt('standard_end')}")  # the line after it
 DESIGNATION_START = re.compile(rf"({lang.alt('designation_words')})\b")
+# the head line of a scanned title page whose two text layers spaced out its letters and mixed them with the designation
+HEAD_LOOSE = re.compile(f"(?i)({lang.alt('standard_head_loose')})")
 NATIONAL = tuple(lang.words("national_standard"))  # designations whose title page gives the title (gost_title)
 NOT_STANDARDS = re.compile(rf"({lang.alt('not_standards')})\b")  # designations that are no standard (specifications)
 
@@ -110,29 +112,68 @@ def gost_title(pages):
     technical requirements"."""
     lines = [tidy(plain(x)).strip(" .:-–") for x in (pages[0] if pages else "").split("\n")]
     lines = [x for x in lines if x]
-    start = next((i + 1 for i, x in enumerate(lines) if GOST_HEAD.match(x)), None)
+    start = next((i + 1 for i, x in enumerate(lines) if is_head(x)), None)
     if start is None:
         return ""
     parts = []
     for x in lines[start:]:
-        if GOST_END.match(x):
-            break
+        if GOST_END.match(x) or GOST_END.search(x.split(" ", 1)[-1]):
+            break  # "Official edition", also after a garbled copy of it from the other text layer
         first = x.split()[0]
-        if DESIGNATION_START.match(x) or sum(c.isalpha() for c in first) < 3 or first.upper() != first:
+        if DESIGNATION_START.match(x) or sum(c.isalpha() for c in first) < 3 or not first[0].isupper():
             continue  # the designation again, a catalogue code ("11—98B3"), a line of plain text
+        if SKIP_TITLE.match(x) or (LATIN_LINE.match(x) and not LATIN_LINE.match(lines[start - 1])):
+            continue  # a service line among the title lines ("OF THE USSR", "COMMITTEE"); the English title of a Russian one
         parts.append(sentence(x))
     return ". ".join(parts[:3])
 
 
+def is_head(line):
+    """The head line of the title page of a national standard ("INTERSTATE STANDARD"), also with its letters spaced
+    out and mixed with the designation by two text layers ("N A T I O N A L GOST R S T A N D A R D 70978")."""
+    return bool(GOST_HEAD.match(line)) or bool(
+        DESIGNATION_START.search(line) and HEAD_LOOSE.search(re.sub(r"[\W\d_]+", "", line))
+    )
+
+
+# the head line of a page of a legal database export: "GOST 28759.5-2022. Interstate standard. Flanges of vessels and
+# apparatus. Specifications" (put into force by …): the designation, the kind of the standard and the title in quotes
+QUOTED_HEAD = re.compile(r'^\s*["\u00ab\u201c\u201e]\s*([^"\u00bb\u201d]{10,300})["\u00bb\u201d]\s*\(')
+
+
+def quoted_title(pages):
+    """The title of a standard from the quoted head line of a legal database export (QUOTED_HEAD) on its first pages:
+    the pieces of the quote after its designation and the kind of the standard ("Interstate standard"); "" when no
+    such line names a designation (step 3 rounds of 2026-10-28: 3 of 20 drafts took the whole line or "Document
+    provided by" for the title)."""
+    for page in pages[:2]:
+        for raw in page.split("\n")[:6]:
+            m = QUOTED_HEAD.match(plain(raw))
+            if not m or not designations_in(m.group(1)):
+                continue
+            parts = [x.strip(" .") for x in m.group(1).split(". ")]
+            rest = [x for x in parts if x and not designations_in(x) and not GOST_HEAD.match(x)]
+            if rest:
+                return ". ".join(rest).rstrip(".").removesuffix("..").strip()
+    return ""
+
+
 def sentence(line):
-    """ "FIELD FACILITIES Process design" -> "Field facilities. Process design": the words in capitals become a
-    sentence, the rest follows after a full stop."""
-    words = line.split()
-    k = next((i for i, w in enumerate(words) if w.upper() != w), len(words))
-    head = " ".join(words[:k])
-    head = head[0] + head[1:].lower() if head else ""
-    rest = " ".join(words[k:])
-    return head + (". " + rest if rest and head else rest)
+    """ "FIELD FACILITIES Process design" -> "Field facilities. Process design": every run of words in capitals becomes
+    a sentence, a run of other words follows after a full stop ("Oil and gas industry ARCTIC OPERATIONS" -> "Oil and
+    gas industry. Arctic operations")."""
+    runs = []
+    for w in line.split():
+        caps = w.upper() == w and sum(c.isalpha() for c in w) >= 1
+        if runs and runs[-1][0] == caps:
+            runs[-1][1].append(w)
+        else:
+            runs.append((caps, [w]))
+    out = []
+    for caps, ws in runs:
+        t = " ".join(ws)
+        out.append(t[0] + t[1:].lower() if caps else t)
+    return ". ".join(out)
 
 
 # the usual words of the titles of standards: an English title only when every word is known
@@ -532,12 +573,15 @@ def draft(md, rel="", profile=None, given=None):
     named = designation(Path(rel).stem.replace("_", " "))  # the file name often carries the designation
     if not desig or (named and named != desig and same_number(named, desig) and len(named) > len(desig)):
         desig = named if not amends else None  # the form of the file name carries the year
+    elif named and NATIONAL and named.startswith(NATIONAL) and not desig.startswith(NATIONAL) and not amends:
+        desig = named  # a national standard that adopts a foreign one, its own designation garbled on a scan
     yr = year_of(text, desig)
     doc_type = "standard" if amends else doc_type_of(text + "\n" + Path(rel).stem, desig, ext)
     langs = text_lang(md)
     lg = langs[0] if langs else "en"
     gost = gost_title(pages) if desig and desig.startswith(NATIONAL) else ""
-    title = (amends[0] if amends else "") or gost or title_of(pages, desig) or desig or ""
+    quoted = quoted_title(pages) if not amends else ""
+    title = (amends[0] if amends else "") or quoted or gost or title_of(pages, desig) or desig or ""
     title = title.lstrip(" \"'«»“”„.,:;–—-")  # the rest of a quoted designation line: ". Interstate standard. …"
     out = {
         "tid": None,

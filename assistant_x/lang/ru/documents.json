@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names; the words before a designation that cite another document, not the document's own (designation_cite_words); the service lines of a title page that are no section heading (not_heading); the first words of an amendment to a standard (amendment).",
+  "_comment": "Russian documents: designations of standards and norms (a company standard: СТО, the name of the organization in one or two words, the number), title pages (places of publication, publishers, company forms, words that are no title, the head and the end of a standard's title page), the phrase that names the document a standard replaces, the words that suggest a genre (doc_type_words, every genre of schemas/card-1.json), the title block of a drawing, the English words of standard titles and the transliteration of file names; the words before a designation that cite another document, not the document's own (designation_cite_words); the service lines of a title page that are no section heading (not_heading); the first words of an amendment to a standard (amendment). standard_head_loose: a piece of the head line of a national standard found in the letters of a line of a title page whose letters are spaced out and mixed with its designation by two text layers ('Н А Ц И О Н А Л Ь Н Ы Й ГОСТ Р С Т А Н Д А Р Т 70978').",
   "designations": [
     "ГОСТ\\s+Р\\s+ИСО\\s*/?\\s*(?:МЭК\\s+)?\\d[\\d.\\-–—]*",
     "ГОСТ\\s+Р\\s+(?:МЭК\\s+|ЕН\\s+)?\\d[\\d.\\-–—]*",
@@ -117,7 +117,15 @@
     "источник публикации",
     "информация о документе",
     "текст документа",
-    "по техническому регулированию"
+    "по техническому регулированию",
+    "документ предоставлен",
+    "консультантплюс",
+    "надежная правовая поддержка",
+    "www\\.",
+    "союза сср",
+    "государственный комитет",
+    "комитет",
+    "гост р?стандарт"
   ],
   "not_heading": [
     "введен в действие",
@@ -132,7 +140,7 @@
     "^(межгосударственный|национальный|государственный)?\\s*стандарт"
   ],
   "standard_end": [
-    "^(издание официальное|издательство|ипк|москва|стандартинформ)"
+    "^(издание официальное|издательство|ипк|москва|стандартинформ|государственный комитет|постановлением)"
   ],
   "doc_type_words": {
     "regulation": [
@@ -332,5 +340,9 @@
   },
   "supersedes": [
     "взамен\\s+([^\\n.]{3,60})"
+  ],
+  "standard_head_loose": [
+    "национальн",
+    "межгосударствен"
   ]
 }
