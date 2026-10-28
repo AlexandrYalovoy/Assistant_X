@@ -2,9 +2,9 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.5.2 — unreleased
+## 0.5.2 — 2026-10-28
 
-Fixes and hardening after 0.5.
+After the live tests of 0.5.1: Codex, self-repair, video memory.
 
 - The instructions of the server and the skill say where to find the tools of Assistant X when an app keeps them behind
   its search of tools (Codex): a small model looked among the resources of the server and never reached the library.
