@@ -15,7 +15,7 @@ compact answers) or --reader; LM Studio gets the compact answers by default. Eve
 connections.json of the machine folder: `update` writes them again (a new version of the program, another python),
 and the library service refreshes their outdated skills when it starts."""
 
-import argparse, json, os, sys, threading, time
+import argparse, json, os, re, sys, threading, time
 
 from assistant_x import clients as K
 from assistant_x.core import proc
@@ -152,8 +152,12 @@ def probe(e, query="pressure", timeout=240):
         t1 = time.monotonic()
         r = ask(3, "tools/call", {"name": "search_library", "arguments": {"query": query, "k": 1}})
         out["search_s"] = round(time.monotonic() - t1, 2)
-        out["answer"] = " ".join(c.get("text", "") for c in r.get("content", []))[:200]
+        text = " ".join(c.get("text", "") for c in r.get("content", []))
+        out["answer"] = text[:200]
         out["ok"] = not r.get("isError")
+        words = re.search(r"Found by words only: ([^\n]*)", text)
+        if words and "loading" not in words[1]:  # no meaning search for good (a model missing), not a cold start
+            out["ok"], out["error"] = False, f"the search answers by words only: {words[1][:200]}"
     except (OSError, TimeoutError, RuntimeError) as err:
         out["error"] = str(err)
     finally:

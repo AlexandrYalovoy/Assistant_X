@@ -21,6 +21,8 @@ Fixes and hardening after 0.5.
   reading them).
 - Suspect text is marked in more answers: document_info, book_map, list_documents, the drafts of intake_card and the
   questions of a base package, not only search hits and read_pages; library_remove counts as a tool word.
+- connect --check no longer says in order when the search of an app answers by words only for want of a model (a model
+  still loading is fine).
 
 ## 0.5 — 2026-10-28
 
