@@ -630,6 +630,10 @@ def card(tids=None):
     if tids:
         rc2, digest = _intake("digest", *tids)
         brief += "\n\n" + digest
+    from assistant_x.core.suspect import SUSPECT_NOTE, addressed_to_ai
+
+    data = brief + "\n" + "\n".join(drafts)  # text of the documents: the head above is ours and names tools
+    head = (f"{SUSPECT_NOTE}\n\n" if addressed_to_ai(data) else "") + head
     return _cut(head + "\n\n## brief\n" + brief + "\n\n## Drafts (meta_draft.jsonl)\n" + "\n".join(drafts), 20000)
 
 

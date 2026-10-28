@@ -40,11 +40,15 @@ def questions_text(report):
     qs = report.get("questions") or []
     if not qs:
         return "QUESTIONS: none (every document of the package is new here; no codes collide)."
+    from assistant_x.core.suspect import SUSPECT_NOTE, addressed_to_ai
+
     lines = [
         "QUESTIONS (data; ask the user in their language, then base_install(path, confirm=True, answers={id: option})):"
     ]
     for q in qs:
         lines.append(json.dumps(q, ensure_ascii=False, sort_keys=True))
+    if addressed_to_ai("\n".join(lines[1:])):  # the texts of the package (titles, reasons) are not ours
+        lines.insert(0, SUSPECT_NOTE)
     return "\n".join(lines)
 
 

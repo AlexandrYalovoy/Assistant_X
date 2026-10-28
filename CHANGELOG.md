@@ -19,6 +19,8 @@ Fixes and hardening after 0.5.
 - search_library names the next calls before the fragments: read_pages of the best page before citing it, verify_quote
   before a verbatim quote or a number (in the live test a 9B local model cited 2 of 8 pages from the hits without
   reading them).
+- Suspect text is marked in more answers: document_info, book_map, list_documents, the drafts of intake_card and the
+  questions of a base package, not only search hits and read_pages; library_remove counts as a tool word.
 
 ## 0.5 — 2026-10-28
 

@@ -260,6 +260,18 @@ def _warn(d):
 from assistant_x.core.suspect import SUSPECT_NOTE, TOOL_WORDS, addressed_to_ai  # noqa: E402, F401
 
 
+def marks_suspect(fn):
+    """The answer of a tool that shows text of documents or packages (cards, contents, lists): SUSPECT_NOTE first when
+    that text speaks to an AI assistant."""
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        return f"{SUSPECT_NOTE}\n\n{out}" if isinstance(out, str) and addressed_to_ai(out) else out
+
+    return wrapper
+
+
 @tool("Library guide")
 @logged
 def library_guide() -> str:
@@ -509,6 +521,7 @@ def read_pages(code: str, start_page: int, end_page: int) -> str:
 @tool("Table of contents")
 @logged
 @needs_base
+@marks_suspect
 def book_map(code: str, page: int | None = None) -> str:
     """Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around
     that page and which tables, figures, formulas and appendices lie in its section."""
@@ -620,6 +633,7 @@ def _open_pdf(path):
 @tool("Document card")
 @logged
 @needs_base
+@marks_suspect
 def document_info(code: str, fields: list[str] | None = None) -> str:
     """The card of a document: designation, title, authors, year, type and shelf, scope, summary, topics, keywords,
     terms, tables, references, other versions, page numbering. fields: only these, e.g. ['toc'] for its contents with
@@ -656,6 +670,7 @@ def printed_pages(code, pages):
 @tool("List documents")
 @logged
 @needs_base
+@marks_suspect
 def list_documents(
     text: str | None = None,
     sections: list[str] | None = None,
