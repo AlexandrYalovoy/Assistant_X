@@ -16,11 +16,12 @@ from assistant_x.core import proc
 
 from assistant_x.core import lang, workspace
 from assistant_x.intake import config as intake_cfg
+from assistant_x.setup import downloads
 
 CODE = Path(__file__).resolve().parents[2]  # the folder with pyproject.toml: the extra "intake" lists the packages
 IMPORTS = "import pymupdf, pymupdf4llm, psutil; print(pymupdf.__version__)"
 PROGRAMS = intake_cfg.LOCAL / "Programs"
-TESSDATA_URL = "https://github.com/tesseract-ocr/tessdata/raw/main/{}.traineddata"
+TESSDATA_URL = "https://github.com/tesseract-ocr/tessdata/raw/" + downloads.TESSDATA_COMMIT + "/{}.traineddata"
 
 
 def say(msg=""):

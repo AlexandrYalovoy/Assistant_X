@@ -23,6 +23,8 @@ Fixes and hardening after 0.5.
 - scripts\check.ps1 -Log FOLDER keeps a full record of the run (every test, the slowest, junit xml); other arguments go
   to pytest.
 - embed on a video card keeps two processor threads of torch instead of dozens.
+- The Tesseract languages are downloaded from a fixed commit of tessdata and tessdata_fast instead of their main
+  branch: a change upstream can no longer break the install.
 
 ## 0.5.1 — 2026-10-28
 

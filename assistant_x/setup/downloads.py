@@ -16,18 +16,23 @@ import hashlib, os, urllib.request
 
 from assistant_x.core import proc
 
-# languages: rus from tessdata (LSTM + legacy), eng and osd from tessdata_fast; unchanged since Tesseract 5.4
+# languages: rus from tessdata (LSTM + legacy), eng and osd from tessdata_fast; unchanged since Tesseract 5.4.
+# The URLs name a commit, not a branch: a change upstream cannot break the install (the sha256 would refuse it)
+TESSDATA_COMMIT, TESSDATA_FAST_COMMIT = (
+    "ced78752cc61322fb554c280d13360b35b8684e4",
+    "87416418657359cb625c412a48b6e1d6d41c29bd",
+)
 TESSDATA = {
     "rus": (
-        "https://github.com/tesseract-ocr/tessdata/raw/main/rus.traineddata",
+        f"https://github.com/tesseract-ocr/tessdata/raw/{TESSDATA_COMMIT}/rus.traineddata",
         "681be2c2bead1bc7bd235df88c44e8e60ae73ae866840c0ad4e3b4c247bd37c2",
     ),
     "eng": (
-        "https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata",
+        f"https://github.com/tesseract-ocr/tessdata_fast/raw/{TESSDATA_FAST_COMMIT}/eng.traineddata",
         "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
     ),
     "osd": (
-        "https://github.com/tesseract-ocr/tessdata_fast/raw/main/osd.traineddata",
+        f"https://github.com/tesseract-ocr/tessdata_fast/raw/{TESSDATA_FAST_COMMIT}/osd.traineddata",
         "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff",
     ),
 }
