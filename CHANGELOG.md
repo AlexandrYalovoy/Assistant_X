@@ -10,6 +10,9 @@ Fixes and hardening after 0.5.
   call (MCP elicitation, the confirmation of a change in Claude Code) reaches the app, and its answer the service; the
   question waits at most 10 minutes. A call that reached the service but got no answer in time is no longer sent a
   second time.
+- base_export from the chat: a package file outside the workspace, or one with the personal documents, is written only
+  with the token of its plan and the user's yes (a text in a document can no longer make the assistant copy the library
+  into a synced folder); into the workspace without the personal documents it starts at once as before.
 
 ## 0.5 — 2026-10-28
 

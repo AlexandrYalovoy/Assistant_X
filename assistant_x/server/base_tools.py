@@ -74,13 +74,62 @@ def inspect(path, keep=None):
     return T._cut(f"{text}\n\n{questions_text(report)}", 12000)
 
 
-def export(out, ident, version, codes="default", name_en=None, name_ru=None, include_personal=False):
-    """The library as a base package, in the background (base_status shows the end)."""
+def _export_target(out, ident, version, codes, include_personal):
+    """What a token of an export is bound to: the output file and what goes into it."""
+    return "|".join([os.path.normcase(os.path.abspath(out)), ident, version, codes, "personal" if include_personal else ""])
+
+
+def _in_workspace(path):
+    from assistant_x.core import workspace
+
+    root = os.path.normcase(os.path.abspath(str(workspace.current().root)))
+    return os.path.normcase(os.path.abspath(path)).startswith(root + os.sep)
+
+
+def export(
+    out,
+    ident,
+    version,
+    codes="default",
+    name_en=None,
+    name_ru=None,
+    include_personal=False,
+    confirm=False,
+    token=None,
+    ask=None,
+):
+    """The library as a base package, in the background (base_status shows the end). A file outside the workspace or
+    one with the personal documents is written only with the token of its plan (confirm=True) and the user's yes."""
+    if codes not in ("default", "reference"):
+        return 'codes: "reference" or "default" (ask the user which one first)'
+    what = _export_target(out, ident, version, codes, include_personal)
+    args = {"out": out, "id": ident, "version": version, "codes": codes, "include_personal": include_personal}
+    where, inside = os.path.abspath(out), _in_workspace(out)
+    if include_personal or not inside:
+        if not confirm:
+            debuglog.log_change("base_export", args, "plan")
+            plan = (
+                f"Plan of the export: the library as the base package {ident} {version} (codes: {codes}) into {where}"
+                + ("" if inside else "; outside the workspace: whoever can read that folder gets the library")
+                + ("; WITH the personal documents of the user" if include_personal else "; without the personal documents")
+                + "."
+            )
+            call = (
+                f'base_export(out="{out}", id="{ident}", version="{version}", codes="{codes}"'
+                + (", include_personal=True" if include_personal else "")
+                + ', confirm=True, token="TOKEN")'
+            )
+            return plan + K.instruction("base_export", what, call)
+        why = K.check("base_export", what, token)
+        if why:
+            debuglog.log_change("base_export", args, "refused: no valid token")
+            return why
+        if ask and ask(f"Assistant X: export the library into {where}, as in the plan shown?") is False:
+            debuglog.log_change("base_export", args, "declined by the user")
+            return K.DECLINED
     b = busy()
     if b:
         return b
-    if codes not in ("default", "reference"):
-        return 'codes: "reference" or "default" (ask the user which one first)'
     cmd = [*BASE, "export", f"--id={ident}", f"--version={version}", f"--codes={codes}"]
     cmd += ([f"--name-en={name_en}"] if name_en else []) + ([f"--name-ru={name_ru}"] if name_ru else [])
     cmd += (["--include-personal"] if include_personal else []) + ["--", out]

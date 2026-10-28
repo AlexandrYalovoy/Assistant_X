@@ -136,8 +136,13 @@ def test_export_from_the_chat(tmp_path, monkeypatch):
     monkeypatch.setenv("AX_CONFIG", path)
     monkeypatch.setattr(intake_tools.P, "ROOT", str(root))
     monkeypatch.setattr(intake_tools, "JOBS", str(root / ".assistant_x" / "work" / "_claude"))
+    monkeypatch.setenv("AX_WORKSPACE", str(root))
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
     assert "reference" in base_tools.export(str(tmp_path / "x.axbase"), "x", "1", codes="mine")
-    out = base_tools.export(str(tmp_path / "x.axbase"), "x", "1", codes="reference", name_en="X")
+    plan = base_tools.export(str(tmp_path / "x.axbase"), "x", "1", codes="reference", name_en="X")
+    assert "outside the workspace" in plan and not intake_tools._job("base_export")  # a plan first, nothing written
+    token = re.search(r'token="(\w+)"', plan)[1]
+    out = base_tools.export(str(tmp_path / "x.axbase"), "x", "1", codes="reference", name_en="X", confirm=True, token=token)
     if "background" in out:
         wait("base_export")
     from assistant_x.base import package as P
@@ -145,6 +150,32 @@ def test_export_from_the_chat(tmp_path, monkeypatch):
     with P.Package(str(tmp_path / "x.axbase")) as pkg:
         assert pkg.manifest["codes"] == "reference" and pkg.manifest["name"] == {"en": "X"}
     assert "Export of the library: finished" in base_tools.status()
+
+
+def test_an_export_out_of_the_workspace_or_with_personal_documents_needs_a_yes(ws, monkeypatch):
+    """base_export writes a file the user may share: into the workspace without the personal documents it starts at
+    once; anywhere else, or with the personal documents, only with the token of its plan (a text in a document cannot
+    make it copy the library into a synced folder) and the user's yes where the client can ask."""
+    started, asked = [], []
+    monkeypatch.setattr(intake_tools, "_start", lambda kind, cmd, **env: started.append(cmd) or (True, ""))
+    inside = str(ws / "exports" / "a.axbase")
+    assert "started in the background" in base_tools.export(inside, "a", "1") and len(started) == 1
+    outside = str(ws.parent / "synced" / "a.axbase")
+    for out, personal in ((outside, False), (inside, True)):
+        plan = base_tools.export(out, "a", "1", include_personal=personal)
+        assert "CONFIRMATION" in plan and len(started) == 1
+        assert ("WITH the personal documents" in plan) == personal and ("outside the workspace" in plan) == (out == outside)
+        assert "Not confirmed" in base_tools.export(out, "a", "1", include_personal=personal, confirm=True)
+        token = re.search(r'token="(\w+)"', plan)[1]
+        assert "Not confirmed" in base_tools.export(out, "a", "2", include_personal=personal, confirm=True, token=token)
+    plan = base_tools.export(outside, "a", "1")
+    token = re.search(r'token="(\w+)"', plan)[1]
+    no = base_tools.export(outside, "a", "1", confirm=True, token=token, ask=lambda q: asked.append(q) or False)
+    assert no.startswith("The user said no") and len(started) == 1 and outside in asked[0]
+    plan = base_tools.export(outside, "a", "1")
+    token = re.search(r'token="(\w+)"', plan)[1]
+    assert "started in the background" in base_tools.export(outside, "a", "1", confirm=True, token=token)
+    assert len(started) == 2 and started[-1][-1] == outside
 
 
 def test_a_change_needs_the_token_of_its_plan(ws, monkeypatch):
@@ -191,7 +222,9 @@ def test_values_are_never_taken_for_options(ws, monkeypatch, capsys):
     monkeypatch.setattr(intake_tools, "_start", lambda kind, cmd, **env: started.append(cmd) or (True, ""))
     base_tools.remove("--rollback")
     base_tools.update("--help")
-    base_tools.export("--x.axbase", "--id", "--1", codes="default", name_en="--name")
+    plan = base_tools.export("--x.axbase", "--id", "--1", codes="default", name_en="--name")  # outside: a plan first
+    token = re.search(r'token="(\w+)"', plan)[1]
+    base_tools.export("--x.axbase", "--id", "--1", codes="default", name_en="--name", confirm=True, token=token)
     for cmd in started:
         i = cmd.index("--")
         assert all(

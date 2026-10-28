@@ -930,13 +930,27 @@ def base_export(
     name_en: str | None = None,
     name_ru: str | None = None,
     include_personal: bool = False,
+    confirm: bool = False,
+    token: str | None = None,
+    ctx: Context | None = None,
 ) -> str:
     """The library as a base package file (out: a path ending in .axbase). Ask the user first, in their language,
     whether it is a reference base (codes="reference": everyone who installs it is recommended to keep its codes, so
     colleagues cite the same codes) or one with default settings (codes="default": each installer chooses). id: lower
-    case, digits, '.', '_', '-'. Personal documents stay out unless include_personal. Runs in the background."""
+    case, digits, '.', '_', '-'. Personal documents stay out unless include_personal. A file outside the workspace or
+    with the personal documents: the plan and a token first; confirm=True with that token only after the user's
+    explicit yes. Runs in the background."""
     return base_tools.export(
-        out, id, version, codes=codes, name_en=name_en, name_ru=name_ru, include_personal=include_personal
+        out,
+        id,
+        version,
+        codes=codes,
+        name_en=name_en,
+        name_ru=name_ru,
+        include_personal=include_personal,
+        confirm=confirm,
+        token=token,
+        ask=_asker(ctx),
     )
 
 
