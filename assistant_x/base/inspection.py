@@ -556,8 +556,8 @@ def inspect(cfg, raw, path, work=None, keep=None, verify=True):
         problems += [f"intake batch {b}" for b in pending_batches(work or os.path.join(root, ".assistant_x", "work"))]
         if server_running():
             warnings.append(
-                "Claude holds the library now (its search server runs): the install has it release the "
-                "files it moves (an install started from the chat goes on when Claude is closed)"
+                "An app holds the library now (its search server runs): the install has it release the "
+                "files it moves (an install started from the chat goes on when the app is closed)"
             )
         size = {n: pkg.size(n) for n in pkg.names()}
         text_bytes = sum(v for n, v in size.items() if n.startswith("texts/"))

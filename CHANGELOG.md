@@ -2,6 +2,16 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.4 — unreleased
+
+The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio.
+
+- Every tool has a title and its annotations (read only, destructive): an app asks the user before a change of the
+  library. The new tool `library_guide` gives any model the rules of the answers and the shelves of the library; the
+  instructions, the tool descriptions and the answers name no app. `page_image` puts a text beside the picture for a
+  model that sees no images. `serve --tools reader` gives only the 8 reading tools, `--compact` one-sentence
+  descriptions and answers cut at 6 000 characters for small local models.
+
 ## 0.3 — 2026-10-28
 
 This release also contains the changes of 0.2 below, which were never tagged.

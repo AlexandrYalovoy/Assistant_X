@@ -249,7 +249,7 @@ def state_text(kind, job=None):
     job = job if job is not None else _job(kind)
     s, code = state(kind, job)
     if s == "running" and job and job.get("detached") is False:
-        return "running (in the job object of Claude: closing Claude stops it)"
+        return "running (in the job object of the app: closing the app stops it)"
     if s == "failed":
         return f"failed (exit code {code})"
     if s == "stopped":
@@ -436,10 +436,10 @@ def batch_words(data):
 def next_step(work, data, running, reindexing):
     """What Claude does next, by the state of the batch."""
     if _alive(_job("apply")):
-        return "Next (Claude): wait — the transfer into the library runs (intake_status shows its stage)."
+        return "Next (assistant): wait — the transfer into the library runs (intake_status shows its stage)."
     if running:
         return (
-            "Next (Claude): wait (intake_status every few minutes); the drafts of the files that are done are in "
+            "Next (assistant): wait (intake_status every few minutes); the drafts of the files that are done are in "
             "meta_draft.jsonl already — their cards may be written now (intake_card, intake_save_meta)."
         )
     if os.path.exists(os.path.join(work, "out", "applied.json")):
@@ -447,8 +447,8 @@ def next_step(work, data, running, reindexing):
     rc, todo = _intake("todo")
     left = int(todo.split()[0]) if rc == 0 and todo.split() and todo.split()[0].isdigit() else None
     if left:
-        return f"Next (Claude): write the cards of {left} files (intake_card, then intake_save_meta)."
-    return "Next (Claude): intake_apply() — the plan for the user (every file has its line in meta.jsonl)."
+        return f"Next (assistant): write the cards of {left} files (intake_card, then intake_save_meta)."
+    return "Next (assistant): intake_apply() — the plan for the user (every file has its line in meta.jsonl)."
 
 
 STAGE_NAMES = {

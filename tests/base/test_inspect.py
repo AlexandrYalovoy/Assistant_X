@@ -193,7 +193,7 @@ def test_warnings(package_a, tmp_path, monkeypatch):
     finally:
         held.close()
     assert r["ok"]
-    assert any("OneDrive" in w for w in r["warnings"]) and any("Claude holds the library" in w for w in r["warnings"])
+    assert any("OneDrive" in w for w in r["warnings"]) and any("An app holds the library" in w for w in r["warnings"])
     registry.put(os.path.join(str(tmp_path / "B"), "index"), {"id": "test-a", "version": "1.0"})
     monkeypatch.delenv("OneDrive")
     r = run(path, package_a["zip"])

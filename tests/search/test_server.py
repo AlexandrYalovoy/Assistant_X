@@ -236,7 +236,8 @@ def test_page_zoom_big_sheet():
 
 
 def test_page_image(server):
-    img = server.page_image("N-00001", 1, zoom=50)
+    note, img = server.page_image("N-00001", 1, zoom=50)
+    assert "N-00001, PDF 1" in note and "read_pages('N-00001', 1, 1)" in note  # for a model that sees no images
     assert img._mime_type == "image/png"
     assert img.data.startswith(b"\x89PNG")
     assert "has 3 PDF pages" in server.page_image("N-00001", 9)
@@ -245,7 +246,7 @@ def test_page_image(server):
 
 def test_page_image_jpeg_when_big(server, monkeypatch):
     monkeypatch.setattr(mcp_server, "MAX_PNG", 100)
-    img = server.page_image("L-00001", 1)
+    img = server.page_image("L-00001", 1)[-1]
     assert img._mime_type == "image/jpeg" and img.data.startswith(b"\xff\xd8")
 
 

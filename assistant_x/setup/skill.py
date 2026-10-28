@@ -12,24 +12,37 @@ from pathlib import Path
 
 from assistant_x.core import config, workspace
 
-TEMPLATE = Path(__file__).resolve().parent.parent / "templates" / "skill" / "SKILL.md"
+TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "skill"
+TEMPLATE = TEMPLATES / "SKILL.md"
+GUIDE = TEMPLATES / "guide.md"  # the short rules: the answer of the tool library_guide, the LM Studio preset
+PARTS = ("safety",)  # templates/skill/<part>.md put into {{<part>}} of every variant: one text for all
 
 
-def render(profile=None):
-    """The text of SKILL.md for a profile (None: the profile of the workspace)."""
+def fill(text, profile=None):
+    """A template with the parts and the "skill" texts of a profile put in (None: the profile of the workspace)."""
     raw = {"profile": profile} if profile else config.load()[1]
     texts = config.profile_info(raw).get("skill") or config.profile_info({"profile": config.PROFILE})["skill"]
-    text = TEMPLATE.read_text(encoding="utf-8")
     shelves = "\n".join(
         f"  - `{s['letter']}` {' / '.join(s['name'].values())} — {s['about']} (types: {', '.join(s['doc_types'])})"
         for s in config.sections(raw)
     )
-    for k, v in {**texts, "shelves": shelves, "card_languages": ", ".join(config.card_languages(raw))}.items():
+    parts = {p: (TEMPLATES / f"{p}.md").read_text(encoding="utf-8").strip() for p in PARTS}
+    for k, v in {**parts, **texts, "shelves": shelves, "card_languages": ", ".join(config.card_languages(raw))}.items():
         text = text.replace("{{" + k + "}}", v)
     left = [p for p in ("title", "description", "example", "role", "practice") if "{{" + p + "}}" in text]
     if left:
         sys.exit(f"The profile has no skill texts for: {', '.join(left)}")
     return text
+
+
+def render(profile=None):
+    """The text of SKILL.md for a profile (None: the profile of the workspace)."""
+    return fill(TEMPLATE.read_text(encoding="utf-8"), profile)
+
+
+def guide(profile=None):
+    """The short rules of the answers with the shelves of the library (the tool library_guide)."""
+    return fill(GUIDE.read_text(encoding="utf-8"), profile).strip()
 
 
 def main(argv=None):

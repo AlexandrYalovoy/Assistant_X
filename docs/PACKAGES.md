@@ -43,7 +43,7 @@ could not start. The JSON report (for Claude) has:
   lack a language this workspace reads documents in); an intake batch built but not applied, or an apply
   interrupted, or an intake running; a document path over 255 characters while long paths are off in Windows; too
   little disk space (the package, the base built anew, the embeddings to compute, plus `[intake.disk] min_free_gb`).
-- `warnings` — Claude holds the library now (its search server runs: the install has it release the files it moves);
+- `warnings` — an app holds the library now (its search server runs: the install has it release the files it moves);
   the workspace is in OneDrive; the package was made by a newer version; the package is installed already.
 - `compatibility` — format, card schema, text format, chunk version; profile, card languages and topics of the package
   and of the workspace. An empty workspace takes the profile and the card languages of the package (`adopt`).

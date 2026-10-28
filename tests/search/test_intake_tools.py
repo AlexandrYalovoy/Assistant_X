@@ -148,7 +148,7 @@ def test_a_job_left_in_the_job_of_claude_says_so(monkeypatch):
     """A job that did not leave the job object of the client (nested job objects) is running, and closing Claude
     stops it: the status says so; a detached one is just running."""
     monkeypatch.setattr(intake_tools, "_alive", lambda job: True)
-    assert "closing Claude stops it" in intake_tools.state_text("run", {"detached": False, "started": 0})
+    assert "closing the app stops it" in intake_tools.state_text("run", {"detached": False, "started": 0})
     assert intake_tools.state_text("run", {"detached": True, "started": 0}) == "running"
     if sys.platform == "win32":
         assert not intake_tools.in_my_job(4)  # the System process is in no job of ours

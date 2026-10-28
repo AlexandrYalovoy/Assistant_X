@@ -93,7 +93,8 @@ def move(src, dst):
         except PermissionError as e:
             if i == RETRIES - 1:
                 raise Stop(
-                    f"{src} is held by another program ({e.strerror}): close Claude Desktop (and Claude Code), "
+                    f"{src} is held by another program ({e.strerror}): close the apps that use the library (Claude, Codex, "
+                    "DeepSeek Harness, LM Studio), "
                     "then assistant-x base install PACKAGE --resume"
                 ) from e
             time.sleep(RETRY_S)
