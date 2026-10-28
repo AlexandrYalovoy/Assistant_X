@@ -144,6 +144,7 @@ def plugin_files(v):
             {
                 "name": "assistant-x",
                 "owner": {"name": "Alexandr Yalovoy"},
+                "description": "Assistant X: your own library of documents for your AI apps.",
                 "plugins": [{"name": "assistant-x", "source": "./plugins/assistant-x", "description": DESCRIPTION}],
             }
         ),
