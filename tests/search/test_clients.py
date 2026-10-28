@@ -79,6 +79,51 @@ def test_codex_toml_keeps_the_rest_and_comes_back(home):
     assert len(list(p.parent.glob("config.backup-*.toml"))) <= K.BACKUPS_KEPT
 
 
+CODEX_SERVER_KEYS = {  # the keys of a stdio server in Codex's config reference (codex-cli 0.165.0)
+    "command",
+    "args",
+    "env",
+    "cwd",
+    "startup_timeout_sec",
+    "tool_timeout_sec",
+    "enabled",
+    "enabled_tools",
+    "disabled_tools",
+    "default_tools_approval_mode",
+    "tools",
+}
+
+
+def test_codex_entry_uses_only_keys_codex_knows(home):
+    """The entry is a [mcp_servers.<name>] table (not mcpServers) of keys Codex documents, with string args and env."""
+    codex.connect(entry("reader", True), False)
+    data = tomllib.loads((home / ".codex" / "config.toml").read_text(encoding="utf-8"))
+    ours = data["mcp_servers"]["assistant-x"]
+    assert set(ours) <= CODEX_SERVER_KEYS and "mcpServers" not in data
+    assert isinstance(ours["command"], str) and all(isinstance(a, str) for a in ours["args"])
+    assert all(isinstance(k, str) and isinstance(v, str) for k, v in ours["env"].items())
+    assert ours["startup_timeout_sec"] >= 30 and ours["tool_timeout_sec"] >= 600
+
+
+@pytest.mark.skipif(not os.environ.get("AX_CODEX_CLI"), reason="AX_CODEX_CLI names a Codex CLI to check against")
+def test_the_real_codex_cli_reads_the_entry_and_the_marketplace(home, tmp_path):
+    """With a real Codex CLI (no sign-in needed): codex mcp list shows the entry enabled, and our marketplace of this
+    repository is accepted with its plugin. CODEX_HOME is a temporary folder: the user's settings are not touched."""
+    import subprocess
+
+    cli = os.environ["AX_CODEX_CLI"]
+    env = dict(os.environ, CODEX_HOME=str(home / ".codex"))
+    codex.connect(entry(), False)
+    run = lambda *a: subprocess.run([cli, *a], env=env, capture_output=True, text=True, timeout=120)  # noqa: E731
+    listed = run("mcp", "list")
+    assert listed.returncode == 0 and "assistant-x" in listed.stdout and "enabled" in listed.stdout, listed
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    added = run("plugin", "marketplace", "add", repo)
+    assert added.returncode == 0, added
+    plugins = run("plugin", "list")
+    assert "assistant-x@assistant-x" in plugins.stdout, plugins
+
+
 def test_codex_new_file_and_a_broken_one(home):
     p = home / ".codex" / "config.toml"
     codex.connect(entry(), False)

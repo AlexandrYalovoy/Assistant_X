@@ -45,6 +45,16 @@ The library and its search run on the PC. The pages a model reads to answer go t
 for Claude, OpenAI for Codex and ChatGPT, DeepSeek for DeepSeek models; nothing leaves the PC with a local model in
 LM Studio (or in DeepSeek Harness and Codex pointed at LM Studio).
 
+## Codex and ChatGPT
+
+The Codex CLI, its IDE extension and the ChatGPT desktop app read the same `~/.codex/config.toml`: `assistant-x connect
+codex` serves all of them. On the Free plan of ChatGPT Codex runs in the desktop app only (the CLI and the IDE
+extension need a paid plan), and its sign-in may ask for a phone number. Codex keeps the tools of a server behind its
+search of tools: the instructions of the server and the skill tell the model to search for them. With a small local
+model through LM Studio (`codex --oss`) Codex takes most of the context itself and some chat templates refuse its
+system messages: in a test with a 9B model it never reached the library; the cloud models of the app do not have
+these limits.
+
 ## Not possible
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.

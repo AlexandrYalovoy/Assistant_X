@@ -8,6 +8,9 @@ Fixes and hardening after 0.5.
 
 - The instructions of the server and the skill say where to find the tools of Assistant X when an app keeps them behind
   its search of tools (Codex): a small model looked among the resources of the server and never reached the library.
+- docs/CLIENTS.md on Codex and ChatGPT: one config for the CLI, the IDE extension and the desktop app; on the Free plan
+  Codex runs in the desktop app only and its sign-in may ask for a phone number. Tests check the Codex entry against
+  the keys Codex documents, and against a real Codex CLI where one is installed (codex mcp list, our marketplace).
 
 ## 0.5.1 — 2026-10-28
 
