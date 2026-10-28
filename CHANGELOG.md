@@ -22,6 +22,10 @@ The open items of the observation journal.
   textbook is no plain book, the imprint line gives the year, and an OCR tilde in an RD designation reads as a dash. On
   the 40 hard documents of the rounds the titles came right 32 times instead of 26 (year 36/39, designation 35/35); the
   recognition snapshot moved only for the intended patterns.
+- The ledger of a batch (ledger.csv in its work folder, a line at the end of summary.md): every file the batch met in
+  inbox has exactly one outcome - done, duplicate, error, unsupported (a kind of file the intake does not process),
+  skipped, moved aside (a letter, an unpacked archive, personal papers) or queued - with its pages, OCR pages,
+  recognition score and seconds, so the totals add up to what the folder held.
 
 ## 0.5.3 — 2026-10-28
 

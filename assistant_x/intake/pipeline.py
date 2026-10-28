@@ -59,6 +59,8 @@ def cmd_run(cfg, a):
     old.update(counts)
     state.set_meta("prepare", dict(old))
     state.set_meta("problems", state.get_meta("problems", []) + problems)
+    moved = [[e[1].removeprefix("inbox\\").replace("\\", "/"), e[2], e[6]] for e in events]  # for the ledger
+    state.set_meta("moved", state.get_meta("moved", []) + moved)
     n = register(cfg, state)
     say(f"New files: {n}; preparation: {dict(counts) or 'nothing to do'}")
     workers = cfg.workers if a.workers is None else a.workers
@@ -72,7 +74,12 @@ def cmd_run(cfg, a):
     if events:
         journal.sync(cfg.index)
     text = summary(cfg, work, state, state.get_meta("prepare", {}), state.get_meta("problems", []), time.time() - t0, q)
-    say("\n" + text)
+    from assistant_x.intake import ledger
+
+    counts, total = ledger.write(work, state)
+    with open(work / "summary.md", "a", encoding="utf-8") as f:
+        f.write(ledger.line(counts, total) + "\n")
+    say("\n" + text + ledger.line(counts, total))
     return 0
 
 
