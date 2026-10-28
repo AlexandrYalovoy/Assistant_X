@@ -11,6 +11,10 @@ Fixes and hardening after 0.5.
 - docs/CLIENTS.md on Codex and ChatGPT: one config for the CLI, the IDE extension and the desktop app; on the Free plan
   Codex runs in the desktop app only and its sign-in may ask for a phone number. Tests check the Codex entry against
   the keys Codex documents, and against a real Codex CLI where one is installed (codex mcp list, our marketplace).
+- An agent can repair the setup by itself: assistant-x doctor --json and connect --check --json name every known
+  failure by a stable code with the command that fixes it (one table, also in docs/CLIENTS.md and a new step of
+  INSTALL_FOR_AI.md); library_guide lists the problems of this PC first; AGENTS.md and the setup skill of the plugin
+  tell agents to run doctor --json first.
 
 ## 0.5.1 — 2026-10-28
 

@@ -195,8 +195,77 @@ def state_of(w):
     return ("ready" if docs else "empty"), [], remarks
 
 
+GPU_LOW_FREE_MB = 3000  # less free video memory than this: the search models and a local model slow each other down
+
+
+def gpu_memory_low():
+    """Free MB of the first NVIDIA card when it is below GPU_LOW_FREE_MB, else None (no card, no nvidia-smi)."""
+    from assistant_x.core import gpu_guard
+
+    rows = gpu_guard._smi("--query-gpu=memory.total,memory.used")
+    try:
+        total, used = (float(x) for x in rows[0].split(","))
+    except (TypeError, ValueError, IndexError):
+        return None
+    free = total - used
+    return free if free < GPU_LOW_FREE_MB else None
+
+
+def diagnose(w):
+    """(problems, remarks) of the workspace as items of core/problems.py: a problem makes it broken, a remark not."""
+    from assistant_x.core import card as C, common, problems as PB, workspace
+    from assistant_x.core.common import load_config
+
+    if not w.exists():
+        return [PB.item("workspace-missing", workspace=w.root)], []
+    probs, remarks = [], []
+    for name in ("inbox", "library", "index", "cards"):
+        p = getattr(w, name)
+        if not p.is_dir():
+            probs.append(dict(PB.item("folder-missing", workspace=w.root), message=f"No folder {p}."))
+    cfg = load_config()
+    base = os.path.exists(cfg["db"])
+    if C.paths(w.cards) and not base:
+        probs.append(PB.item("base-missing"))
+    if base and common.base_vector_gap(cfg["db"])[0]:
+        remarks.append(PB.item("vectors-missing"))
+    if not os.path.isdir(cfg.get("embed_model") or ""):
+        remarks.append(PB.item("model-missing"))
+    for line in workspace.split_note():
+        remarks.append(dict(PB.item("older-folder"), message=line))
+    free = gpu_memory_low()
+    if free is not None:
+        msg = f"The video card has {free:.0f} MB free: the search models and a local language model slow each other down."
+        remarks.append(dict(PB.item("gpu-memory-low"), message=msg))
+    return probs, remarks
+
+
+def doctor_json():
+    """doctor --json: one JSON document on stdout for an agent: ok, the folders, the problems and remarks with fixes."""
+    import json
+
+    from assistant_x import __version__
+    from assistant_x.core import workspace
+
+    w = workspace.current()
+    probs, remarks = diagnose(w)
+    out = {
+        "ok": not probs,
+        "version": __version__,
+        "workspace": str(w.root),
+        "folder_of_the_pc": str(workspace.machine_dir()),
+        "problems": probs,
+        "remarks": remarks,
+    }
+    print(json.dumps(out, ensure_ascii=False, indent=1))
+    return 0 if not probs else 1
+
+
 def doctor(argv):
-    """Where everything is and what is missing: an empty workspace is fine, a broken one is listed (exit code 1)."""
+    """Where everything is and what is missing: an empty workspace is fine, a broken one is listed (exit code 1).
+    --json: one JSON document with stable codes and fixes (core/problems.py)."""
+    if "--json" in argv:
+        return doctor_json()
     from assistant_x.core import config, lang, lock, workspace
     from assistant_x.core.common import load_config
 

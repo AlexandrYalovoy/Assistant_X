@@ -41,3 +41,36 @@ def test_words_only_for_want_of_a_model_is_a_failure(tmp_path):
     loading = "Found by words only: the meaning model is loading (10-20 s).\n\n[N-00001, PDF 2] ..."
     assert connect.probe(entry(tmp_path, loading))["ok"]
     assert connect.probe(entry(tmp_path, "[N-00001, PDF 2] Title (standard)"))["ok"]
+
+
+def test_check_json_gives_a_fix_for_every_failed_app(monkeypatch, capsys):
+    """--check --json: stdout is one JSON document; a failed app carries the code and the command that fixes it."""
+    import json
+
+    from assistant_x import clients as K
+
+    class App:
+        def __init__(self, name, entry):
+            self.NAME, self.TITLE, self._entry = name, name.upper(), entry
+
+        def read(self):
+            return self._entry
+
+    apps = {"lmstudio": App("lmstudio", {"command": "x"}), "codex": App("codex", None), "dsh": App("dsh", {"command": "y"})}
+    monkeypatch.setattr(K, "app", lambda name: apps[name])
+    monkeypatch.setattr(connect, "choose", lambda names: list(names))
+    answers = {
+        "x": {"ok": False, "error": "the search answers by words only: no embedding model"},
+        "y": {"ok": False, "error": "no answer to initialize in 240 s"},
+    }
+    monkeypatch.setattr(connect, "probe", lambda e: dict(answers[e["command"]]))
+    rc = connect.main(["--check", "--json", "lmstudio", "codex", "dsh"])
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert out["lmstudio"]["problem"]["code"] == "search-words-only"
+    assert out["codex"]["problem"] == {
+        "code": "app-not-connected",
+        "message": out["codex"]["problem"]["message"],
+        "fix": "assistant-x connect codex",
+    }
+    assert out["dsh"]["problem"]["fix"].startswith("assistant-x connect --check dsh --json")

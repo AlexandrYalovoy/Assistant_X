@@ -64,7 +64,7 @@ def commands_table():
     from assistant_x.cli import main as cli
 
     rows = ["| Command | What it does |", "| --- | --- |", "| `init [FOLDER]` | make a workspace |"]
-    rows.append("| `doctor` | where everything is and what is missing |")
+    rows.append("| `doctor [--json]` | where everything is and what is missing (`--json`: codes and fixes) |")
     rows += [f"| `{k}` | {v[1]} |" for k, v in cli.COMMANDS.items()]
     return "\n".join(rows)
 
@@ -80,6 +80,7 @@ def values():
         "apps_table": apps_table(),
         "tools_table": tools_table(),
         "commands_table": commands_table(),
+        "troubleshooting": __import__("assistant_x.core.problems", fromlist=["markdown"]).markdown(),
         "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER),
         "apps": ", ".join(f"`{n}`" for n in __import__("assistant_x.clients", fromlist=["APPS"]).APPS),
     }

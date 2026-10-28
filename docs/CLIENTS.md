@@ -55,6 +55,28 @@ model through LM Studio (`codex --oss`) Codex takes most of the context itself a
 system messages: in a test with a 9B model it never reached the library; the cloud models of the app do not have
 these limits.
 
+## When something does not work
+
+`assistant-x doctor --json` and `assistant-x connect --check --json` name every known failure by a stable code with
+the command that fixes it (the same table, core/problems.py):
+
+| Code | What it means | Fix |
+| --- | --- | --- |
+| `workspace-missing` | The workspace of the library is not made yet. | assistant-x init "{workspace}" |
+| `folder-missing` | A folder of the workspace is missing. | assistant-x init "{workspace}" |
+| `base-missing` | The library has cards but no search base. | assistant-x build |
+| `model-missing` | No embedding model: the search is by words only. | assistant-x download-models (about 4.5 GB: ask the user first) |
+| `vectors-missing` | Fragments without meaning vectors are found by words only. | assistant-x embed |
+| `older-folder` | An older folder of the PC (before 0.5.1, or the private copy of Claude Desktop from the Microsoft Store) may still be used by an app connected before. | assistant-x connect auto |
+| `app-not-connected` | The app has no entry of Assistant X. | assistant-x connect {app} |
+| `app-check-failed` | The entry of the app does not answer the handshake, the tool list or a search. | assistant-x connect --check {app} --json; if it fails again: assistant-x debug-report |
+| `search-words-only` | The search of the app answers by words only (no model or no vectors). | assistant-x doctor --json (it names the missing model or vectors) |
+| `service-not-started` | The library service did not start. | read the end of the service log {log}; then assistant-x doctor --json |
+| `gpu-memory-low` | The video card has little free memory: the search models and a local language model slow each other down. | in assistant_x.toml under [search] set device = "cpu" (the library then leaves the video card to the local model), or load the local model with fewer parallel slots |
+| `skill-outdated` | The skill uploaded to Claude Desktop is older than the program. | assistant-x skill; zip the folder {folder} and upload it in Claude (Settings, Capabilities, Skills) |
+| `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library_guide search_library"; the server has no resources |
+| `sign-in-limits` | The plan or the sign-in of the app limits it: on the Free plan of ChatGPT, Codex runs in the desktop app only, and its sign-in may ask for a phone number. | use the ChatGPT desktop app, or connect another app: assistant-x connect auto |
+
 ## Not possible
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.

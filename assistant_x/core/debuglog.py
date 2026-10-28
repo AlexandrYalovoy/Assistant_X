@@ -115,7 +115,8 @@ def logged(fn):
             log_call(fn.__name__, time.time() - t, False, shown, f"{type(e).__name__}: {e}")
             return (
                 f"Library command failed {fn.__name__}: {type(e).__name__}: {e}\n"
-                f"The failure was logged. To pass it on for a look, {REPORT_HINT}."
+                f"The failure was logged. To pass it on for a look, {REPORT_HINT}. An assistant that can run commands: "
+                "assistant-x doctor --json names the known causes, each with the command that fixes it."
             )
         size = f"{len(res)} chars" if isinstance(res, str) else ""
         log_call(fn.__name__, time.time() - t, True, shown, "; ".join(x for x in (_local.note, size) if x))

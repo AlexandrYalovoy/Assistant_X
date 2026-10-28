@@ -73,6 +73,14 @@ yes: `<command> base install FILE --confirm` (with `--keep own|package` when the
 - Their own documents: put them into the `inbox` folder of the workspace and ask "AX: sort my documents".
 - Something fails: `<command> doctor`, `<command> connect --check`, `<command> debug-report`.
 
+## 9. When something fails: repair it yourself
+
+Run `<command> doctor --json` and `<command> connect --check --json`. Each prints one JSON document; every failure in
+it has a stable `code`, a `message` and a `fix`: the command to run (ask the user before any download or change of
+their settings), then run both checks again. `ok: true` and every app `"ok": true` mean done. The codes:
+
+{{troubleshooting}}
+
 ## What the tools are
 
 {{tools_table}}

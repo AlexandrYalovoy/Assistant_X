@@ -280,8 +280,28 @@ def library_guide() -> str:
     this library."""
     from assistant_x.setup import skill
 
-    text = skill.guide()
+    notes = setup_notes()  # first: the compact cut keeps the top
+    text = (notes + "\n\n" if notes else "") + skill.guide()
     return toolsets.fit(text) if COMPACT else text
+
+
+def setup_notes():
+    """The problems and remarks of doctor (core/problems.py codes, with their fixes) for the guide: "" when clean."""
+    try:
+        from assistant_x.cli import main as cli
+        from assistant_x.core import workspace
+
+        probs, remarks = cli.diagnose(workspace.current())
+    except Exception as e:  # noqa: BLE001 — a note only: the guide is given anyway
+        debuglog.log_error("setup notes", e)
+        return ""
+    if not probs + remarks:
+        return ""
+    lines = [f"- {p['code']}: {p['message']} Fix: {p['fix']}" for p in probs + remarks]
+    return (
+        "## The setup of this PC (assistant-x doctor --json)\n\nTell the user in one line each; an assistant that can "
+        "run commands may run the fix after the user's yes:\n" + "\n".join(lines)
+    )
 
 
 @tool("Search the library")

@@ -170,6 +170,10 @@ def probe(e, query="pressure", timeout=240):
 
 
 def check(names, say=print):
+    """{app: probe result}; a failed app gets "problem": an item of core/problems.py with the command that fixes it.
+    An app named but not connected is in the result too (ok False, app-not-connected)."""
+    from assistant_x.core import problems as PB
+
     res = {}
     for name in choose(names or ["all"]):
         a = K.app(name)
@@ -177,12 +181,15 @@ def check(names, say=print):
         if not e:
             if names:
                 say(f"{a.TITLE}: not connected")
+                res[name] = {"ok": False, "problem": PB.item("app-not-connected", app=name)}
             continue
         res[name] = r = probe(e)
         if r["ok"]:
             say(f"{a.TITLE}: in order — handshake {r['initialize_s']} s, {r['tools']} tools, a search in {r['search_s']} s")
         else:
-            say(f"{a.TITLE}: FAILED — {r.get('error') or r.get('answer')}")
+            words = "by words only" in (r.get("error") or "")
+            r["problem"] = PB.item("search-words-only") if words else PB.item("app-check-failed", app=name)
+            say(f"{a.TITLE}: FAILED — {r.get('error') or r.get('answer')}; fix: {r['problem']['fix']}")
     if not res:
         say("No app is connected: assistant-x connect auto")
     from assistant_x.core import workspace
@@ -222,7 +229,7 @@ def main(argv=None, disconnecting=False):
                 print(f"{r['app']:<15} {r['title']:<36} {state:<28} {r['config']}")
         return 0
     if a.check:
-        res = check(a.apps)
+        res = check(a.apps, say=(lambda s: print(s, file=sys.stderr)) if a.json else print)  # stdout: the JSON alone
         if a.json:
             print(json.dumps(res, ensure_ascii=False))
         return 0 if res and all(r["ok"] for r in res.values()) else 1

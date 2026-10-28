@@ -49,6 +49,13 @@ model through LM Studio (`codex --oss`) Codex takes most of the context itself a
 system messages: in a test with a 9B model it never reached the library; the cloud models of the app do not have
 these limits.
 
+## When something does not work
+
+`assistant-x doctor --json` and `assistant-x connect --check --json` name every known failure by a stable code with
+the command that fixes it (the same table, core/problems.py):
+
+{{troubleshooting}}
+
 ## Not possible
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.

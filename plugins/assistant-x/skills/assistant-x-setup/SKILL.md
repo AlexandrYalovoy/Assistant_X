@@ -14,7 +14,9 @@ MCP entry and the library skill of this app.
 1. Read the instructions of the latest release and follow them step by step, with the user's yes before every
    command: https://github.com/AlexandrYalovoy/Assistant_X/blob/main/INSTALL_FOR_AI.md (the tag of https://github.com/AlexandrYalovoy/Assistant_X/releases/latest gives the version; install that one, never
    `main`).
-2. When the program is there already (`assistant-x --version` answers, or `%USERPROFILE%\.assistant_x\venv`), run only
-   `assistant-x connect auto` and `assistant-x connect --check`.
+2. When the program is there already (`assistant-x --version` answers, or `%USERPROFILE%\.assistant_x\venv`), run
+   `assistant-x doctor --json` first and follow the `fix` of every item it lists (ask the user before a download or a
+   change of their settings), then `assistant-x connect auto` and `assistant-x connect --check --json`; an app that is
+   not `"ok"` has its own `problem.fix`. Run the checks again until they are clean.
 3. Tell the user to restart this app; then a message starting with `AX:` (or "connect to the library") switches the
    library on.
