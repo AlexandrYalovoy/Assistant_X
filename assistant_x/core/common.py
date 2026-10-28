@@ -487,12 +487,71 @@ def model_text(title, heading, text, table_rows=False):
 CHUNK_VERSION = "5"
 
 
+# running headers and footers: a line among the first or the last RUNNING_EDGE lines of a page that stands there on
+# RUNNING_SHARE of the pages of a document of RUNNING_MIN_PAGES pages or more (its digits aside: "Страница 40 из 331",
+# "Документ предоставлен … Дата сохранения: 21.10.2026", "ГОСТ 33213— 2014"). The step 1 audit of the library: 68 of
+# 336 documents, N-00001 on 144 of its 152 pages; a question with the title words of such a document found only it
+RUNNING_EDGE, RUNNING_SHARE, RUNNING_MIN_PAGES = 4, 0.5, 5
+
+
+def _line_key(line):
+    return re.sub(r"[\W_]+", "", re.sub(r"\d+", "0", line.lower()))
+
+
+def _edge_lines(text):
+    lines = [ln for ln in text.split("\n") if ln.strip()]
+    return lines[:RUNNING_EDGE] + lines[-RUNNING_EDGE:]
+
+
+def running_lines(pages):
+    """The keys (_line_key) of the running headers and footers of a document [(page, text)]: set() for a short one."""
+    if len(pages) < RUNNING_MIN_PAGES:
+        return set()
+    count = collections.Counter(k for _, text in pages for k in {_line_key(ln) for ln in _edge_lines(text)} if k)
+    least = max(3, RUNNING_SHARE * len(pages))
+    return {k for k, n in count.items() if n >= least}
+
+
+def body_span(text, running):
+    """(start, end) of a page without its running header and footer lines (running_lines), blank lines around them
+    included; (0, len(text)) without any; start == end for a page that has nothing else."""
+    if not running:
+        return 0, len(text)
+    spans, pos = [], 0
+    for line in text.split("\n"):
+        spans.append((pos, pos + len(line), line))
+        pos += len(line) + 1
+    s, e, seen = 0, len(text), 0
+    for at, end, line in spans:  # from the top
+        if not line.strip():
+            continue
+        if seen >= RUNNING_EDGE or _line_key(line) not in running:
+            s = at
+            break
+        seen += 1
+    else:
+        return len(text), len(text)
+    seen = 0
+    for at, end, line in reversed(spans):  # from the bottom
+        if not line.strip():
+            continue
+        if seen >= RUNNING_EDGE or _line_key(line) not in running or at < s:
+            e = end
+            break
+        seen += 1
+    return s, max(s, e)
+
+
 def chunk_doc(pages):
     """[(page, n, heading, start, end, lead)] for a whole document: the fragments of chunk_page with their section
-    heading. A heading that opens a fragment already counts for it; one further down counts from the next fragment."""
+    heading. A heading that opens a fragment already counts for it; one further down counts from the next fragment.
+    The running headers and footers (running_lines) are left out of the fragments: the page text keeps them, the
+    search does not find every page of a document by its title."""
     tracker, out = SectionTracker(pages), []
+    running = running_lines(pages)
     for page, text in pages:
-        for n, (s, e, lead) in enumerate(chunk_page(text)):
+        b, f = body_span(text, running)
+        for n, (s, e, lead) in enumerate((s + b, e + b, lead) for s, e, lead in chunk_page(text[b:f])):
             lines = text[s:e].strip().splitlines()
             first = 0
             while first < len(lines) and (not lines[first].strip() or heading_text(lines[first])):

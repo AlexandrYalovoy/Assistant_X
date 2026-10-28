@@ -6,7 +6,16 @@ and the links of the cards."""
 import os
 
 from assistant_x.core import card as C
-from assistant_x.core.common import split_pages, chunk_page, chunk_doc, chunk_search_text, ocr_share, read_ocr_scores
+from assistant_x.core.common import (
+    body_span,
+    chunk_doc,
+    chunk_page,
+    chunk_search_text,
+    ocr_share,
+    read_ocr_scores,
+    running_lines,
+    split_pages,
+)
 from assistant_x.search import catalog
 from assistant_x.search.build_index import doc_rows, link_rows, load_cards, toc_rows
 
@@ -86,6 +95,26 @@ def test_fragment_carries_its_section():
     pages = [(1, "# 1. Общие положения\n\nТекст первого раздела."), (2, "# 2. Расчёт дебита\n\nТекст второго.")]
     heads = {p: h for p, _, h, _, _, _ in chunk_doc(pages)}
     assert heads == {1: "1. Общие положения", 2: "2. Расчёт дебита"}
+
+
+def test_running_headers_are_left_out_of_the_fragments():
+    """A web export repeats the title and the page number on every page: the fragments leave them out (a question with
+    the title words found every page of the document), the page text keeps them; a short document has none."""
+    head = '"ГОСТ 12.2.063-2015. Арматура трубопроводная. Общие требования"\n\nДокумент предоставлен Дата: 21.10.2026'
+    pages = [
+        (n, f"{head}\n\nПункт {n}.1 Текст о {w}.\n\n**www.consultant.ru**\n\nСтраница {n} из 9")
+        for n, w in enumerate("затворах клапанах кранах задвижках фланцах прокладках болтах шпильках муфтах".split(), 1)
+    ]
+    pages[3] = (4, f"{head}\n\n**www.consultant.ru**\n\nСтраница 4 из 9")  # a page of nothing else
+    out = chunk_doc(pages)
+    text = dict(pages)
+    bodies = {p: text[p][s:e] for p, _, _, s, e, _ in out}
+    assert bodies[1] == "Пункт 1.1 Текст о затворах." and 4 not in bodies
+    assert all("Страница" not in b and "ГОСТ" not in b for b in bodies.values())
+    assert running_lines(pages[:4]) == set()  # fewer than 5 pages
+    assert body_span("Текст без колонтитулов", set()) == (0, 22)
+    # a line that only looks like one in the middle of a page stays
+    assert body_span("Начало\n\nСтраница 2 из 9\n\nКонец", running_lines(pages)) == (0, 30)
 
 
 def test_catalog_is_made_from_the_cards(mini):
