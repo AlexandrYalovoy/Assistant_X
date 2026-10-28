@@ -1,6 +1,6 @@
 # Roadmap
 
-Version 0.4 is an open prototype, for Windows and Linux (0.1 was the first) ([CHANGELOG.md](CHANGELOG.md) says what it does). What is done and
+Version 0.5 is an open prototype, for Windows and Linux (0.1 was the first) ([CHANGELOG.md](CHANGELOG.md) says what it does). What is done and
 what comes next, roughly in this order.
 
 ## Done in 0.1
