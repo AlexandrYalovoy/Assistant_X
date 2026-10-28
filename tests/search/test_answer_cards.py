@@ -49,7 +49,9 @@ def test_cards_after_the_pages(server, lib, monkeypatch):  # noqa: F811
     monkeypatch.setattr(lib, "search", lambda *a, **k: rows)
     monkeypatch.setattr(mcp_server, "full_mode", lambda: True)
     out = mcp_server.search_library("сепаратор")
-    assert out.index("[N-00002, PDF 3]") < out.index("## Documents on the topic") < out.index("[N-00001, card]")
+    # the heads of the fragments start a line; the hint above them cites the best page in the same form
+    page, card = "\n[N-00002, PDF 3]", "\n[N-00001, card]"
+    assert out.index(page) < out.index("## Documents on the topic") < out.index(card)
     rows[0]["named"] = True  # the question names the document: its card leads
     out = mcp_server.search_library("ГОСТ 1")
-    assert "## Documents on the topic" not in out and out.index("[N-00001, card]") < out.index("[N-00002, PDF 3]")
+    assert "## Documents on the topic" not in out and out.index(card) < out.index(page)
