@@ -16,6 +16,9 @@ Fixes and hardening after 0.5.
 - verify_quote takes a quote cut with an ellipsis (… or ...): its parts are found in order on one page, each word for
   word, and the answer says to keep the cuts marked; a quote over 2000 characters is refused (to be checked in parts)
   instead of holding the service.
+- search_library names the next calls before the fragments: read_pages of the best page before citing it, verify_quote
+  before a verbatim quote or a number (in the live test a 9B local model cited 2 of 8 pages from the hits without
+  reading them).
 
 ## 0.5 — 2026-10-28
 

@@ -336,6 +336,12 @@ def search_library(
     first = [r for r in res if r.get("kind") != "card" or r.get("named")]
     cards = [r for r in res if r.get("kind") == "card" and not r.get("named")]
     text = "\n\n".join(f"{_head(r)}\n{r['text']}" for r in first)
+    page = next((r for r in first if r.get("kind") != "card"), None)
+    if page:  # before the fragments: small models cite a hit without reading it, and the compact cut keeps the top
+        pending += (
+            f'Before citing a page, read it: read_pages("{page["code"]}", {page["page"]}, {page["page"]}) for the best '
+            f'one; before a verbatim quote or a number: verify_quote("{page["code"]}", {page["page"]}, "…").\n\n'
+        )
     if cards:
         text += (
             ("\n\n" if text else "")

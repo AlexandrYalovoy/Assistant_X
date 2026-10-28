@@ -280,6 +280,19 @@ def test_search_does_not_wait_for_the_model(server, lib, monkeypatch):
     assert "dense_pending" not in st
 
 
+def test_search_names_the_next_calls_before_a_citation(server):
+    """A small model cited pages straight from the hits (the live test of 0.4: 2 of 8): the answer names the calls that
+    read the best page and check a quote of it, before the fragments, so the compact cut keeps them."""
+    from assistant_x.server import toolsets
+
+    out = server.search_library("обводнённости газового фактора")
+    hint = next(line for line in out.splitlines() if line.startswith("Before citing"))
+    assert 'read_pages("N-00001", 2, 2)' in hint and 'verify_quote("N-00001", 2, ' in hint
+    assert out.index(hint) < out.index("[N-00001, PDF 2]")
+    assert hint in toolsets.fit(out + "x" * 20000)
+    assert "Before citing" not in server.search_library("zzzz qqqq nothing")
+
+
 def test_read_pages_is_the_page_of_the_text(server, mini):
     """read_pages gives the pages exactly as the text file has them (marker, blank line, body)."""
     import os
