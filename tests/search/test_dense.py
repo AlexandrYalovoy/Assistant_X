@@ -208,7 +208,16 @@ def test_a_page_and_a_document_once(dense):
     assert len({r["code"] for r in res}) == len(res)
     res = dense.search("обводнённости продукции сепаратора", k=10)
     assert len({(r["code"], r["page"], r["kind"]) for r in res}) == len(res)
-    assert max(sum(r["code"] == c for r in res) for c in {r["code"] for r in res}) <= 3
+    # 3 pages a document; a 4th one only after every other document (M-080: a book that fills the candidates alone)
+    first_over, count = None, {}
+    for i, r in enumerate(res):
+        count[r["code"]] = count.get(r["code"], 0) + 1
+        if count[r["code"]] > 3 and first_over is None:
+            first_over = i
+    if first_over is not None:
+        assert len(res) == 10 and all(
+            sum(x["code"] == r["code"] for x in res[: i + 1]) > 3 for i, r in enumerate(res) if i >= first_over
+        )
 
 
 def test_stats_of_the_meaning_search(dense):

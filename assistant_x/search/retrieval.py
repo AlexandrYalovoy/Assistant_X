@@ -52,6 +52,7 @@ SHOWN_KIND = {"card_q": "card"}
 TOC_BOOST = 0.25  # a fragment in a chapter whose title shares words of the question (toc_match)
 TOC_MIN_SHARED, TOC_MIN_SHARE = 2, 0.4  # toc_match: two stems of the question, or 40 % of them
 POOL = 50  # the candidates before the merging of pages and documents (and the reranking): max(POOL, 4 k)
+MAX_PER_DOC = 3  # pages of one document in an answer, unless the other documents leave places free (M-080)
 RERANK_WEIGHT = 1.0  # final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight
 RERANK_CHARS = 2000  # what the reranker reads of a fragment at most (it truncates at its max_length anyway)
 EXACT_ROWS = 100_000  # a filter letting fewer fragments through: exact search over them, even with a FAISS index
@@ -504,7 +505,7 @@ class Library:
         return sorted(order, key=lambda i: -final[i])
 
     # ---------- all together ----------
-    def search(self, query, k=10, dense=None, rerank=None, max_per_doc=3, stats=None, max_cards=None, **flt):
+    def search(self, query, k=10, dense=None, rerank=None, max_per_doc=None, stats=None, max_cards=None, **flt):
         """stats: a dict to receive how strong the match was (for the call journal and query_log.py). max_cards: the
         cards of documents in the answer at most ([search] max_cards, 2); the card of a document named in the question
         by its designation always comes."""
@@ -566,20 +567,11 @@ class Library:
         if rerank and order:
             order = self.rerank(query, order, rows, fused, stats)
         order = [i for i in first if i in rows] + [i for i in order if i not in first]
-        out, per_doc, seen, cards = [], {}, {}, 0
-        for cid in order:
-            r = rows[cid]
-            r["kind"] = SHOWN_KIND.get(r["kind"], r["kind"])
-            at = (r["code"], r["page"], r["kind"])
-            if at in seen:  # second fragment of a page already listed: join them
-                seen[at]["text"] += "\n\n" + r["text"]
-                continue
-            if per_doc.get(r["code"], 0) >= max_per_doc:
-                continue
-            card = r["kind"] == "card"
-            if card and cards >= max_cards and r["code"] not in named:  # pages answer, cards point to documents
-                continue
-            cards += card
+        fill = max_per_doc is None  # the default quota gives way to free places; one asked for holds
+        max_per_doc = MAX_PER_DOC if fill else max_per_doc
+        out, per_doc, seen, cards, over = [], {}, {}, 0, []
+
+        def add(r, at, card):
             per_doc[r["code"]] = per_doc.get(r["code"], 0) + 1
             out.append(
                 dict(
@@ -602,8 +594,36 @@ class Library:
                 )
             )
             seen[at] = out[-1]
+
+        for cid in order:
+            r = rows[cid]
+            r["kind"] = SHOWN_KIND.get(r["kind"], r["kind"])
+            at = (r["code"], r["page"], r["kind"])
+            if at in seen:  # second fragment of a page already listed: join them
+                seen[at]["text"] += "\n\n" + r["text"]
+                continue
+            card = r["kind"] == "card"
+            if per_doc.get(r["code"], 0) >= max_per_doc:
+                if not card:
+                    over.append((cid, at))
+                continue
+            if card and cards >= max_cards and r["code"] not in named:  # pages answer, cards point to documents
+                continue
+            cards += card
+            add(r, at, card)
             if len(out) >= k:
                 break
+        if len(out) < k and fill:
+            # the other documents left places free: a document that fills the candidates alone (a big book, a question
+            # in the words of its title) gives its pages over the quota, in their order (M-080: L-00005 p.209 was the
+            # 4th page of the book and the answer had 3 results)
+            for cid, at in over:
+                if len(out) >= k:
+                    break
+                if at in seen:
+                    seen[at]["text"] += "\n\n" + rows[cid]["text"]
+                else:
+                    add(rows[cid], at, False)
         for r in out:  # where "see table 4.2", "formula (12)", "see 5.3" in the fragment lead within the book
             r["refs"] = self.maps.targets(r["code"], r["page"], r["text"]) if r["kind"] == "text" else []
             r["related_pages"] = sorted({p for _, p in r["refs"]})
