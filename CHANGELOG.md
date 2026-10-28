@@ -29,6 +29,9 @@ The open items of the observation journal.
 - Intake summary and ledger wording: the load line says how long the regulator held workers back (it was called
   paused), a temporary Office file (~$) is no longer called a Word file, and a card draft whose text gives no title (a
   drawing, a scan without words) takes the name of the file.
+- Card drafts of pictures: a photo whose recognition score is below 30 is proposed to drop even when OCR read its
+  shapes as many words (26 of 31 photos of a trial batch had more than 25 such words), and a file name whose UTF-8
+  bytes an old archiver showed in another code page is mended for the title.
 
 ## 0.5.3 — 2026-10-28
 

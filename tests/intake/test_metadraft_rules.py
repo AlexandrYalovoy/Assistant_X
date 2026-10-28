@@ -352,3 +352,22 @@ def test_a_drawing_without_words_takes_its_title_from_the_file_name():
     d = metadraft.draft(page(1, "1 2 3 A-A"), "Drawing/66291_005_2014-02 Power Details - Sheet 5.pdf")
     assert d["title"]["en" if "en" in d["title"] else next(iter(d["title"]))] == "66291 005 2014-02 Power Details - Sheet 5"
     assert metadraft.name_title("scan_0001.pdf") == "" and metadraft.name_title("IMG_2041.jpg") == ""
+
+
+def test_a_photo_with_a_low_score_is_proposed_to_drop(tmp_path):
+    """Round b003: OCR reads the shapes of a photo as letters (more than 25 words), its score tells it is no text."""
+    state = _state(tmp_path, ["photo/IMG_1.png", "doc.pdf", "doc2.pdf"])
+    for tid, score in (("T0001", 8.4), ("T0002", 92.0), ("T0003", 8.4)):
+        state.update(tid, ocr_score=score, pages=1)
+    (tmp_path / "md" / "T0001.md").write_text(page(1, "ео == fre ait ла за ой но " * 6), encoding="utf-8")
+    metadraft.write_drafts(tmp_path, state)
+    d = {x["tid"]: x for x in map(json.loads, (tmp_path / "meta_draft.jsonl").read_text(encoding="utf-8").splitlines())}
+    assert "readable text" in d["T0001"]["drop"]
+    assert "drop" not in d["T0003"]  # a PDF is no picture, whatever its score
+
+
+def test_a_file_name_spoiled_by_an_old_code_page_is_mended():
+    spoiled = "Изображение PNG 4".encode("utf-8").decode("cp866")
+    assert metadraft.mended_name(spoiled) == "Изображение PNG 4"
+    assert metadraft.name_title(spoiled + ".png") == "Изображение PNG 4"
+    assert metadraft.mended_name("Отчёт 2020") == "Отчёт 2020" and metadraft.mended_name("Report") == "Report"

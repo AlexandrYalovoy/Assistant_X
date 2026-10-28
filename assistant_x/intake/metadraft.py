@@ -641,13 +641,33 @@ def units_of(pages):
     return [{"kind": "article", "title": title, "pdf_from": page} for _, title, page, _ in textmap.toc_entries(pages)][:300]
 
 
+# the code pages an old archiver or a Windows console used to show the UTF-8 bytes of a name: "\u2568\u0428\u2568..."
+MOJIBAKE = ("cp866", "cp437", "cp1251", "cp1252")
+
+
+def mended_name(name):
+    """A file name whose UTF-8 bytes were read in an old code page ("\u2568\u0428\u2568\u2556..." for a Russian
+    word) given back as it was; any other name as it is."""
+    if name.isascii():
+        return name
+    for cp in MOJIBAKE:
+        try:
+            fixed = name.encode(cp).decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            continue
+        if fixed != name and sum(c.isalpha() for c in fixed) > sum(c.isalpha() for c in name):
+            return fixed
+    return name
+
+
 NAME_LETTERS = 6  # letters a file name needs to give a title ("scan_0001", "IMG_2041" give none)
 
 
 def name_title(rel):
     """The title a file name gives when the text gives none ("66291_005_2014-02 Power Details - Sheet 5.pdf" ->
-    "66291 005 2014-02 Power Details - Sheet 5"); "" for a name of few letters (scan_0001)."""
-    stem = re.sub(r"\s+", " ", Path(rel).stem.replace("_", " ")).strip(" .-")
+    "66291 005 2014-02 Power Details - Sheet 5"); "" for a name of few letters (scan_0001). A name an archiver spoiled
+    (mended_name) is mended first."""
+    stem = re.sub(r"\s+", " ", mended_name(Path(rel).stem).replace("_", " ")).strip(" .-")
     return stem if sum(c.isalpha() for c in stem) >= NAME_LETTERS else ""
 
 
@@ -718,6 +738,8 @@ def draft(md, rel="", profile=None, given=None):
 
 IMAGES = set(extensions("image"))
 PICTURE_WORDS = 25
+PICTURE_SCORE = 30  # the recognition score below which a picture file is a photo or a scrap, whatever OCR read in it
+PICTURE_PAGES = 2
 # the title block of a drawing: a drawing is a document even with few words
 STAMP = re.compile(f"(?i){lang.alt('drawing_stamp')}")
 
@@ -835,6 +857,10 @@ def write_drafts(work, state, tids=None, index=None, profile=None, append=False)
         d["tid"] = r["tid"]
         if r.get("ocr_score") is not None:  # recognition score 0-100 (tools/ocr_score.py), for the assistant to see
             d["ocr_score"] = r["ocr_score"]
+            low = r["ocr_score"] < PICTURE_SCORE and (r.get("pages") or 1) <= PICTURE_PAGES
+            if low and Path(r["rel"]).suffix.lower().lstrip(".") in IMAGES and not d.get("drop"):
+                # a photo: OCR reads its shapes as letters, so the count of words is no test (round b003: 26 of 31)
+                d["drop"] = f"a picture without readable text (recognition score {r['ocr_score']:.0f})"
         title = " ".join((d.get("title") or {}).values())
         hit = versions.find(d.get("code_hint"), title, docs) if docs and not d.get("amends") else None
         if hit:
