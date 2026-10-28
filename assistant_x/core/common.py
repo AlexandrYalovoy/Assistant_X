@@ -226,13 +226,15 @@ def skeleton(text):
     the soft hyphen, the marks of Markdown and the underscores of italics at the edges of words dropped, a word broken
     at a line end joined (join_hyphens: 'separa- tor' as 'separator'), white space collapsed."""
     t = unicodedata.normalize("NFKC", text.replace(SOFT_HYPHEN, ""))
-    t = EDGE_UNDERSCORE_RX.sub("", MARKDOWN_MARK_RX.sub(" ", t))
+    t = EDGE_UNDERSCORE_RX.sub("", ITALIC_WORD_RX.sub(r" \1 ", MARKDOWN_MARK_RX.sub(" ", t)))
     t = lang.homoglyphs(lang.fold(join_hyphens(" ".join(t.split()).lower()))).translate(_skeleton_map())
     return " ".join(t.split())
 
 
 # the underscores of Markdown italics ('_straightness', 'part_'): an underscore not between two letters or digits
 EDGE_UNDERSCORE_RX = re.compile(r"(?<![^\W_])_+|_+(?![^\W_])")
+# one word in italics glued to its neighbours by a converter ("|_DN_300 and less|"): the word apart
+ITALIC_WORD_RX = re.compile(r"(?<![^\W_])_([^\W_]+)_")
 # a word broken at a line end that a converter joined into one line with its hyphen: 'separa- tor'
 INLINE_HYPHEN_RX = re.compile(r"([^\W\d_]{2,})[-‐][ \t]+([^\W\d_]+)")
 

@@ -44,6 +44,7 @@ def test_skeleton():
     assert skeleton("_прямолинейность_ измеряют на длине гладкой _части_") == skeleton(
         "прямолинейность измеряют на длине гладкой части"
     )
+    assert skeleton("|_DN_300 и менее|75|") == skeleton("DN 300 и менее 75")  # italics glued to a number (N-00273)
     assert skeleton("snake_case") == "snake_case" and skeleton("нефте- и газо-") != skeleton("нефтеи газо-")
 
 
