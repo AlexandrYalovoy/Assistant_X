@@ -2,7 +2,7 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.4.1 — 2026-10-28
+## 0.5 — 2026-10-28
 
 Connected by one sentence, and up to date by itself.
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "assistant-x",
-  "version": "0.4.1",
+  "version": "0.5",
   "description": "Your own library of documents (PDF, scans, standards, books) on your PC: search by words and meaning, answers citing the code and the page. The plugin installs and connects Assistant X.",
   "author": {
     "name": "Alexandr Yalovoy"
