@@ -2,7 +2,7 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.4 — unreleased
+## 0.4 — 2026-10-28
 
 The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio.
 
@@ -28,6 +28,8 @@ The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop
   `library_guide` (`assistant-x skill --app guide` writes them as the system prompt of an LM Studio preset), one text
   of the safety rules; a stamp with the version and the hash of the text, so an outdated skill is replaced and one
   edited by hand is kept (the new one beside it as SKILL.md.new).
+- Tried on a PC with a local model: Qwen 3.5 9B in LM Studio, with no system prompt, called `library_guide` by itself
+  on "connect to the library" and cited the right document in 8 of 8 questions, the right page in 5 of 8.
 
 ## 0.3 — 2026-10-28
 
