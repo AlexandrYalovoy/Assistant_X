@@ -45,9 +45,11 @@ The Codex CLI, its IDE extension and the ChatGPT desktop app read the same `~/.c
 codex` serves all of them. On the Free plan of ChatGPT Codex runs in the desktop app only (the CLI and the IDE
 extension need a paid plan), and its sign-in may ask for a phone number. Codex keeps the tools of a server behind its
 search of tools: the instructions of the server and the skill tell the model to search for them. With a small local
-model through LM Studio (`codex --oss`) Codex takes most of the context itself and some chat templates refuse its
-system messages: in a test with a 9B model it never reached the library; the cloud models of the app do not have
-these limits.
+model through LM Studio (`codex --oss`) Codex takes most of the context itself (16 000 tokens of a 16 384 context, 68 000
+input tokens a turn at 32 768) and some chat templates refuse its system messages: Qwen3.5 in LM Studio answers
+"System message must be at the beginning" (its template raises on a system message that is not the first one); in a
+test with a 9B model, its template patched, Codex still never reached the library. The cloud models of the app do not
+have these limits; LM Studio's own chat with the same model works (`assistant-x connect lmstudio`).
 
 ## When something does not work
 
