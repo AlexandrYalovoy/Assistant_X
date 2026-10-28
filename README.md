@@ -5,7 +5,7 @@ searchable texts on your computer and lets Claude read, cross-check and cite the
 Search by words and by meaning, page images of the originals, tables of contents of books, a quality warning for weak
 scans. Everything runs locally; the documents never leave the PC.
 
-Version 0.1, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
+Version 0.3, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
 field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer. License: GNU AGPL-3.0-or-later; the data folders also CC-BY-4.0 (see License below).
 
 **Author:** Alexandr Yalovoy.

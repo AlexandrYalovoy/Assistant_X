@@ -2,7 +2,9 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## Unreleased (0.3)
+## 0.3 — 2026-10-28
+
+This release also contains the changes of 0.2 below, which were never tagged.
 
 What the second real intake run showed, fixed.
 
@@ -39,7 +41,33 @@ What the second real intake run showed, fixed.
   confirm): a document of the library taken aside into `inbox\_to_delete`, journaled, its code reserved, its fragments
   out of the base; a file removed so is no duplicate when it comes back.
 
-## Unreleased (0.2)
+What the pipeline test of 2026-10-27/28 (rounds of real files, the 40 control questions) showed, fixed.
+
+- Intake speed: every file is prepped before the conversions; a scan with a visible text layer and the picture pages
+  of a text PDF are cut into OCR page ranges (20 pages at least, up to 3 ranges a worker); a text chunk ends at 5 pages
+  with a picture. A round of 19 files (1 534 pages) went from 922 s to 375 s with the same texts.
+- A PDF whose text layer scores below 90 by its words is read again from its page images, and the better text is kept;
+  a scan without a text layer is not read twice.
+- `intake redo` runs as the intake does (the pool, the load regulator, the OCR page ranges, reused readings first),
+  writes each document as soon as it is ready (`--reuse` takes the readings of a stopped run), keeps a replaced text
+  aside in `inbox\_to_delete\redo_<date>`, counts the known words once per page and reads the page images only when
+  they can help; a text no longer doubled loses the doubled issue of its card.
+- `assistant-x intake reflag [--dry-run] [CODE ...]`: the page flags (garbled, doubled) and the quality notes of the
+  cards made again from their texts, without OCR; redo does the same for every document it reads.
+- A page is doubled only when its repeated phrases occur exactly twice (a legal database export repeating a note is
+  not); a digit or a sign in a tiny font is no hidden text; the word "system" alone is no instruction for an AI.
+- Search: running headers and footers (a title, "Document provided by …", "Page 40 of 331") are left out of the
+  fragments; a document that fills the candidates alone gives more than 3 pages; words broken at a line end and left on
+  one line with the hyphen are joined (not a suspended compound: `hyphen_suspended` of the packs).
+- `verify_quote`: a word in italics (`_word_`) glued to its neighbours by the converter is found.
+- Drafts: the title of a legal database export and of a scanned GOST R title page (new pack key
+  `standard_head_loose`), a quoted amendment line, no web address as an English title, a national designation in the
+  file name before a foreign one on the page.
+- The base is out of date when a page file, a text or `ocr_quality.tsv` changed (a tie of the modification times
+  counts as newer); `build` and `reindex` take the machine lock; `reindex --help` builds nothing.
+- The load regulator counts a quarter of the memory cap of a worker (14-15 workers on a 16-core PC instead of 11).
+
+## 0.2 — released as part of 0.3
 
 What the first real intake run (42 files, 8 644 pages) showed, fixed.
 
