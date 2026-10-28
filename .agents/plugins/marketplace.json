@@ -1,0 +1,17 @@
+{
+  "name": "assistant-x",
+  "plugins": [
+    {
+      "name": "assistant-x",
+      "source": {
+        "source": "local",
+        "path": "./plugins/assistant-x"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

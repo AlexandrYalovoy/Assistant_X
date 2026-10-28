@@ -1,6 +1,7 @@
 #!/bin/sh
-# Check before a commit: every test but the slow ones (pytest -m "not slow" tests: the whole intake with LibreOffice
-# and OCR and the corpus run separately, pytest -m slow tests), and ruff when it is installed.
+# Check before a commit: the documents made from the code made again (assistant-x gen-docs), every test but the slow
+# ones (pytest -m "not slow" tests: the whole intake with LibreOffice and OCR and the corpus run separately, pytest -m
+# slow tests), and ruff when it is installed.
 # On an error the commit is cancelled. To bypass it in an emergency: git commit --no-verify.
 # Install: copy this file to .git/hooks/pre-commit.
 root="$(git rev-parse --show-toplevel)"
@@ -14,6 +15,11 @@ export PYTHONUTF8=1
 if "$py" -m ruff --version >/dev/null 2>&1; then
     (cd "$root" && "$py" -m ruff check -q .) || { echo "pre-commit: ruff found errors"; exit 1; }
     (cd "$root" && "$py" -m ruff format -q --check .) || { echo "pre-commit: not formatted: python -m ruff format ."; exit 1; }
+fi
+# the documents made from the code (INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin): made again and added
+if ! (cd "$root" && "$py" -m assistant_x.setup.gen_docs --check >/dev/null); then
+    (cd "$root" && "$py" -m assistant_x.setup.gen_docs && git add INSTALL_FOR_AI.md AGENTS.md docs/CLIENTS.md plugins \
+        .claude-plugin .agents/plugins) || { echo "pre-commit: assistant-x gen-docs failed"; exit 1; }
 fi
 echo "pre-commit: tests…"
 (cd "$root" && "$py" -m pytest -q -p no:cacheprovider -m "not slow" tests) || {

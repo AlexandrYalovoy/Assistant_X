@@ -1,0 +1,13 @@
+{
+  "name": "assistant-x",
+  "owner": {
+    "name": "Alexandr Yalovoy"
+  },
+  "plugins": [
+    {
+      "name": "assistant-x",
+      "source": "./plugins/assistant-x",
+      "description": "Your own library of documents (PDF, scans, standards, books) on your PC: search by words and meaning, answers citing the code and the page. The plugin installs and connects Assistant X."
+    }
+  ]
+}

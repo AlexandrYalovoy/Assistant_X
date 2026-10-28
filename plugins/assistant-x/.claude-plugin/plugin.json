@@ -1,0 +1,19 @@
+{
+  "name": "assistant-x",
+  "version": "0.4",
+  "description": "Your own library of documents (PDF, scans, standards, books) on your PC: search by words and meaning, answers citing the code and the page. The plugin installs and connects Assistant X.",
+  "author": {
+    "name": "Alexandr Yalovoy"
+  },
+  "homepage": "https://github.com/AlexandrYalovoy/Assistant_X",
+  "repository": "https://github.com/AlexandrYalovoy/Assistant_X",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "documents",
+    "library",
+    "rag",
+    "mcp",
+    "search",
+    "citations"
+  ]
+}
