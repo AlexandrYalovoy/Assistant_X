@@ -14,7 +14,7 @@ MCP entry and the library skill of this app.
 1. Read the instructions of the latest release and follow them step by step, with the user's yes before every
    command: {{repo}}/blob/main/INSTALL_FOR_AI.md (the tag of {{latest}} gives the version; install that one, never
    `main`).
-2. When the program is there already (`assistant-x --version` answers, or `%LOCALAPPDATA%\AssistantX\venv`), run only
+2. When the program is there already (`assistant-x --version` answers, or `%USERPROFILE%\.assistant_x\venv`), run only
    `assistant-x connect auto` and `assistant-x connect --check`.
 3. Tell the user to restart this app; then a message starting with `AX:` (or "connect to the library") switches the
    library on.

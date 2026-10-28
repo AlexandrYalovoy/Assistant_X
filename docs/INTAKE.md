@@ -28,7 +28,7 @@ For an offline media: `python -m assistant_x.setup.collect_programs` copies the 
 193 MB), LibreOffice (without help, dictionaries ru and en, the Visual C++ runtime beside soffice; ≈1.1 GB), 7-Zip and
 DjVuLibre (the command-line tools without the viewer; the official installer with a pinned SHA-256 when it is not
 installed here)
-into `%LOCALAPPDATA%\AssistantX\programs` (`AX_PROGRAMS` names another folder; `VERSIONS.txt` says what is inside).
+into `%USERPROFILE%\.assistant_x\programs` (`AX_PROGRAMS` names another folder; `VERSIONS.txt` says what is inside).
 From there the programs run without installation and are found first. Without that folder the installed programs are
 used.
 
@@ -45,7 +45,7 @@ priority "high".
 | `[paths]` `inbox`, `library`, `index` | the folders, relative to the workspace | `inbox`, `library`, `index` |
 | `[paths]` `work` | the work folders of batches `work\<DATE>` | `.assistant_x\work` |
 | `[paths]` `reports` | the reports of the hidden text check | `reports` |
-| `soffice`, `tesseract`, `tessdata`, `sevenzip` | programs; empty — look for them: the bundled programs folder `%LOCALAPPDATA%\AssistantX\programs` (portable copies of an offline media: `Tesseract-OCR`, `LibreOffice\program`, `7-Zip`; the folder — `AX_PROGRAMS`), the path of the settings, `%LOCALAPPDATA%\Programs`, `Program Files`, PATH; `-` — do not use. A path in the settings that is not there (another PC) does not stop the search. The paths of this PC are written to `assistant_x.local.toml` beside it (not in Git) and are read only from there: a program path in the shared `assistant_x.toml` is ignored, so a copied or received settings file never chooses which program runs | |
+| `soffice`, `tesseract`, `tessdata`, `sevenzip` | programs; empty — look for them: the bundled programs folder `%USERPROFILE%\.assistant_x\programs` (portable copies of an offline media: `Tesseract-OCR`, `LibreOffice\program`, `7-Zip`; the folder — `AX_PROGRAMS`), the path of the settings, `%LOCALAPPDATA%\Programs`, `Program Files`, PATH; `-` — do not use. A path in the settings that is not there (another PC) does not stop the search. The paths of this PC are written to `assistant_x.local.toml` beside it (not in Git) and are read only from there: a program path in the shared `assistant_x.toml` is ignored, so a copied or received settings file never chooses which program runs | |
 | `stage_mode` | `inproc` — long-lived worker processes (`pool.py`), `subprocess` — the former mode: a python process per tool | `inproc` |
 | `workers` | at most this many worker processes (0 — everything in the main process, for debugging); how many really — `balance.py` decides by the PC | 16 |
 | `profile` | `auto` — by the measurements; `day` — always "at the computer"; `weak` — a weak PC (1–2 workers, 1 thread, always "at the computer"); `night` — always "free" | `auto` |
@@ -367,7 +367,7 @@ The memory cap of a task goes by the pages known after prep: up to 300 pages `wo
 — 8 GB and such a document goes alone (no more than half of the RAM). A worker hit the cap — the document is repeated
 once with a doubled cap in a new worker (in the output and in the state: `memory_retry`), the second time it is an error
 of the file.
-One heavy task per PC (`core/lock.py`, the lock `%LOCALAPPDATA%\AssistantX\heavy.lock`, the journal `heavy.log` beside it): `run`,
+One heavy task per PC (`core/lock.py`, the lock `%USERPROFILE%\.assistant_x\heavy.lock`, the journal `heavy.log` beside it): `run`,
 `redo`, `build`, `apply`; busy — they print who holds it and exit with code 3, `--wait` — they wait. Other heavy commands
 under the lock: `assistant-x lock --wait "embed" -- assistant-x embed`; who holds it:
 `assistant-x lock`. The former mode: `stage_mode = "subprocess"` in `assistant_x.toml` `[intake]` or

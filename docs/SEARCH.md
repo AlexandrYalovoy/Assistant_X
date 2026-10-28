@@ -24,7 +24,7 @@ the embeddings of the new fragments (the MCP command `intake_apply(confirm=True,
     db\vector_cache\        the embeddings by content: a fragment the model has read once is never computed again
     models\                 only in a workspace of before 2026-10-25 (or a link): its models
     debug\                  journals of failures and calls, debug reports, query reviews
-%LOCALAPPDATA%\AssistantX\  per PC: app\<version> and venv\ (the program, from a medium), models\ (bge-m3,
+%USERPROFILE%\.assistant_x\  per PC: app\<version> and venv\ (the program, from a medium), models\ (bge-m3,
                             bge-reranker-v2-m3, onnx\: everything works without internet), programs\ (of the
                             intake), the machine lock heavy.lock and its journal heavy.log, mcp_server.lock,
                             speed.json, model_fingerprints.json
@@ -315,7 +315,7 @@ cached vectors no base uses any more.
 
 The model fingerprint names the vectors a model gives: its name, the sha256 of its `config.json` and `tokenizer.json`,
 the sha256 of its weights (the one HuggingFace wrote beside a download in `.cache\huggingface\download`, else hashed
-once and kept per PC in `%LOCALAPPDATA%\AssistantX\model_fingerprints.json`; nothing is ever written into the model
+once and kept per PC in `%USERPROFILE%\.assistant_x\model_fingerprints.json`; nothing is ever written into the model
 folder) and `max_seq_length` (a text cut at another length gives another vector). A base remembers it
 (`meta embed_fingerprint`); a base package carries it with its vectors.
 
@@ -330,7 +330,7 @@ processor bge-m3 in int8 ONNX (`python -m assistant_x.search.onnx_models --int8`
 language packs, must keep a mean cosine of 0.99 to the float32 vectors and 0.97 each, or the file is deleted;
 `[search] cpu_int8 = true` uses it; off by default since 0.2: its vectors are about 2 % apart from the full model's). `search/models.py` is the one place that loads the models, for `embed` and the
 search alike. The estimates of the time (`embed` on the processor, `intake_reindex`) use the speeds measured on this PC
-(`speed.json` in `%LOCALAPPDATA%\AssistantX`: every `embed` of 50 fragments or more, and `--check`). Measured on 2026-10-25 (200 fragments of a
+(`speed.json` in `%USERPROFILE%\.assistant_x`: every `embed` of 50 fragments or more, and `--check`). Measured on 2026-10-25 (200 fragments of a
 library, 120 Russian and 80 English, Core Ultra 9 275HX): int8 accepted only when the mean cosine to the torch float32
 vectors is 0.99 or more and every one 0.97 or more — one scale per tensor gave 0.980 (min 0.972), a scale per channel
 0.983 (min 0.970), per channel with the first and the last layer in float32 0.984 (min 0.970): all refused, so the

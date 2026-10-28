@@ -15,7 +15,7 @@ One writer at a time: embed.py, under the machine lock.
 
 The model fingerprint (fingerprint(cfg)): the name of the model, the sha256 of its config.json and tokenizer.json,
 the sha256 of its weights (model.safetensors, else pytorch_model.bin: the etag HuggingFace wrote beside a download
-when it is a sha256, else hashed once and kept in %LOCALAPPDATA%\AssistantX\model_fingerprints.json by path, size
+when it is a sha256, else hashed once and kept in %USERPROFILE%\.assistant_x\model_fingerprints.json by path, size
 and date — never written into the model folder, which may be read-only or linked), max_seq_length and the
 normalization. A model folder without these files (a HuggingFace name, the tests) counts by its name.
 """

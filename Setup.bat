@@ -1,6 +1,6 @@
 @echo off
 rem Installation of Assistant X: double-click. Python, the packages (from the medium without internet), the program,
-rem the models and the programs into %LOCALAPPDATA%\AssistantX (AX_MACHINE_DIR: another folder), the connection
+rem the models and the programs into %USERPROFILE%\.assistant_x (AX_MACHINE_DIR: another folder), the connection
 rem to Claude. The workspace is AX_WORKSPACE, else Documents\Assistant X. Setup.bat --base PACKAGE installs a base
 rem package right after.
 chcp 65001 >nul
@@ -11,7 +11,7 @@ if exist "%~dp0app\assistant_x\" set "APPDIR=%~dp0app\"
 if exist "%~dp0app\assistant_x\" set "AX_MEDIUM=%~dp0"
 cd /d "%APPDIR%"
 set "AXM=%AX_MACHINE_DIR%"
-if not defined AXM set "AXM=%LOCALAPPDATA%\AssistantX"
+if not defined AXM set "AXM=%USERPROFILE%\.assistant_x"
 set "WS=%AX_WORKSPACE%"
 if not defined WS set "WS=%USERPROFILE%\Documents\Assistant X"
 set "PACKS=%WS%\.assistant_x\packages"

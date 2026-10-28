@@ -220,8 +220,9 @@ def doctor(argv):
     print(f"  domain profile   {raw['profile']} ({config.profile_info(raw).get('name', '')})")
     print(f"  languages        {', '.join(lang.active())}")
     h = lock.holder()
+    print(f"  folder of the PC {workspace.machine_dir()}")
     print(f"  machine lock     {lock.lock_path()} ({'held by ' + lock.who(h) if h else 'free'})")
-    for r in remarks:
+    for r in remarks + workspace.split_note():
         print(f"Remark: {r}")
     if state == "empty":
         print(f"The workspace is empty and in order: put documents into {w.inbox}, then assistant-x intake run.")
@@ -233,6 +234,12 @@ def doctor(argv):
     for p in problems:
         print(f"  - {p}")
     return 1
+
+
+def take_over():
+    from assistant_x.core import workspace
+
+    workspace.take_over()
 
 
 def safe_output():
@@ -278,6 +285,8 @@ def main(argv=None):
     if cmd in HELP and wants_help(rest):  # help only: no workspace made, no server started, no lock taken
         print(HELP[cmd])
         return 0
+    if cmd != "--version":
+        take_over()
     if cmd == "init":
         return init(rest)
     if cmd == "doctor":

@@ -393,6 +393,9 @@ def main(argv=None):
     ap.add_argument("--tools", default="all", help="reader: only the reading tools; all (default): every tool")
     ap.add_argument("--compact", action="store_true", help="short descriptions and answers for small local models")
     a = ap.parse_args(argv)
+    from assistant_x.core import workspace
+
+    workspace.take_over()  # an app connected before 0.5.1 starts the bridge first
     Bridge(toolsets.check(a.tools), a.compact).run()
     return 0
 

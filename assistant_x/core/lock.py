@@ -3,7 +3,7 @@
 r"""Locks, all in one place.
 
 The machine lock: one heavy task on the PC at a time (intake run / redo / build / apply, embed, eval, the
-whole-library hidden_scan), across every workspace. The file is %LOCALAPPDATA%\AssistantX\heavy.lock
+whole-library hidden_scan), across every workspace. The file is %USERPROFILE%\.assistant_x\heavy.lock
 (AX_HEAVY_LOCK_FILE overrides it), held with msvcrt.locking (fcntl elsewhere): Windows frees it when the owner dies, so
 a switched-off PC leaves no stale lock. The file holds the PID, the task and its start; heavy.log beside it is the
 journal of who took and gave it back.

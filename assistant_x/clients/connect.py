@@ -185,6 +185,10 @@ def check(names, say=print):
             say(f"{a.TITLE}: FAILED — {r.get('error') or r.get('answer')}")
     if not res:
         say("No app is connected: assistant-x connect auto")
+    from assistant_x.core import workspace
+
+    for line in workspace.split_note():  # apps connected before 0.5.1 may start from an older folder of the PC
+        say(f"Note: {line}")
     return res
 
 

@@ -11,7 +11,7 @@ documents: the bundled programs (Tesseract, LibreOffice, 7-Zip) checked by a tri
 profile by this PC. The code is the folder of the package; the data (base, models, packages) is the workspace.
 A medium (prepare-media --out): Setup.bat at its top, app\ (the program), packages\ (wheels, the Python installer),
 models\ with MODELS.json, programs\, optionally a base package. Everything of the program goes to the PC folder
-%LOCALAPPDATA%\AssistantX — app\<version> (a copy of app\), venv (the program installed from its wheel, never linked to
+%USERPROFILE%\.assistant_x — app\<version> (a copy of app\), venv (the program installed from its wheel, never linked to
 the medium), models (each folder copied once and checked against MODELS.json; a folder that is there, a linked one
 above all, is left as it is), programs — and the workspace holds the data only.
 Usage: python -m assistant_x.setup.install [--workspace DIR] [--profile NAME] [--dry-run] [--yes] [--venv DIR]
@@ -161,7 +161,7 @@ def run(cmd, dry, **kw):
 # ---------------------------------------------------------------- steps
 def pick_venv(arg):
     r"""The environment: the one given; .venv of a development checkout (a .git folder, or a .venv there already);
-    else %LOCALAPPDATA%\AssistantX\venv — never on a medium, which may be a flash drive taken out tomorrow."""
+    else %USERPROFILE%\.assistant_x\venv — never on a medium, which may be a flash drive taken out tomorrow."""
     if arg:
         return os.path.abspath(arg)
     dev = os.path.join(CODE, ".venv")
@@ -478,7 +478,7 @@ def install_packages(py, offline, dry, device="cpu"):
 
 
 def install_self(py, offline, dry):
-    r"""The package itself. From a medium: app\ copied to %LOCALAPPDATA%\AssistantX\app\<version> and the package
+    r"""The package itself. From a medium: app\ copied to %USERPROFILE%\.assistant_x\app\<version> and the package
     installed from its wheel (packages\wheels\assistant_x-<version>-…whl), so nothing points at the medium. From a
     folder of the code: an editable install (an update of the folder needs no new installation); without internet the
     build tools come from the media (setuptools and wheel in the wheels folder)."""

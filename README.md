@@ -68,7 +68,7 @@ originals by shelves, `01_Standards … 99_Other`), `index/` (`cards/<code>.json
 the one source of truth about every document; `texts/<code>.md` with pages `=== page N ===`; `CATALOG.md` and
 `sources_to_update.md` made from the cards; `intake_events.tsv` and the generated `journal.md`, `manifest.tsv`,
 `ocr_quality.tsv`), `reports/`, and `.assistant_x/` (the base, the batches of the intake, the debug journals; the models are of
-the PC, in `%LOCALAPPDATA%\AssistantX\models`). Keep your own copy of `library` and `index`: they are your data. The code folder is never written to.
+the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library` and `index`: they are your data. The code folder is never written to.
 
 ## Requirements
 
@@ -91,12 +91,12 @@ the PC, in `%LOCALAPPDATA%\AssistantX\models`). Keep your own copy of `library` 
    Claude Code, Codex, DeepSeek Harness, LM Studio: `assistant-x connect auto`), writes the skills and runs a
    self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` with `MODELS.json`, `programs\`) everything of the program goes to
-   `%LOCALAPPDATA%\AssistantX` — `app\<version>`, the environment `venv`, the models (checked against `MODELS.json`),
+   `%USERPROFILE%\.assistant_x` — `app\<version>`, the environment `venv`, the models (checked against `MODELS.json`),
    the programs of the intake — and the workspace holds your data only; `Setup.bat --base E:\base\x.axbase` installs
    a base package right after. Another folder or the oil-and-gas profile: `Setup.bat --workspace "D:\My library"
    --profile oil-gas-ru`. From a folder of the code (a development checkout) it uses `.venv` beside it; then
-   `assistant-x.bat download-models` downloads the models (≈ 4.5 GB) into `%LOCALAPPDATA%\AssistantX\models`;
-   without them the search is by words. The PC folder `%LOCALAPPDATA%\AssistantX` (program, models, programs of the
+   `assistant-x.bat download-models` downloads the models (≈ 4.5 GB) into `%USERPROFILE%\.assistant_x\models`;
+   without them the search is by words. The PC folder `%USERPROFILE%\.assistant_x` (program, models, programs of the
    intake, locks, tokens) can be moved: set `AX_MACHINE_DIR` to another folder before [`Setup.bat`](Setup.bat) and keep it set.
 2. [`scripts\install_intake.bat`](scripts/install_intake.bat) (`assistant-x setup-intake`) — LibreOffice, Tesseract (the languages of the packs: rus+eng by default), 7-Zip and DjVuLibre for the
    intake, without administrator rights.
@@ -192,7 +192,7 @@ on 127.0.0.1: the models are loaded once for all the apps. By hand (any MCP clie
 {
   "mcpServers": {
     "assistant-x": {
-      "command": "C:\\Users\\you\\AppData\\Local\\AssistantX\\venv\\Scripts\\pythonw.exe",
+      "command": "C:\\Users\\you\\.assistant_x\\venv\\Scripts\\pythonw.exe",
       "args": ["-m", "assistant_x.server.bridge", "--tools", "reader"],
       "env": {"AX_WORKSPACE": "C:\\Users\\you\\Documents\\Assistant X", "PYTHONUTF8": "1", "HF_HUB_OFFLINE": "1"}
     }

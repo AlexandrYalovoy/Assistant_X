@@ -258,7 +258,7 @@ def readme(out, cuda, dml):
     lines = [
         "Assistant X — installation medium",
         "",
-        "Setup.bat (a double click) installs the program into %LOCALAPPDATA%\\AssistantX and connects it to Claude.",
+        "Setup.bat (a double click) installs the program into %USERPROFILE%\\.assistant_x and connects it to Claude.",
         "Setup.bat --base base\\<package>.axbase also installs a base package.",
         "",
         "The search runs on:",

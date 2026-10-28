@@ -188,7 +188,7 @@ def python_env():
     ]
     if not in_venv:
         hints.append(
-            "The report was not started from the search environment (.venv of the code or %LOCALAPPDATA%\\AssistantX\\venv): "
+            "The report was not started from the search environment (.venv of the code or %USERPROFILE%\\.assistant_x\\venv): "
             "the package versions below may differ from what the server sees. Run Setup.bat."
         )
     if sys.version_info < (3, 11):

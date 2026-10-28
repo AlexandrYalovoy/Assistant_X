@@ -6,7 +6,7 @@ connects through its stdio bridge (assistant-x mcp, server/bridge.py), which sta
 
     assistant-x service [--port N] [--idle MINUTES]
 
-- One service per workspace: service-<id>.lock in the machine folder (%LOCALAPPDATA%\AssistantX) is held while it
+- One service per workspace: service-<id>.lock in the machine folder (%USERPROFILE%\.assistant_x) is held while it
   runs, service-<id>.json says its pid, port and version (a second start exits at once).
 - The port: N (default 8765, AX_SERVICE_PORT), a free one when it is taken.
 - Every request needs the bearer token of mcp_http_token.txt in the machine folder; only the Host and Origin of
@@ -142,6 +142,7 @@ def main(argv=None):
     ap.add_argument("--port", type=int, default=int(env.get("SERVICE_PORT") or PORT))
     ap.add_argument("--idle", type=float, default=float(env.get("SERVICE_IDLE") or IDLE_MINUTES), help="minutes")
     a = ap.parse_args(argv)
+    workspace.take_over()
     paths = files()
     os.makedirs(os.path.dirname(paths["lock"]), exist_ok=True)
     held = lock.exclusive(paths["lock"])

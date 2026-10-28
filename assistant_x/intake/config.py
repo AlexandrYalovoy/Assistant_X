@@ -11,7 +11,7 @@ from here.
   AX_STAGE_MODE     "inproc" (persistent workers, pool.py) | "subprocess" (a python process per tool, the old way)
   AX_PRIORITY       "below_normal" | "idle" | "normal"; AX_AFFINITY "auto" | "ecores" | "all" | "8,9,10" (balance.py)
   AX_PROFILE        "auto" | "weak" | "night" (balance.py)
-  AX_PROGRAMS       the folder of the bundled programs (default: %LOCALAPPDATA%\AssistantX\programs)
+  AX_PROGRAMS       the folder of the bundled programs (default: %USERPROFILE%\.assistant_x\programs)
 
 Programs are looked for in this order: the bundled programs folder (portable copies of an offline media), the path in
 the settings, the usual install folders, PATH. Paths of programs on this PC go to assistant_x.local.toml (not in Git).

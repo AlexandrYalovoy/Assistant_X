@@ -28,6 +28,11 @@ Fixes and hardening after 0.5.
   sentence_transformers.
 - The note that the uploaded skill of Claude Desktop is outdated goes to Claude Desktop only, once; the shared service
   no longer gives it to LM Studio, DeepSeek Harness or Codex.
+- Windows: the folder of the PC is %USERPROFILE%\.assistant_x instead of %LOCALAPPDATA%\AssistantX. Claude Desktop from
+  the Microsoft Store redirects %LOCALAPPDATA% of the programs it starts into its package, so its apps and the others
+  (LM Studio, DeepSeek Harness, Codex) ran two services, one without models. An older folder, and the private copy of
+  the Store app, is taken over by itself: the small files copied, venv, models and programs linked, nothing moved;
+  doctor and connect --check name it. Reconnect the apps once: assistant-x connect auto.
 
 ## 0.5 — 2026-10-28
 

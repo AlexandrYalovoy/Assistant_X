@@ -13,8 +13,9 @@ agreed to it; say in one line what each one does. These instructions are of vers
 - Downloads: the source of the release (≈ 5 MB), the Python packages (≈ 1 GB; ≈ 3.5 GB with the CUDA build of torch
   for an NVIDIA video card), the models of the search by meaning (≈ 4.5 GB, optional: without them the search is by
   words only).
-- Folders: the program and the models in `%LOCALAPPDATA%\AssistantX` (Linux: `~/.cache/AssistantX`); the user's data in
-  one workspace folder, `Documents\Assistant X` by default. Ask whether another folder is wanted, and the profile:
+- Folders: the program and the models in `%USERPROFILE%\.assistant_x` (Linux: `~/.cache/AssistantX`; an install before
+  0.5.1 in `%LOCALAPPDATA%\AssistantX` is taken over by itself); the user's data in one workspace folder,
+  `Documents\Assistant X` by default. Ask whether another folder is wanted, and the profile:
   `general` (any field, the default) or `oil-gas-ru` (a Russian oil-and-gas process engineer).
 - Privacy: the library and its search stay on the PC; the pages the model reads to answer go to the provider of the
   model of the app (with a local model in LM Studio nothing leaves the PC).
@@ -28,7 +29,7 @@ agreed to it; say in one line what each one does. These instructions are of vers
 
 Read the tag of the latest release (`vX.Y`) from https://github.com/AlexandrYalovoy/Assistant_X/releases/latest (or the GitHub API
 `https://api.github.com/repos/AlexandrYalovoy/Assistant_X/releases/latest`, field `tag_name`). Download the source
-`https://github.com/AlexandrYalovoy/Assistant_X/archive/refs/tags/<tag>.zip` and extract it to `%LOCALAPPDATA%\AssistantX\src\<tag>` (Linux:
+`https://github.com/AlexandrYalovoy/Assistant_X/archive/refs/tags/<tag>.zip` and extract it to `%USERPROFILE%\.assistant_x\src\<tag>` (Linux:
 `~/.cache/AssistantX/src/<tag>`): the program is installed from that folder and keeps using it, so do not put it into
 Downloads or a temporary folder.
 
@@ -40,7 +41,7 @@ In that folder:
 py -3.11 -m assistant_x.setup.install --online --yes --json [--workspace "D:\My library"] [--profile oil-gas-ru]
 ```
 
-(`python3.11` on Linux.) It makes the environment `%LOCALAPPDATA%\AssistantX\venv`, installs the packages, makes the
+(`python3.11` on Linux.) It makes the environment `%USERPROFILE%\.assistant_x\venv`, installs the packages, makes the
 workspace, connects every app it finds and checks itself; it asks nothing (`--yes`). Its last line is one JSON object:
 `ok`, `version`, `python`, `command` (the `assistant-x` program), `workspace`, `device`, `apps` (connected),
 `problems`, `next`. Tell the user the `problems` in plain words. Run it again after a failure: what is done is not done

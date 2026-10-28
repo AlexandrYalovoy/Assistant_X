@@ -1,6 +1,6 @@
 # Assistant X — Copyright (C) 2026 Alexandr Yalovoy
 # SPDX-License-Identifier: AGPL-3.0-or-later
-r"""Download the embedding and reranking models once into the models folder (of this PC: %LOCALAPPDATA%\AssistantX\
+r"""Download the embedding and reranking models once into the models folder (of this PC: %USERPROFILE%\.assistant_x\
 models, or --dst), so the search works offline; and MODELS.json, what a medium carries of them.
 Usage: python -m assistant_x.setup.download_models [--dst DIR] [--no-onnx]
        python -m assistant_x.setup.download_models --manifest DIR   only write DIR/MODELS.json (sha256 of every file)

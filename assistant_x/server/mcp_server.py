@@ -6,7 +6,7 @@ Start: assistant-x mcp  the stdio bridge to the library service of the PC (serve
        the apps start (assistant-x connect writes it into their settings).
        assistant-x serve [--tools reader|all] [--compact]  this server in the process of the app (stdio), the fallback.
        assistant-x serve --http [--port 8765]  streamable HTTP on http://127.0.0.1:8765/mcp, for other clients: every
-       request needs "Authorization: Bearer <token>" (the token: %LOCALAPPDATA%\AssistantX\mcp_http_token.txt, made at
+       request needs "Authorization: Bearer <token>" (the token: %USERPROFILE%\.assistant_x\mcp_http_token.txt, made at
        the first start), and only the Host and Origin of 127.0.0.1 and localhost are taken (DNS rebinding).
 Every tool has its annotations (read only, destructive) and a title: an app asks the user before a tool that changes
 the library; --tools reader gives only the reading tools (server/toolsets.py), --compact short descriptions and
@@ -48,7 +48,7 @@ def tool(title, read=True, destructive=False):
 _lib = None
 _lib_lock = threading.Lock()
 # One server with the video card per PC: Claude Desktop starts one for the chat and one for the Code tab, each took
-# ~2 GB of RAM and its share of the video card. The first holds mcp_server.lock (%LOCALAPPDATA%\AssistantX) and
+# ~2 GB of RAM and its share of the video card. The first holds mcp_server.lock (%USERPROFILE%\.assistant_x) and
 # loads the models (on the video card if there is one); the others load only the meaning model, on the processor (~2 GB of RAM, a question
 # in ~0.05 s, no reranking), on their first question, and move to the video card once the holder is gone.
 LOCK_FILE = lock.server_lock_path()
@@ -1086,6 +1086,9 @@ def base_list() -> str:
 
 
 if __name__ == "__main__":
+    from assistant_x.core import workspace
+
+    workspace.take_over()  # an app connected before 0.5.1 may start this in-process server
     first = take_models_lock()
     debuglog.log_call(
         "server start",

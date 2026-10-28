@@ -53,7 +53,7 @@ format, archives in the inbox, base packages received from other people. These a
 - **The search server** (MCP) reads the library and returns text; page images are confined to the library folder.
   Over HTTP (the library service `assistant-x service` the apps reach through their stdio bridge, and
   `assistant-x serve --http`) it listens on 127.0.0.1 only, every request needs the bearer token of
-  `%LOCALAPPDATA%\AssistantX\mcp_http_token.txt` (the bridge reads it itself: no app setting holds it), and a Host or
+  `%USERPROFILE%\.assistant_x\mcp_http_token.txt` (the bridge reads it itself: no app setting holds it), and a Host or
   Origin other than 127.0.0.1 or localhost is refused. Every tool carries its annotations (read only, destructive), so
   an app asks the user before a change; DeepSeek Harness and LM Studio get the reading tools only by default.
   The commands that change the library (`base_install`, `base_update`, `base_remove`, `intake_apply`) need two steps:
