@@ -373,7 +373,9 @@ def search_library(
     if page:  # before the fragments: small models cite a hit without reading it, and the compact cut keeps the top
         pending += (
             f'Before citing a page, read it: read_pages("{page["code"]}", {page["page"]}, {page["page"]}) for the best '
-            f'one; before a verbatim quote or a number: verify_quote("{page["code"]}", {page["page"]}, "…").\n\n'
+            f'one; before a verbatim quote or a number: verify_quote("{page["code"]}", {page["page"]}, "…"). Cite in '
+            f"brackets with the code and the PDF page, as the head of a fragment shows it: [{page['code']}, PDF "
+            f"{page['page']}].\n\n"
         )
     if cards:
         text += (

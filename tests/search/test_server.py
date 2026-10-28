@@ -288,7 +288,8 @@ def test_search_names_the_next_calls_before_a_citation(server):
     out = server.search_library("обводнённости газового фактора")
     hint = next(line for line in out.splitlines() if line.startswith("Before citing"))
     assert 'read_pages("N-00001", 2, 2)' in hint and 'verify_quote("N-00001", 2, ' in hint
-    assert out.index(hint) < out.index("[N-00001, PDF 2]")
+    assert "Cite in brackets" in hint and hint.endswith("[N-00001, PDF 2].")  # the form small models skipped (M-094)
+    assert out.index(hint) + len(hint) < out.index("\n[N-00001, PDF 2]")  # before the fragments
     assert hint in toolsets.fit(out + "x" * 20000)
     assert "Before citing" not in server.search_library("zzzz qqqq nothing")
 

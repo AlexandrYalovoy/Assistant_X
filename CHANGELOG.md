@@ -15,6 +15,8 @@ Fixes and hardening after 0.5.
   failure by a stable code with the command that fixes it (one table, also in docs/CLIENTS.md and a new step of
   INSTALL_FOR_AI.md); library_guide lists the problems of this PC first; AGENTS.md and the setup skill of the plugin
   tell agents to run doctor --json first.
+- The hint of search_library ends with the citation of the best page in brackets ([code, PDF N]): small local models
+  cited pages in other forms or named a standard in words.
 
 ## 0.5.1 — 2026-10-28
 
