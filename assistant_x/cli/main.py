@@ -233,6 +233,14 @@ def diagnose(w):
         remarks.append(PB.item("model-missing"))
     for line in workspace.split_note():
         remarks.append(dict(PB.item("older-folder"), message=line))
+    try:
+        from assistant_x.clients import connect
+
+        for row in connect.listing():  # an entry made before 0.5 runs its own server, apart from the shared service
+            if row["connected"] and not row["through_service"]:
+                remarks.append(PB.item("app-in-process", app=row["app"]))
+    except Exception:  # noqa: BLE001 — a settings file that cannot be read: connect --list says more
+        pass
     free = gpu_memory_low()
     if free is not None:
         msg = f"The video card has {free:.0f} MB free: the search models and a local language model slow each other down."

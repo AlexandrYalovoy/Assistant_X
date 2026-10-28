@@ -88,3 +88,21 @@ def test_library_guide_names_the_setup_problems_first(monkeypatch):
 
     monkeypatch.setattr(main, "diagnose", broken)
     assert mcp_server.library_guide()  # the guide anyway
+
+
+def test_an_app_with_its_own_server_is_named_with_the_fix(mini, monkeypatch, capsys):
+    """An entry made before 0.5 starts a server inside the app (assistant_x.server.mcp_server): it holds the models
+    and the video card apart from the shared service (M-082). doctor --json names it with the command that moves it
+    to the bridge; connect --check names it on that app too."""
+    from assistant_x.clients import connect
+
+    monkeypatch.setenv("AX_WORKSPACE", mini["root"])
+    rows = [
+        {"app": "claude_desktop", "connected": True, "through_service": False},
+        {"app": "lmstudio", "connected": True, "through_service": True},
+        {"app": "codex", "connected": False, "through_service": False},
+    ]
+    monkeypatch.setattr(connect, "listing", lambda: rows)
+    _, out = doctor_json(capsys)
+    own = [p for p in out["remarks"] if p["code"] == "app-in-process"]
+    assert len(own) == 1 and own[0]["fix"] == "assistant-x connect claude_desktop, then restart the app"

@@ -59,7 +59,10 @@ CPU_PENDING = (
     "Found by words only: the semantic search on the processor is still loading{why}, repeat the query in 10–20 s if "
     "the answer is not here."
 )
-OTHER_HOLDER = " (another app or window holds the video card)"
+OTHER_HOLDER = (
+    " (another app or window holds the video card; an app connected before 0.5 runs a server of its own: "
+    "assistant-x doctor --json names it and the fix)"
+)
 SAME_WINDOW = " (the first server of this window loads the models)"
 WEAK = 0.5  # the closeness of the best fragment below which the library may not cover a question ([search] weak)
 # without [search] weak the threshold is calibrated on the journal of this PC: the 10th percentile of the closeness of

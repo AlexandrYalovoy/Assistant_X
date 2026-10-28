@@ -2,6 +2,13 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.3 — unreleased
+
+The open items of the observation journal.
+
+- doctor --json names an app whose entry runs a library server of its own (made before 0.5): it holds the video card
+  apart from the shared service; the fix is assistant-x connect APP and a restart of the app.
+
 ## 0.5.2 — 2026-10-28
 
 After the live tests of 0.5.1: Codex, self-repair, video memory.

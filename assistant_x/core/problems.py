@@ -24,6 +24,11 @@ PROBLEMS = {
         "assistant-x connect auto",
     ),
     "app-not-connected": ("The app has no entry of Assistant X.", "assistant-x connect {app}"),
+    "app-in-process": (
+        "The app starts a library server of its own (an entry made before 0.5): it holds the models and the video "
+        "card apart from the shared service of the other apps.",
+        "assistant-x connect {app}, then restart the app",
+    ),
     "app-check-failed": (
         "The entry of the app does not answer the handshake, the tool list or a search.",
         "assistant-x connect --check {app} --json; if it fails again: assistant-x debug-report",
