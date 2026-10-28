@@ -32,6 +32,9 @@ The open items of the observation journal.
 - Card drafts of pictures: a photo whose recognition score is below 30 is proposed to drop even when OCR read its
   shapes as many words (26 of 31 photos of a trial batch had more than 25 such words), and a file name whose UTF-8
   bytes an old archiver showed in another code page is mended for the title.
+- Letters: the small pictures of a letter body (a logo, a signature: an attachment with a Content-ID, under 100 KB)
+  stay in the letter instead of becoming documents of the batch; the summary counts them. A bigger picture (a
+  screenshot pasted into the letter) and the real attachments are taken out as before.
 
 ## 0.5.3 — 2026-10-28
 

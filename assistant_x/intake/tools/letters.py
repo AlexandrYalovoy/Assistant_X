@@ -106,9 +106,20 @@ def _msg_text(cf, items, tag):
     return ""
 
 
-def msg_attachments(data):
+# a picture of the body of a letter (a logo, a signature, an icon): referred to by a Content-ID, small; a bigger one
+# (a screenshot pasted into the letter) is taken out like any attachment
+INLINE_MAX = 100_000  # bytes
+PICTURES = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".emf", ".wmf")
+
+
+def body_picture(name, data, cid):
+    return bool(cid) and data is not None and len(data) < INLINE_MAX and name.lower().endswith(PICTURES)
+
+
+def msg_attachments(data, inline=None):
     """[(file name, bytes)] of the attachments of an Outlook .msg / .oft; [(name, None)] of an attachment that is an
-    embedded message or an OLE object (not taken out)."""
+    embedded message or an OLE object (not taken out). The small pictures of the body (body_picture) are left out,
+    their names added to the list inline when one is given."""
     cf = CompoundFile(data)
     out = []
     for name, i in sorted(cf.children().items()):
@@ -117,12 +128,18 @@ def msg_attachments(data):
         items = cf.children(i)
         fname = _msg_text(cf, items, "3707") or _msg_text(cf, items, "3704") or f"attachment_{len(out) + 1}"
         data_i = items.get("__substg1.0_37010102")
-        out.append((fname, cf.stream(data_i) if data_i is not None else None))
+        blob = cf.stream(data_i) if data_i is not None else None
+        if body_picture(fname, blob, _msg_text(cf, items, "3712")):  # PR_ATTACH_CONTENT_ID
+            if inline is not None:
+                inline.append(fname)
+            continue
+        out.append((fname, blob))
     return out
 
 
-def eml_attachments(data):
-    """[(file name, bytes)] of the attachments of a MIME letter; a forwarded letter comes as an .eml of its own."""
+def eml_attachments(data, inline=None):
+    """[(file name, bytes)] of the attachments of a MIME letter; a forwarded letter comes as an .eml of its own. The
+    small pictures of the body (body_picture) are left out, their names added to the list inline when one is given."""
     msg = email.message_from_bytes(data, policy=policy.default)
     out = []
     for part in msg.iter_attachments():
@@ -139,24 +156,31 @@ def eml_attachments(data):
             )
             continue
         payload = part.get_payload(decode=True)
-        out.append((name or f"attachment_{len(out) + 1}", payload))
+        name = name or f"attachment_{len(out) + 1}"
+        if body_picture(name, payload, part.get("Content-ID")):
+            if inline is not None:
+                inline.append(name)
+            continue
+        out.append((name, payload))
     return out
 
 
-def attachments(path):
-    """[(file name, bytes or None)] of the attachments of a letter by its extension."""
+def attachments(path, inline=None):
+    """[(file name, bytes or None)] of the attachments of a letter by its extension (the pictures of its body left out,
+    named in the list inline)."""
     data = Path(path).read_bytes()
     if str(path).lower().endswith(".eml"):
-        return eml_attachments(data)
-    return msg_attachments(data)
+        return eml_attachments(data, inline)
+    return msg_attachments(data, inline)
 
 
 def extract(path, folder, safe_name=lambda s: s):
     """Write the attachments of a letter into folder (made only when there is one); returns {"files": [paths],
-    "skipped": [names of embedded items not taken out], "error": text or ""}."""
-    rep = {"files": [], "skipped": [], "error": ""}
+    "skipped": [names of embedded items not taken out], "inline": [names of the pictures of the body left out],
+    "error": text or ""}."""
+    rep = {"files": [], "skipped": [], "inline": [], "error": ""}
     try:
-        items = attachments(path)
+        items = attachments(path, rep["inline"])
     except Exception as e:  # noqa: BLE001 — a letter that does not read loses nothing: it still goes aside whole
         rep["error"] = f"the attachments were not read: {e!r}"[:300]
         return rep

@@ -220,6 +220,9 @@ def letters(cfg, st, events, problems, dry=False):
             n = len(rep["files"])
             where = "inbox\\" + win(str(Path(dest).relative_to(cfg.inbox))) if n else ""
             skipped = f"; not taken out (an embedded item): {', '.join(rep['skipped'])[:200]}" if rep["skipped"] else ""
+            if rep.get("inline"):  # a logo, a signature: no document
+                skipped += f"; pictures of the letter body left in it: {len(rep['inline'])}"
+                st["letter_pictures"] += len(rep["inline"])
             place = move_aside(cfg, full, rel, "_to_delete")
             events.append(
                 [

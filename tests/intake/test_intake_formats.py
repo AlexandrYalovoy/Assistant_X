@@ -330,7 +330,10 @@ def cfb(entries):
                 size=len(sizes[n]),
             )
         )
-    sectors[1] = b"".join(dir_).ljust(sec, b"\x00")[:sec]
+    raw_dir = b"".join(dir_)
+    sectors[1] = raw_dir[:sec].ljust(sec, b"\x00")
+    if len(raw_dir) > sec:  # more than 4 entries: the directory goes on in a chain of sectors
+        fat[1] = put(raw_dir[sec:])
     sectors[2] = struct.pack(f"<{sec // 4}I", *(minifat + [free] * (sec // 4 - len(minifat))))
     sectors[0] = struct.pack(f"<{sec // 4}I", *(fat + [free] * (sec // 4 - len(fat))))
     header = (
@@ -352,6 +355,34 @@ def test_outlook_msg_attachment_is_taken_out(tmp_path):
     assert letters.msg_attachments(msg.read_bytes()) == [("Паспорт.pdf", data)]
     rep = letters.extract(msg, tmp_path / "out")
     assert [p.split("\\")[-1].split("/")[-1] for p in rep["files"]] == ["Паспорт.pdf"] and not rep["error"]
+
+
+def test_the_small_pictures_of_a_letter_body_are_no_documents(tmp_path):
+    """Trial batches b004-b006: image001.png of the signatures and logos became documents of the batch. A small picture
+    with a Content-ID stays in the letter; a big one (a screenshot) and a picture without one are taken out."""
+    msg = EmailMessage()
+    msg["Subject"] = "Схема"
+    msg.set_content("См. схему.")
+    msg.add_attachment(b"\x89PNG" + b"0" * 2000, maintype="image", subtype="png", filename="image001.png", cid="<logo@x>")
+    msg.add_attachment(b"\x89PNG" + b"0" * 200_000, maintype="image", subtype="png", filename="image002.png", cid="<s@x>")
+    msg.add_attachment(b"\x89PNG" + b"0" * 2000, maintype="image", subtype="png", filename="photo.png")
+    path = tmp_path / "a.eml"
+    path.write_bytes(bytes(msg))
+    rep = letters.extract(path, tmp_path / "out")
+    assert sorted(os.path.basename(p) for p in rep["files"]) == ["image002.png", "photo.png"]
+    assert rep["inline"] == ["image001.png"]
+    small = tmp_path / "logo.msg"
+    small.write_bytes(
+        cfb(
+            [
+                ("__substg1.0_37010102", b"\x89PNG" + b"0" * 5000),
+                ("__substg1.0_3707001F", "image001.png".encode("utf-16-le")),
+                ("__substg1.0_3712001F", "image001.png@01DA".encode("utf-16-le")),
+            ]
+        )
+    )
+    inline = []
+    assert letters.msg_attachments(small.read_bytes(), inline) == [] and inline == ["image001.png"]
 
 
 def test_letter_attachments_become_documents_of_the_batch(project):
