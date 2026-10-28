@@ -14,6 +14,8 @@ The open items of the observation journal.
   processor) is no longer reported as failed with exit code 3.
 - The tests can run in a shuffled order (AX_TEST_SHUFFLE=SEED); the first shuffled run found a test that left the
   models of a medium in the folder of the PC of the session, fixed.
+- prepare-media --check reports a second build of a pinned package beside the pinned one (two builds of torch were in
+  order).
 
 ## 0.5.2 — 2026-10-28
 

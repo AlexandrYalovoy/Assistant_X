@@ -483,8 +483,11 @@ def check(out):
             for w in os.listdir(wheels)
             if w.endswith(".whl") and norm(w.split("-")[0]) == norm(name) and w.split("-")[1].split("+")[0] == ver
         }
-        if not have & {h.split(":", 1)[1] for h in x.split()[1:] if h.startswith("--hash=sha256:")}:
+        pinned = {h.split(":", 1)[1] for h in x.split()[1:] if h.startswith("--hash=sha256:")}
+        if not have & pinned:
             problems.append(f"packages/wheels: no wheel of {name}=={ver} with the sha256 of the lock")
+        elif have - pinned:  # a second build beside the pinned one (audit 5: two builds of torch, "in order")
+            problems.append(f"packages/wheels: {len(have - pinned)} more build(s) of {name}=={ver} not in the lock")
     for sub, pattern in ((ML.WHEELS_GPU, ML.TORCH_GPU_GLOB), (ML.WHEELS_DML, ML.DML_GLOB)):
         folder = os.path.join(packs, sub)
         wheel = os.path.isdir(folder) and any(fnmatch.fnmatch(w, pattern) for w in os.listdir(folder))

@@ -532,6 +532,12 @@ def test_prepare_media_check_tells_a_whole_medium_from_a_stale_one(tmp_path, mon
     out = _a_whole_medium(tmp_path, monkeypatch)
     assert M.check(str(out)) == []
     assert M.main(["--check", str(out)]) == 0
+    # a second build of a pinned package beside the pinned one (audit 5: two builds of torch were "in order")
+    pins, torch = M.lock_file()
+    second = out / "packages" / "wheels" / f"torch-{torch}+cpu-cp311-cp311-win_amd64.whl"
+    second.write_bytes(b"another build")
+    assert any(f"1 more build(s) of torch=={torch} not in the lock" in p for p in M.check(str(out)))
+    second.unlink()
     (out / "app" / "README.md").write_text("an older README\n", encoding="utf-8")
     (out / "app" / "assistant_x" / "gone.py").write_text("", encoding="utf-8")
     wheel = next((out / "packages" / "wheels").glob("numpy-*.whl"))
