@@ -85,6 +85,22 @@ def test_not_found(pages):
     assert pages.verify_quote("B-00002", 10, "  ")["diff"] == "an empty quote"
 
 
+def test_an_elided_quote(pages):
+    """A quote cut with "…" or "..." (the live test of 0.4: "Перепад давления … равен …"): its parts are found in
+    order on one page; parts out of order, or a part that is not there, are not."""
+    r = pages.verify_quote("L-00009", 6, "наработка на отказ … вибрация в норме ... утечек нет")
+    assert (r["status"], r["page"], r["exact"]) == ("found", 6, True) and "elided" in r["diff"]
+    r = pages.verify_quote("L-00009", 5, "наработка на отказ… утечек нет")
+    assert (r["status"], r["page"], r["exact"]) == ("found_nearby", 6, True)
+    assert pages.verify_quote("L-00009", 6, "утечек нет … наработка на отказ")["exact"] is False  # not in order
+    assert pages.verify_quote("L-00009", 6, "наработка на отказ … 500 часов")["exact"] is False
+
+
+def test_a_quote_too_long_to_check(pages):
+    r = pages.verify_quote("L-00009", 6, "наработка на отказ " * 200)
+    assert r["status"] == "not_found" and "longer than" in r["diff"] and not r["closest"]
+
+
 def test_the_tool_on_the_mini_base(lib, monkeypatch):
     monkeypatch.setattr(mcp_server, "_lib", lib)
     assert (
@@ -95,6 +111,8 @@ def test_the_tool_on_the_mini_base(lib, monkeypatch):
     assert (
         near.startswith("Not on PDF 1, but on the neighbouring PDF 2 of N-00001, word for word.") and "Cite PDF 2." in near
     )
+    cut = mcp_server.verify_quote("N-00001", 2, "с учетом … продукции")
+    assert cut.startswith("Found on PDF 2 of N-00001: an elided quote") and "word for word" in cut
     out = mcp_server.verify_quote("N-00001", 2, "сепаратор рассчитывают по времени пребывания жидкости")
     assert out.startswith("Not found on PDF 1–3 of N-00001.") and '"(paraphrase)"' in out
 

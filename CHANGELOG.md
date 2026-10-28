@@ -13,6 +13,9 @@ Fixes and hardening after 0.5.
 - base_export from the chat: a package file outside the workspace, or one with the personal documents, is written only
   with the token of its plan and the user's yes (a text in a document can no longer make the assistant copy the library
   into a synced folder); into the workspace without the personal documents it starts at once as before.
+- verify_quote takes a quote cut with an ellipsis (… or ...): its parts are found in order on one page, each word for
+  word, and the answer says to keep the cuts marked; a quote over 2000 characters is refused (to be checked in parts)
+  instead of holding the service.
 
 ## 0.5 — 2026-10-28
 

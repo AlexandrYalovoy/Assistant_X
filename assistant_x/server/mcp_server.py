@@ -549,7 +549,9 @@ def verify_quote(code: str, page: int, text: str) -> str:
     debuglog.note(f"{r['status']} on PDF {r['page']}, similarity {r['ratio']:.2f}")  # for query_log.py
     where = f"PDF {r['page']}" + (f" (p. {r['label']})" if r["label"] else "")
     seen = f"\nThe page has: «{r['closest']}»" if r["closest"] else ""
-    if r["status"] == "found" and r["exact"]:
+    if r["status"] == "found" and r["exact"] and r["diff"]:
+        out = f"Found on {where} of {r['code']}: {r['diff']}, each part word for word; keep the cuts marked (…)."
+    elif r["status"] == "found" and r["exact"]:
         out = f"Found word for word on {where} of {r['code']}."
     elif r["status"] == "found":
         out = f"Found with small differences on {where} of {r['code']} (similarity {r['ratio']:.2f}): {r['diff']}.{seen}"

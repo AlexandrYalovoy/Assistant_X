@@ -61,6 +61,8 @@ MIN_DESIG_KEY = 5  # shorter designations ("API") are no exact match
 QUOTED_RX = re.compile(r'["«“]([^"«»“”]{2,300})["»”]')  # a phrase in quotes in a question
 DIGIT_RX, LETTER_RX, INNER_RX = re.compile(r"\d"), re.compile(r"[^\W\d_]"), re.compile(r"[-./]")
 QUOTE_RATIO = 0.9  # verify_quote: a place this similar to the quote (difflib) is found with small differences
+MAX_QUOTE = 2000  # verify_quote: characters of a quote it compares (a longer one would hold a thread of the service)
+ELLIPSIS = re.compile(r"…|\.{3,}")  # where a quote was cut: its parts are found in order
 CLOSEST_CHARS = 400  # verify_quote: the longest closest place shown
 PUNCT = ".,;:!?()[]\"'"  # the punctuation around a word word_diff does not count
 
@@ -712,12 +714,29 @@ class Library:
                 diff=diff,
             )
 
+        if len(text) > MAX_QUOTE:
+            return result("not_found", page, False, diff=f"a quote longer than {MAX_QUOTE} characters: check it in parts")
         want = skeleton(text)
         if not texts or not want:
             return result("not_found", page, False, diff="no text of this page in the library" if want else "an empty quote")
         for p, t in texts:
             if want in skeleton(t):
                 return result("found" if p == page else "found_nearby", p, True, 1.0, closest_window(t, text)[1])
+        parts = [s for s in (skeleton(x) for x in ELLIPSIS.split(text)) if s]
+        if len(parts) > 1:
+            for p, t in texts:
+                body, at = skeleton(t), 0
+                for s in parts:
+                    at = body.find(s, at)
+                    if at < 0:
+                        break
+                    at += len(s)
+                else:
+                    first = closest_window(t, ELLIPSIS.split(text)[0])[1]
+                    return result(
+                        "found" if p == page else "found_nearby", p, True, 1.0, first, "an elided quote: its parts in order"
+                    )
+            text = " ".join(x.strip() for x in ELLIPSIS.split(text))  # compared without the cuts below
         ratio, closest, diff, at = max(
             (closest_window(t, text) + (p,) for p, t in texts), key=lambda x: (x[0], x[3] == page)
         )
