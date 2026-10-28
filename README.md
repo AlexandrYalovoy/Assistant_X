@@ -14,6 +14,12 @@ field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer.
 
 ## Get the program
 
+**The shortest way: ask your agent.** Tell Codex, Claude Code or DeepSeek Harness: "Install Assistant X for me:
+https://github.com/AlexandrYalovoy/Assistant_X" — the agent follows [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md) (the
+latest release, the connection of your apps, a check), and you confirm its commands. Codex and the ChatGPT desktop app
+also take the plugin of this repository: `codex plugin marketplace add AlexandrYalovoy/Assistant_X`; Claude Code:
+`/plugin marketplace add AlexandrYalovoy/Assistant_X`.
+
 - **The repository:** https://github.com/AlexandrYalovoy/Assistant_X (issues and pull requests there); a mirror on
   GitFlic: https://gitflic.ru/project/alexandryalovoy/assistant_x. Clone it with
   `git clone https://github.com/AlexandrYalovoy/Assistant_X.git`, or download the ZIP of the code from the page.
@@ -33,6 +39,7 @@ field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer.
 | [`scripts/`](scripts) | thin .bat files: debug report, library report, query log, intake installation, media |
 | [`assistant_x/templates/skill/`](assistant_x/templates/skill) | the skill `assistant-x` (switched on by "AX:") from one core: SKILL.md for Claude and for the agents (Codex, DeepSeek Harness), the short rules of the tool `library_guide`; `assistant-x skill` writes it for the profile of the workspace |
 | [`assistant_x/clients/`](assistant_x/clients) | the apps `assistant-x connect` knows: where each keeps its MCP servers and skills |
+| [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md), [`AGENTS.md`](AGENTS.md), [`plugins/`](plugins) | the instructions for an agent that installs Assistant X, the notes for agents, the plugin of Codex and Claude Code (with [`.agents/plugins`](.agents/plugins) and [`.claude-plugin`](.claude-plugin)): made by `assistant-x gen-docs` from [`assistant_x/templates/docs/`](assistant_x/templates/docs) |
 | [`assistant_x/schemas/`](assistant_x/schemas) | the JSON Schema of the document cards (`card-1.json`) |
 | [`tests/`](tests) | the tests ([`tests/base`](tests/base), [`tests/search`](tests/search), [`tests/intake`](tests/intake), [`tests/corpus`](tests/corpus), and the top of `tests`: see Tests) |
 | [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the apps ([`CLIENTS.md`](docs/CLIENTS.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
@@ -117,6 +124,8 @@ chooses another workspace):
 | `search "question"` | a query from the command line |
 | `base export`, `base inspect`, `base install`, `base update`, `base remove` | base packages: a library passed between people ([docs/PACKAGES.md](docs/PACKAGES.md)) |
 | `connect APP\|auto`, `connect --list`, `connect --check`, `disconnect APP` | connect the apps of this PC ([docs/CLIENTS.md](docs/CLIENTS.md)) |
+| `update` | connect every connected app again (after a new version: its entry and its skill) |
+| `install --yes --json` | the installation without questions, a JSON summary at the end (for an agent) |
 | `mcp [--tools reader] [--compact]`, `service` | the stdio bridge every app starts; the library service it talks to (both started by themselves) |
 | `serve [--http]` | the MCP server in the process of the app (the fallback), or over HTTP for other clients |
 | `setup-intake`, `download-models`, `skill` | the programs of the intake; the models; the skill |
@@ -190,6 +199,14 @@ on 127.0.0.1: the models are loaded once for all the apps. By hand (any MCP clie
   }
 }
 ```
+
+**Add to LM Studio** without the command line: `assistant-x connect lmstudio --link` prints a link
+(`lmstudio://add_mcp?...`, the entry of this PC); opened, LM Studio asks to add the server. The installer's summary
+gives it too.
+
+After a new version, `assistant-x update` writes the entries again; the skills of the apps are refreshed by the library
+service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
+outdated.
 
 `--tools reader` gives the 8 reading tools (search, pages, contents, page image, quote check, card, list, the guide);
 without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local

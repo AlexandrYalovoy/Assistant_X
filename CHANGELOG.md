@@ -2,6 +2,24 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5 — unreleased
+
+Connected by one sentence, and up to date by itself.
+
+- "Install Assistant X for me" to an agent (Codex, Claude Code, DeepSeek Harness): `INSTALL_FOR_AI.md` says what to
+  do — the latest release, `assistant-x install --yes --json` (no question, one JSON summary with the downloads, the
+  connected apps, the problems and the next steps), the models after the user's yes, `connect auto`, `connect --check`.
+- The plugin of Codex and the ChatGPT desktop app and of Claude Code in this repository, with an onboarding skill:
+  `codex plugin marketplace add AlexandrYalovoy/Assistant_X`, `/plugin marketplace add AlexandrYalovoy/Assistant_X`.
+- `assistant-x gen-docs` makes `INSTALL_FOR_AI.md`, the agents section of `AGENTS.md`, `docs/CLIENTS.md` and the plugin
+  from the registry of the apps, the tools, the commands and the version; a test fails when they are out of date and
+  the pre-commit hook makes them again.
+- Up to date by itself: the connections are recorded (`connections.json` of the machine folder), `assistant-x update`
+  writes them again, the library service refreshes the outdated skills of the apps at its start (one edited by hand
+  stays), and Claude Desktop is told once when its uploaded skill is of an older version.
+- "Add to LM Studio": `assistant-x connect lmstudio --link` prints the link that adds the server in LM Studio; the
+  installer's summary gives it too.
+
 ## 0.4 — 2026-10-28
 
 The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio.
