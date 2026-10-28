@@ -327,7 +327,7 @@ def test_the_title_block_of_a_big_drawing_sheet_is_read_at_300_dpi(tmp_path, mon
     monkeypatch.setattr(ocr_page, "recognise", recognise)
     ocr_page.DOCS.clear()
     ocr_page.reset()
-    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)  # a page of a PDF prep did not look at: a scan
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", set())  # as in the intake: prep found no scan (curves, no image)
     sheet = pymupdf.open(pdf)
     ocr_page.exec_ocr(sheet[0], dpi=300, language="rus")  # as pymupdf4llm calls it for a page without text
     st = ocr_page.STATS[0]
@@ -360,7 +360,7 @@ def test_a_sheet_without_a_title_block_keeps_its_reading(tmp_path, monkeypatch):
 
     monkeypatch.setattr(ocr_page, "recognise", recognise)
     ocr_page.reset()
-    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", set())  # as in the intake: prep found no scan (curves, no image)
     sheet = pymupdf.open(pdf)
     ocr_page.exec_ocr(sheet[0], dpi=300, language="rus")
     assert seen.count("stamp") == 2  # both corners read
@@ -388,7 +388,7 @@ def test_the_sheets_of_a_set_of_drawings_are_drawings(tmp_path, monkeypatch):
     monkeypatch.setattr(ocr_page, "recognise", recognise)
     monkeypatch.setattr(ocr_page, "orientation", lambda *a, **k: (0, 0.0))
     ocr_page.reset()
-    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", set())  # as in the intake: prep found no scan (curves, no image)
     ocr_page.exec_ocr(doc[1], dpi=300, language="rus")
     assert ocr_page.STATS[1]["drawing"] and ("v0", 11) in seen and ("stamp", 11) in seen
     assert ocr_score.is_sheet(3370 * 2384) and not ocr_score.is_sheet(842 * 1191)  # A3 stays a page

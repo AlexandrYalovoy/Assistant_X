@@ -494,7 +494,7 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         area = page.rect.width * page.rect.height
         drawing = ocr_score.is_drawing(page.parent.page_count, area) or ocr_score.is_sheet(area)
         picture = SCAN_PAGES is not None and page.number not in SCAN_PAGES  # a text page with a picture
-        if len(layer) >= MIN_WORDS or picture:
+        if len(layer) >= MIN_WORDS or (picture and not drawing):  # a sheet of curves without a layer: a drawing
             psm = 11 if drawing or picture else None
             beside_layer(page, png, dpi, language, tmp, set(layer), psm, t0, MIN_WORDS if picture else 1)
             return
