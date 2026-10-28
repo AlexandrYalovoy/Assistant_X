@@ -20,6 +20,8 @@ The open items of the observation journal.
   assistant_x.local.toml); it never turns it on itself.
 - The intake says at its start what limits the number of its workers: the processor cores, the free memory, the workers
   setting or the number of documents.
+- Each release carries the source archive of its commit beside the wheel, both in SHA256SUMS.txt, and INSTALL_FOR_AI.md
+  has an agent check the archive before installing it.
 
 ## 0.5.2 — 2026-10-28
 

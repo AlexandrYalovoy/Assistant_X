@@ -1,6 +1,7 @@
 # A release from a tag vX.Y[.Z] (CONTRIBUTING.md, "Releases"): the wheel is built from a clean copy of the tagged
-# commit, checked to hold exactly the files of the package, and attached with its SHA-256 to a GitHub release whose
-# notes are the section of the version in CHANGELOG.md. The release is made by the GitHub CLI of the runner (no
+# commit, checked to hold exactly the files of the package, and attached with the source archive of that commit and
+# their SHA-256 (SHA256SUMS.txt: INSTALL_FOR_AI.md has an agent check the archive) to a GitHub release whose notes are
+# the section of the version in CHANGELOG.md. The release is made by the GitHub CLI of the runner (no
 # third-party action); only this job may write to the repository. The actions are pinned by the commit of their
 # release tag (the comment names the tag), as in tests.yml.
 name: release
@@ -36,6 +37,8 @@ jobs:
           git archive "$GITHUB_SHA" | tar -x -C "$RUNNER_TEMP/src"
           python -m pip install --upgrade pip
           python -m pip wheel --no-deps -w dist "$RUNNER_TEMP/src"
+      - name: The source archive of the tagged commit (the agents install from it and check its sha256)
+        run: git archive --format=zip --prefix="Assistant_X-$VERSION/" -o "dist/assistant_x-$VERSION-src.zip" "$GITHUB_SHA"
       - name: The wheel holds exactly the files of the package
         run: |
           python - <<'EOF'
@@ -68,7 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd dist
-          sha256sum *.whl > SHA256SUMS.txt
+          sha256sum *.whl *-src.zip > SHA256SUMS.txt
           cat SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "Assistant X $VERSION" --notes-file "$RUNNER_TEMP/notes.md" ./*.whl SHA256SUMS.txt
+            --title "Assistant X $VERSION" --notes-file "$RUNNER_TEMP/notes.md" ./*.whl ./*-src.zip SHA256SUMS.txt

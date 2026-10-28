@@ -27,11 +27,14 @@ agreed to it; say in one line what each one does. These instructions are of vers
 
 ## 3. The latest release
 
-Read the tag of the latest release (`vX.Y`) from https://github.com/AlexandrYalovoy/Assistant_X/releases/latest (or the GitHub API
-`https://api.github.com/repos/AlexandrYalovoy/Assistant_X/releases/latest`, field `tag_name`). Download the source
-`https://github.com/AlexandrYalovoy/Assistant_X/archive/refs/tags/<tag>.zip` and extract it to `%USERPROFILE%\.assistant_x\src\<tag>` (Linux:
-`~/.cache/AssistantX/src/<tag>`): the program is installed from that folder and keeps using it, so do not put it into
-Downloads or a temporary folder.
+Read the tag of the latest release (`vX.Y.Z`) from https://github.com/AlexandrYalovoy/Assistant_X/releases/latest (or the GitHub API
+`https://api.github.com/repos/AlexandrYalovoy/Assistant_X/releases/latest`, field `tag_name`). From the assets of that
+release download `assistant_x-<version>-src.zip` and `SHA256SUMS.txt` (`https://github.com/AlexandrYalovoy/Assistant_X/releases/download/<tag>/<file>`;
+`<version>` is the tag without `v`) and check the archive before anything else: its SHA-256 (`Get-FileHash -Algorithm
+SHA256 FILE` on Windows, `sha256sum FILE` on Linux) must be the one `SHA256SUMS.txt` names; when it differs, stop and
+tell the user. Extract it to `%USERPROFILE%\.assistant_x\src\<tag>` (Linux: `~/.cache/AssistantX/src/<tag>`): the
+program is installed from that folder and keeps using it, so do not put it into Downloads or a temporary folder.
+(A release before 0.5.3 has no source archive among its assets: use `https://github.com/AlexandrYalovoy/Assistant_X/archive/refs/tags/<tag>.zip`.)
 
 ## 4. Install
 
