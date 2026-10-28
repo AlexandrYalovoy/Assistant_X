@@ -169,29 +169,31 @@ def ocr_font():
     return _font
 
 
-def insert_words(page, words, width, height):
+def insert_words(page, words, width, height, clip=None):
     """Put the recognised words on the page as invisible text, each in its own box: the gaps between words stay
     real gaps, so the table analysis of pymupdf4llm keeps the spaces (the text layer of the Tesseract PDF loses
-    them in table cells: two words run together)."""
+    them in table cells: two words run together). clip: the part of the page the image shows (the title block of a
+    drawing), else the whole page."""
     import pymupdf
 
     if not words:
         return
+    box = clip or page.rect
     name, file, font = ocr_font()
     if file:
         page.insert_font(fontname=name, fontfile=file)
     else:
         page.insert_font(fontname=name, fontbuffer=font.buffer)
-    sx, sy = page.rect.width / width, page.rect.height / height
+    sx, sy = box.width / width, box.height / height
     by_line = {}
     for w in words:
         by_line.setdefault(w[5], []).append(w)
     for line in by_line.values():
-        top = min(w[1] for w in line) * sy
-        bottom = max(w[1] + w[3] for w in line) * sy
+        top = box.y0 + min(w[1] for w in line) * sy
+        bottom = box.y0 + max(w[1] + w[3] for w in line) * sy
         size = max(bottom - top, 1.0)
         for left, _, w_px, _, word, _ in line:
-            pos = pymupdf.Point(left * sx, bottom - 0.2 * size)
+            pos = pymupdf.Point(box.x0 + left * sx, bottom - 0.2 * size)
             length = font.text_length(word, fontsize=size)
             mat = pymupdf.Matrix(w_px * sx / length, 1) if length > 0 else pymupdf.Matrix(1, 1)
             page.insert_text(pos, word, fontsize=size, fontname=name, render_mode=3, morph=(pos, mat))
@@ -433,6 +435,31 @@ def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None, min_ne
     return STATS[page.number]
 
 
+# a drawing sheet too big for the pixel limit of the page image is read at a low dpi (80-120 on A1/A0): labels come
+# out as noise. Its title block (the bottom right corner: name, designation, sheet; GOST 2.104 185 x 55 mm) is read
+# again at STAMP_DPI and kept instead when the reading of the whole sheet is weak or scores lower (batches b009-b011).
+STAMP_DPI, STAMP_BELOW = 300, 200  # dpi of the title block; the dpi of the sheet below which it is read
+STAMP_W, STAMP_H = 200 / 25.4 * 72, 80 / 25.4 * 72  # points: 200 x 80 mm with the frame
+
+
+def stamp_rect(rect):
+    """The bottom right corner of a sheet where its title block is."""
+    import pymupdf
+
+    return pymupdf.Rect(max(rect.x0, rect.x1 - STAMP_W), max(rect.y0, rect.y1 - STAMP_H), rect.x1, rect.y1)
+
+
+def stamp(page, displaylist, language, tmp):
+    """The reading of the title block of a drawing sheet at STAMP_DPI ((reading, clip)); its image is gray."""
+    import pymupdf
+
+    clip = stamp_rect(page.rect)
+    pix = displaylist.get_pixmap(matrix=pymupdf.Matrix(STAMP_DPI / 72, STAMP_DPI / 72), clip=clip, colorspace=pymupdf.csGRAY)
+    png = os.path.join(tmp, "s.png")
+    pix.save(png)
+    return recognise(png, STAMP_DPI, language, tmp, "stamp", psm=11), clip
+
+
 def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
     import pymupdf
 
@@ -461,14 +488,20 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         if drawing:
             # a drawing gets one sparse-text pass; turning and retrying did not raise its score (177 of 288 in redo)
             best = recognise(png, dpi, language, tmp, "v0", psm=11)
-            PLAIN[page.number] = (best["plain"].strip(), not spans)
-            insert_words(page, best["words"], *best["size"])
+            tried, variant, clip = {"drawing psm 11": best["m"]["score"]}, "drawing psm 11", None
+            if dpi < STAMP_BELOW:
+                block, box = stamp(page, displaylist, language, tmp)
+                tried[f"title block {STAMP_DPI} dpi"] = block["m"]["score"]
+                if block["m"]["words"] and (weak(best["m"]) or block["m"]["score"] > best["m"]["score"]):
+                    best, variant, clip = block, f"title block {STAMP_DPI} dpi (the sheet read at {dpi} dpi)", box
+            PLAIN[page.number] = (best["plain"].strip(), not spans and clip is None)
+            insert_words(page, best["words"], *best["size"], clip=clip)
             STATS[page.number] = {
                 **best["m"],
-                "variant": "drawing psm 11",
+                "variant": variant,
                 "rotate": 0,
                 "drawing": True,
-                "tried": {"drawing psm 11": best["m"]["score"]},
+                "tried": tried,
                 "seconds": round(time.time() - t0, 1),
             }
             return

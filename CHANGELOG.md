@@ -38,6 +38,10 @@ The open items of the observation journal.
 - An archive split in volumes (X.7z.001, X.zip.001, X.001 with .002, .003 … beside it) is unpacked from its first
   volume by 7-Zip; the next volumes go aside with it. Before, the first volume was left as a file the intake does not
   process.
+- A drawing sheet too big for the page image (read at 80-120 dpi on A1/A0, its labels noise) has its title block - the
+  bottom right corner with the name, the designation and the sheet - read again at 300 dpi; that reading is kept when
+  the reading of the whole sheet is weak or scores lower. On one-page project drawings of a trial batch: score 68
+  instead of 39, the designation read, 22 s instead of about 70 s.
 
 ## 0.5.3 — 2026-10-28
 

@@ -290,3 +290,53 @@ def test_a_phrase_repeated_many_times_is_no_doubled_text():
     clean = " ".join(documents.sentences(741, 4))
     assert ocr_score.repeated(native) >= ocr_score.DOUBLED and not ocr_score.is_doubled(native)
     assert ocr_score.is_doubled(f"{clean} {clean}")
+
+
+def test_the_title_block_of_a_big_drawing_sheet_is_read_at_300_dpi(tmp_path, monkeypatch):
+    """Trial batches b009-b011: an A0 sheet whose text is drawn as curves is read at about 80 dpi, its labels come out
+    as noise (score 38). The title block in the bottom right corner is read again at 300 dpi and kept instead."""
+    pdf = tmp_path / "sheet.pdf"
+    doc = pymupdf.open()
+    page = doc.new_page(width=3370, height=2384)
+    shape = page.new_shape()
+    for i in range(0, 3300, 7):  # strokes all over the sheet, as glyphs drawn as curves
+        shape.draw_line((10 + i, 50 + (i * 37) % 2300), (14 + i, 60 + (i * 37) % 2300))
+    shape.finish(color=(0, 0, 0), width=1)
+    shape.commit()
+    doc.save(pdf)
+    monkeypatch.setattr(ocr_page, "tesseract_exe", lambda: "tesseract")
+    monkeypatch.setenv("TESSDATA_PREFIX", str(tmp_path))
+    seen = []
+
+    def recognise(png, dpi, language, tmp, tag, psm=None):
+        seen.append((tag, dpi))
+        text = (
+            "Изм Лист Разраб Иванов ГПН-ТПР-ИП.02.05.03-ГЧ-001 Схема генерального плана"
+            if tag == "stamp"
+            else "aeq xzqv qqvh zzkr wqx jjq vvqz"
+        )
+        words = [(10 + 60 * i, 10, 50, 20, w, (1, 1, 1)) for i, w in enumerate(text.split())]
+        return {
+            "words": words,
+            "size": (2362, 945),
+            "text": text,
+            "plain": text,
+            "m": ocr_page.measure(text, [40.0 if tag == "stamp" else 20.0] * len(words)),
+        }
+
+    monkeypatch.setattr(ocr_page, "recognise", recognise)
+    ocr_page.DOCS.clear()
+    ocr_page.reset()
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)  # a page of a PDF prep did not look at: a scan
+    sheet = pymupdf.open(pdf)
+    ocr_page.exec_ocr(sheet[0], dpi=300, language="rus")  # as pymupdf4llm calls it for a page without text
+    st = ocr_page.STATS[0]
+    assert ("stamp", ocr_page.STAMP_DPI) in seen and seen[0][1] < ocr_page.STAMP_BELOW
+    assert st["variant"].startswith("title block 300 dpi") and st["drawing"]
+    assert "генерального" in ocr_page.PLAIN[0][0]
+    words = sheet[0].get_text("words")  # the words of the block lie in the bottom right corner of the sheet
+    assert (
+        words
+        and min(w[0] for w in words) > 3370 - ocr_page.STAMP_W - 1
+        and min(w[1] for w in words) > 2384 - ocr_page.STAMP_H - 1
+    )
