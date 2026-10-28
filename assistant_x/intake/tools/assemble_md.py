@@ -5,8 +5,9 @@ where the conversion lost text or came out garbled. A cache file that does not r
 it is removed with a warning, so the next run converts those pages again.
 The text is written in the text format "AX text 1" (core/formats.py, docs/INTAKE.md): UTF-8, LF, NFC, no invisible
 characters, a line of a body that reads as a page marker escaped. The two characters the OCR font shares a glyph with
-are fixed on every page (ocr_page.FONT_FIX); on an OCR page a word broken at the end of a line is joined when the
-vocabulary of the library knows the whole word (common.dehyphenate).
+are fixed on every page (ocr_page.FONT_FIX); on a converted page (OCR or Markdown) a word broken at the end of a line,
+or left on one line with its hyphen and a space by the converter, is joined when the vocabulary of the library knows
+the whole word (common.dehyphenate).
 Beside it <code>.pages.json, every page with
   source     layer (the page was not converted: the plain text layer), markdown, ocr (converted, recognised by OCR),
              fallback (the conversion was refused, the text layer taken instead)
@@ -227,7 +228,7 @@ def main(argv):
                 continue
             new.update(pages)
         stats, labs = ocr_stats(cache, code), labels(jobs.get(code) or {})
-        known = ocr_score.load_vocab()[0] if stats else None
+        known = ocr_score.load_vocab()[0]
         used, fallback, out, invisible, info = 0, [], [], 0, {}
         for n in sorted(set(old) | set(new)):
             o, m = old.get(n, ""), new.get(n)
@@ -249,7 +250,7 @@ def main(argv):
             body, k = INVISIBLE.subn("", body.translate(ocr_page.FONT_FIX))
             invisible += k
             body = unicodedata.normalize("NFC", body)
-            if source == "ocr":
+            if source in ("ocr", "markdown"):  # a converted page: its lines were joined by the converter
                 body = dehyphenate(body, known)
             out.append(f"=== page {n} ===\n\n{escape_marker(body)}\n")
             info[n] = {"source": source, "ocr_score": None, "label": labs.get(n), "flags": page_flags(body)}

@@ -39,6 +39,12 @@ def test_skeleton():
     assert skeleton("сепар\u0061тор") == skeleton("сепаратор")  # a Latin a in a Cyrillic word
     assert skeleton("**Таблица** | ЭЦН | 120 |") == skeleton("Таблица ЭЦН 120")
     assert skeleton("мягкий\u00adперенос") == skeleton("мягкийперенос") and skeleton("ﬁ") == "fi"  # NFKC
+    # night of 2026-10-28: two quotes of the library were "not word for word" for these only
+    assert skeleton("должны быть забрако- ваны или") == skeleton("должны быть забракованы или")
+    assert skeleton("_прямолинейность_ измеряют на длине гладкой _части_") == skeleton(
+        "прямолинейность измеряют на длине гладкой части"
+    )
+    assert skeleton("snake_case") == "snake_case" and skeleton("нефте- и газо-") != skeleton("нефтеи газо-")
 
 
 @pytest.mark.parametrize(

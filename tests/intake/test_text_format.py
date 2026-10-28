@@ -8,7 +8,7 @@ import json, unicodedata
 import pymupdf
 import pytest
 
-from assistant_x.core.common import dehyphenate, split_pages
+from assistant_x.core.common import dehyphenate, join_hyphens, split_pages
 from assistant_x.core.formats import (
     PAGES_SUFFIX,
     escape_marker,
@@ -40,6 +40,23 @@ def test_dehyphenate_with_and_without_vocabulary():
     assert dehyphenate(text, set()) == text and dehyphenate(text, None) == text  # a new library: no vocabulary
     assert dehyphenate("Ёлка-\nми", {"елками"}) == "Ёлками"  # the vocabulary is folded (yo as ye), the word stays as it is
     assert dehyphenate("10-\n20", {"1020"}) == "10-\n20"  # numbers are no words
+
+
+def test_dehyphenate_a_word_left_on_one_line():
+    """A converter joins the lines of a paragraph and leaves «забрако- ваны»: joined as the line end break is, when the
+    vocabulary knows the word; a suspended compound («нефте- и газо-») and an unknown join stay."""
+    known = {"забракованы", "сепаратор"}
+    assert dehyphenate("должны быть забрако- ваны или", known) == "должны быть забракованы или"
+    assert dehyphenate("нефте- и газопроводы", known | {"нефтеи"}) == "нефте- и газопроводы"
+    assert dehyphenate("Урало- поволжский", known) == "Урало- поволжский"  # the vocabulary does not know it
+    assert dehyphenate("сепара- тор и сепара-\nтор", known) == "сепаратор и сепаратор"
+
+
+def test_join_hyphens_without_vocabulary():
+    assert join_hyphens("забрако- ваны, ЗАБРАКО- ВАНЫ") == "забракованы, ЗАБРАКОВАНЫ"
+    assert join_hyphens("нефте- и газо-, pre- and post-processing") == "нефте- и газо-, pre- and post-processing"
+    assert join_hyphens("ГОСТ 1.0- 2012, слово - слово, А- Б") == "ГОСТ 1.0- 2012, слово - слово, А- Б"
+    assert join_hyphens("Нефте- Газовый") == "Нефте- Газовый"  # a capital after a lower-case part: two words
 
 
 def labelled_pdf(path, pages, first=None):

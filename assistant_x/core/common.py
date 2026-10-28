@@ -223,10 +223,45 @@ def skeleton(text):
     """The comparison form of a quote and of a page (search/retrieval.verify_quote, search/eval.py): NFKC, lower case,
     the folding of the languages (lang.fold: Russian yo as ye) and of look-alike letters of two scripts
     (lang.homoglyphs), every dash of the language packs ("dashes") as "-" and every quote ("quotes") as a double quote,
-    the soft hyphen and the marks of Markdown dropped, white space collapsed."""
+    the soft hyphen, the marks of Markdown and the underscores of italics at the edges of words dropped, a word broken
+    at a line end joined (join_hyphens: «забрако- ваны» as «забракованы»), white space collapsed."""
     t = unicodedata.normalize("NFKC", text.replace(SOFT_HYPHEN, ""))
-    t = lang.homoglyphs(lang.fold(MARKDOWN_MARK_RX.sub(" ", t).lower())).translate(_skeleton_map())
+    t = EDGE_UNDERSCORE_RX.sub("", MARKDOWN_MARK_RX.sub(" ", t))
+    t = lang.homoglyphs(lang.fold(join_hyphens(" ".join(t.split()).lower()))).translate(_skeleton_map())
     return " ".join(t.split())
+
+
+# the underscores of Markdown italics («_прямолинейность», «части_»): an underscore not between two letters or digits
+EDGE_UNDERSCORE_RX = re.compile(r"(?<![^\W_])_+|_+(?![^\W_])")
+# a word broken at a line end that a converter joined into one line with its hyphen: «забрако- ваны», «separa- tor»
+INLINE_HYPHEN_RX = re.compile(r"([^\W\d_]{2,})[-‐][ \t]+([^\W\d_]+)")
+
+
+@functools.lru_cache(maxsize=1)
+def _suspended():
+    return frozenset(w.lower() for w in lang.words("hyphen_suspended"))
+
+
+def join_hyphens(text, known=None):
+    """Words broken at a line end and left on one line with the hyphen and a space («забрако- ваны») joined into one
+    («забракованы»): the second part goes on in lower case (or both parts are capitals) and is not a word of
+    "hyphen_suspended" of the language packs, which ends a suspended compound («нефте- и газопроводы», "pre- and
+    post-"). known: the vocabulary of the library (lower case, folded); with it a word is joined only when the
+    vocabulary knows the whole word, as dehyphenate does (a text written to the library); without it every such word
+    is joined (the search text and the comparison of quotes, where a wrong join of a rare compound costs nothing)."""
+    if "- " not in text and "-\t" not in text and "‐" not in text:
+        return text
+    stop = _suspended()
+
+    def join(m):
+        a, b = m.group(1), m.group(2)
+        if b.lower() in stop or not (b[0].islower() or (a.isupper() and b.isupper())):
+            return m.group(0)
+        if known is not None and lang.fold((a + b).lower()) not in known:
+            return m.group(0)
+        return a + b
+
+    return INLINE_HYPHEN_RX.sub(join, text)
 
 
 # characters a reader does not see but Claude does (a way to hide instructions in a text): zero width,
@@ -253,7 +288,8 @@ HYPHEN_BREAK_RX = re.compile(r"([^\W\d_]+)[-\u2010][ \t]*\n[ \t]*([^\W\d_]+)")
 def dehyphenate(text, known):
     """A word broken at the end of a line ('separa-\\ntor') joined into one, but only when the joined word (lower case,
     folded) is in known, the vocabulary of the library (intake/tools/ocr_score.py): 'Ural-\\nVolga' stays as it is
-    unless the vocabulary knows 'uralvolga'. The rest of the next line goes on after the word."""
+    unless the vocabulary knows 'uralvolga'. The rest of the next line goes on after the word. A word a converter
+    already put on one line with its hyphen ('separa- tor') is joined by the same rule (join_hyphens)."""
     if not known:
         return text
 
@@ -261,7 +297,7 @@ def dehyphenate(text, known):
         word = m.group(1) + m.group(2)
         return word if lang.fold(word.lower()) in known else m.group(0)
 
-    return HYPHEN_BREAK_RX.sub(join, text)
+    return join_hyphens(HYPHEN_BREAK_RX.sub(join, text), known)
 
 
 CHUNK_TARGET, CHUNK_LIMIT, CHUNK_CUT, CHUNK_SHORT = 900, 2000, 1800, 50
@@ -397,8 +433,8 @@ def chunk_page(text, target=CHUNK_TARGET, limit=CHUNK_LIMIT, cut=CHUNK_CUT, shor
 
 def chunk_search_text(page_text, start, end, lead=None):
     """The text a fragment is searched and embedded by: its lead (the repeated header of a table, the sentence of
-    overlap) and its piece of the page."""
-    body = page_text[start:end].strip()
+    overlap) and its piece of the page, a word broken at a line end joined (join_hyphens: the page text keeps it)."""
+    body = join_hyphens(page_text[start:end].strip())
     return f"{lead}\n{body}" if lead else body
 
 
@@ -428,8 +464,9 @@ def table_lines(text):
 
 
 def for_embedding(text, table_rows=False):
-    """A text without Markdown markup; table_rows: a table as a line per row."""
-    return MODEL_MARKUP_RX.sub("", table_lines(text) if table_rows else text)
+    """A text without Markdown markup, a word broken at a line end joined (join_hyphens); table_rows: a table as a line
+    per row."""
+    return join_hyphens(MODEL_MARKUP_RX.sub("", table_lines(text) if table_rows else text))
 
 
 def model_text(title, heading, text, table_rows=False):

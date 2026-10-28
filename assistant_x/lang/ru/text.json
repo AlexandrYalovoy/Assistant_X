@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian: the letters (pieces of regex character classes), case folding, the lower-case letters that look like Latin ones (homoglyphs, mapped to the Latin), stemmer, the Tesseract language and stop words; lang_share: the share of the letters of a text that makes it Russian (a Russian text carries Latin units and formulas); keep_share: a converted page must keep the share of these letters of its text layer (a broken font encoding or a bad recognition turns them into Latin); the dashes and quotes of its typography (read as '-' and '\"' when a quote is checked); encodings: the legacy code pages of a plain-text file of the language.",
+  "_comment": "Russian: the letters (pieces of regex character classes), case folding, the lower-case letters that look like Latin ones (homoglyphs, mapped to the Latin), stemmer, the Tesseract language and stop words; lang_share: the share of the letters of a text that makes it Russian (a Russian text carries Latin units and formulas); keep_share: a converted page must keep the share of these letters of its text layer (a broken font encoding or a bad recognition turns them into Latin); the dashes and quotes of its typography (read as '-' and '\"' when a quote is checked); encodings: the legacy code pages of a plain-text file of the language. hyphen_suspended: the words after which a hyphen and a space end a suspended compound ('нефте- и газопроводы'), not a word broken at a line end.",
   "name": "Russian",
   "letters": "А-Яа-яЁё",
   "lower": "а-яё",
@@ -206,5 +206,12 @@
     "этот",
     "эту",
     "я"
+  ],
+  "hyphen_suspended": [
+    "и",
+    "или",
+    "либо",
+    "а",
+    "до"
   ]
 }
