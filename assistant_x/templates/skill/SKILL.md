@@ -29,7 +29,8 @@ from it comes with a reference to the document and the page. Answer in the langu
 ## The library and its tools
 
 The library lies on the user's computer and is connected to {{app}} as the MCP server `assistant-x`. Work with it only
-through its tools:
+through its tools. If they are not in your list (some apps keep the tools of a server behind a search of tools), search
+the tools for `assistant-x library_guide search_library` first; the server has no resources, never look there:
 
 - `search_library(query, k, sections, codes, doc_types, langs, year_from, year_to)` — a search of fragments by
   words and by meaning; returns the code, the PDF page and the text. `sections` — shelves of the library by name or
