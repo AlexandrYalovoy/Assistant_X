@@ -16,6 +16,18 @@ The library for every app that speaks MCP: Claude, Codex and the ChatGPT desktop
   minutes without a request. The apps start `assistant-x mcp`, a light stdio bridge: it answers the handshake at
   once, starts the service hidden when it is not running (and again when it is gone), reads the token itself and
   passes the messages both ways; `--tools reader` and `--compact` there. `assistant-x serve` stays as the fallback.
+- `assistant-x connect APP|auto` writes the entry of the bridge into the settings of Claude Desktop, Claude Code,
+  Codex and the ChatGPT desktop app (`~/.codex/config.toml`), DeepSeek Harness (`~/.dsh/cordis.patch.yml`) and
+  LM Studio (`~/.lmstudio/mcp.json`), with the skill where the app has a skills folder: the reading tools for DeepSeek
+  Harness and LM Studio (and the compact answers for LM Studio), every tool for the others, `--full` / `--reader` to
+  choose. A copy of the file first, the entries and comments of others kept, a second run changes nothing, a file that
+  cannot be read is left alone with the entry to add by hand; `disconnect` takes it out again, `connect --list` shows
+  the apps, `connect --check` makes the handshake and a search through every entry. The installer connects every app
+  it finds; `pythonw.exe` on Windows, so no app opens a console window.
+- One core for the skill of every app: SKILL.md for Claude and for the agents (no app named), the short rules of
+  `library_guide` (`assistant-x skill --app guide` writes them as the system prompt of an LM Studio preset), one text
+  of the safety rules; a stamp with the version and the hash of the text, so an outdated skill is replaced and one
+  edited by hand is kept (the new one beside it as SKILL.md.new).
 
 ## 0.3 — 2026-10-28
 

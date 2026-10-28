@@ -429,12 +429,15 @@ def test_a_model_copy_is_whole_or_made_again(tmp_path, monkeypatch):
 def test_installer_housekeeping(tmp_path, monkeypatch):
     r"""Only the last three backups of the settings of Claude Desktop stay; app\<version> is copied again when the
     wheel of the medium is another build of the same version, and left alone when it is the same."""
+    from assistant_x import clients
+
+    prefix = "claude_desktop_config.backup-"
     for k in range(6):
-        (tmp_path / f"{install.BACKUP_PREFIX}2026-10-2{k}_120000.json").write_text("{}", encoding="utf-8")
+        (tmp_path / f"{prefix}2026-10-2{k}_120000.json").write_text("{}", encoding="utf-8")
     (tmp_path / "claude_desktop_config.json").write_text("{}", encoding="utf-8")
-    install.prune_backups(str(tmp_path))
-    left = sorted(f.name for f in tmp_path.iterdir() if f.name.startswith(install.BACKUP_PREFIX))
-    assert left == [f"{install.BACKUP_PREFIX}2026-10-2{k}_120000.json" for k in (3, 4, 5)]
+    clients.prune(tmp_path / "claude_desktop_config.json")
+    left = sorted(f.name for f in tmp_path.iterdir() if f.name.startswith(prefix))
+    assert left == [f"{prefix}2026-10-2{k}_120000.json" for k in (3, 4, 5)]
     assert (tmp_path / "claude_desktop_config.json").exists()
     code = tmp_path / "app_src"
     (code / "assistant_x").mkdir(parents=True)

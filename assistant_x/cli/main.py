@@ -42,7 +42,12 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "download-models": ("assistant_x.setup.download_models", "the embedding and reranking models from HuggingFace"),
     "prepare-media": ("assistant_x.setup.prepare_media", "the packages of an offline installation (build PC)"),
     "lock": ("assistant_x.core.lock", "who holds the machine lock; a command under it"),
-    "skill": ("assistant_x.setup.skill", "write the Claude skill of the profile of the workspace (SKILL.md)"),
+    "skill": ("assistant_x.setup.skill", "write the skill of the profile of the workspace (SKILL.md)"),
+    "connect": (
+        "assistant_x.clients.connect",
+        "connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio",
+    ),
+    "disconnect": ("assistant_x.clients.disconnect", "take the library out of the settings of an app"),
     "base": ("assistant_x.base.cli", "base packages: export, inspect, install, update, remove"),
     "remove": ("assistant_x.intake.remove", "take documents of the library aside (inbox\\_to_delete), codes reserved"),
 }

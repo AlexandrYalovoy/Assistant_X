@@ -76,12 +76,12 @@ def test_harmless_warnings_out_of_the_tail(tmp_path, monkeypatch):
 
 
 def test_the_desktop_entry_has_pythonutf8(tmp_path, monkeypatch):
+    from assistant_x.clients import claude_desktop
     from assistant_x.setup import install
 
     conf = tmp_path / "claude_desktop_config.json"
     conf.write_text(json.dumps({"mcpServers": {install.SERVER: {"command": "old", "env": {"MINE": "1"}}}}), encoding="utf-8")
-    monkeypatch.setattr(install, "desktop_dirs", lambda: ([str(tmp_path)], True))
-    monkeypatch.setattr(install, "prune_backups", lambda d: None)
+    monkeypatch.setattr(claude_desktop, "dirs", lambda: ([str(tmp_path)], True))
     install.register_desktop("python.exe", False)
     env = json.loads(conf.read_text(encoding="utf-8"))["mcpServers"][install.SERVER]["env"]
     assert env["PYTHONUTF8"] == "1" and env["MINE"] == "1" and env["HF_HUB_OFFLINE"] == "1"

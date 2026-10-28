@@ -27,7 +27,7 @@ Usage: python -m assistant_x.setup.install [--workspace DIR] [--profile NAME] [-
   --base PACKAGE install a base package right after (assistant-x base install --confirm; with codes that collide a
                  reference package keeps its codes, a default one needs --keep own|package)"""
 
-import argparse, datetime, glob, json, os, platform, shutil, sys, tempfile
+import argparse, glob, json, os, platform, shutil, sys, tempfile
 
 from assistant_x.core import proc
 
@@ -49,7 +49,6 @@ GPU_TORCH = f"{TORCH}+cu128"  # CUDA 12.8: RTX 50xx (Blackwell) and older cards;
 ORT = f"onnxruntime=={K.pin('onnxruntime')}"
 DML_ORT = f"onnxruntime-directml=={K.pin('onnxruntime-directml')}"  # AMD and Intel cards through DirectML
 MIN_DRIVER = 570
-SERVE = ["-m", "assistant_x.server.mcp_server"]
 NAMES = ("WS", "ROOT", "SKILL", "PACKS", "MODELS", "WHEELS", "LOCK", "PYVER", "WHEELS_GPU", "WHEELS_DML", "INBOX", "MEDIUM")
 
 
@@ -800,17 +799,6 @@ def check_data():
     return problems
 
 
-def desktop_dirs():
-    if os.name == "nt":  # the Microsoft Store build keeps settings inside its package folder
-        dirs = [os.path.join(os.environ.get("APPDATA", ""), "Claude")] + glob.glob(
-            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Packages", "Claude_*", "LocalCache", "Roaming", "Claude")
-        )
-    else:
-        dirs = [os.path.expanduser("~/Library/Application Support/Claude"), os.path.expanduser("~/.config/Claude")]
-    found = [d for d in dirs if os.path.isdir(d)]
-    return found or dirs[:1], bool(found)
-
-
 def license_note():
     """AGPL-3.0 needs no agreement to install or use: one line about the license, no question."""
     say("   Assistant X is distributed under the AGPL-3.0 license (file LICENSE)")
@@ -864,102 +852,33 @@ def wait_claude_closed(dry):
 
 
 def register_desktop(py, dry):
-    dirs, installed = desktop_dirs()
-    if not installed:
+    """The entry of the library in the settings of Claude Desktop (clients/claude_desktop.py: a copy of the file first,
+    the other servers kept, a file that cannot be read left alone); True when a file changed."""
+    from assistant_x import clients
+    from assistant_x.clients import claude_desktop
+
+    if not claude_desktop.found():
         say(
             "   Claude Desktop is not found on this PC: writing the setting in advance, it is picked up once Claude is installed."
         )
     changed = False
-    for d in dirs:
-        path = os.path.join(d, "claude_desktop_config.json")
-        conf = {}
-        if os.path.exists(path):
-            try:
-                conf = json.load(open(path, encoding="utf-8-sig"))
-            except ValueError as e:
-                conf = None
-                err = e
-            if not isinstance(conf, dict):
-                say(
-                    f"   {path}: the settings file cannot be read ({err if conf is None else 'not a JSON object'}), leaving it alone."
-                )
-                say("   Add the section mcpServers → assistant-x to it by hand (see README.md).")
-                continue
-        servers = conf.setdefault("mcpServers", {})
-        old = servers.get(SERVER) or {}
-        new = dict(
-            old,
-            command=py,
-            args=SERVE,
-            env=dict(old.get("env") or {}, HF_HUB_OFFLINE="1", PYTHONUTF8="1", AX_WORKSPACE=P.ROOT),
-        )
-        if old == new:
-            say(f"   {path}: already set up")
-            continue
-        say(f"   {path}: {'would write' if dry else 'writing'} {SERVER} → {py}")
-        if dry:
-            continue
-        os.makedirs(d, exist_ok=True)
-        if os.path.exists(path):
-            backup = os.path.join(d, f"{BACKUP_PREFIX}{datetime.datetime.now():%Y-%m-%d_%H%M%S}.json")
-            shutil.copy2(path, backup)
-            say(f"   the previous settings are saved: {backup}")
-            prune_backups(d)
-        servers[SERVER] = new
-        with open(path + ".tmp", "w", encoding="utf-8") as f:
-            json.dump(conf, f, ensure_ascii=False, indent=2)
-        os.replace(path + ".tmp", path)
-        changed = True
+    for path, status in claude_desktop.connect(clients.entry(py, "all", False, P.ROOT), dry):
+        say(f"   {path}: {status}")
+        changed |= status == "written"
     return changed
 
 
-BACKUP_PREFIX, BACKUPS_KEPT = "claude_desktop_config.backup-", 3
+def register_others(py, dry):
+    """Claude Code, Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio: the ones found on this PC
+    (clients/connect.py), each with its tool set and its skill."""
+    from assistant_x import clients
+    from assistant_x.clients import connect
 
-
-def prune_backups(folder, keep=BACKUPS_KEPT):
-    """Only the newest keep backups of the settings of Claude Desktop that this installer made stay (one more per
-    change otherwise, for ever)."""
-    old = sorted(f for f in os.listdir(folder) if f.startswith(BACKUP_PREFIX) and f.endswith(".json"))
-    for f in old[:-keep] if keep else old:
-        os.remove(os.path.join(folder, f))
-
-
-def register_code(py, dry):
-    exe = shutil.which("claude")
-    if not exe:
-        say("   Claude Code is not installed, skipping.")
+    names = [n for n in ("claude_code", "codex", "dsh", "lmstudio") if clients.app(n).found()]
+    if not names:
+        say("   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio)")
         return
-    try:
-        got = proc.run(
-            [exe, "mcp", "get", SERVER], capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace"
-        )
-    except (OSError, proc.TimeoutExpired) as e:
-        say(f"   could not ask Claude Code: {e}")
-        return
-    if got.returncode == 0 and py in got.stdout and SERVE[1] in got.stdout and P.ROOT in got.stdout:
-        say("   already set up")
-        return
-    if got.returncode == 0:
-        run([exe, "mcp", "remove", SERVER, "-s", "user"], dry)
-    if run(
-        [
-            exe,
-            "mcp",
-            "add",
-            SERVER,
-            "-s",
-            "user",
-            "-e",
-            "HF_HUB_OFFLINE=1",
-            "-e",
-            f"AX_WORKSPACE={P.ROOT}",
-            "--",
-            py,
-            *SERVE,
-        ],
-        dry,
-    ):
-        say("   Claude Code did not take the setting; connect it by hand (see README.md).")
+    connect.connect(names, dry=dry, python=py, root=P.ROOT, say=lambda s: say("   " + s.replace("\n", "\n   ")))
 
 
 def self_check(py, dry):
@@ -1056,13 +975,13 @@ def main():
         copy_programs(dry)
         problems += check_intake(py, dry)
         if a.no_register:
-            say("7-8. Connection to Claude Desktop and Claude Code: skipped (--no-register)")
+            say("7-8. Connection to Claude Desktop and the other apps: skipped (--no-register)")
             changed = False
         else:
             say("7. Connection to Claude Desktop")
             changed = register_desktop(py, dry)
-            say("8. Connection to Claude Code")
-            register_code(py, dry)
+            say("8. Connection to the other apps")
+            register_others(py, dry)
         say("9. Self-test")
         problems += self_check(py, dry)
         if a.base:
