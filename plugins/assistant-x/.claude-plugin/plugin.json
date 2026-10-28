@@ -1,6 +1,6 @@
 {
   "name": "assistant-x",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Your own library of documents (PDF, scans, standards, books) on your PC: search by words and meaning, answers citing the code and the page. The plugin installs and connects Assistant X.",
   "author": {
     "name": "Alexandr Yalovoy"

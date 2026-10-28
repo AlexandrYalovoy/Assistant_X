@@ -4,9 +4,9 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.5.4 — unreleased
+## 0.5.4 — 2026-10-29
 
-The open items of the observation journal.
+The documents for people in Russian too; the fixes found by the trial intake of a big real folder in batches of 50 files.
 
 - The models of the PC no longer stay in the folder of the Microsoft Store app of Claude Desktop (which removing or
   resetting the app would delete): any command moves them into %USERPROFILE%\.assistant_x when nothing holds them, and

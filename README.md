@@ -9,7 +9,7 @@ model, and any other MCP client. Search by words and by meaning, page images of 
 books, a quality warning for weak scans. The library and its search run locally; what reaches the model is only what
 it reads from the library to answer (with a local model in LM Studio nothing leaves the PC).
 
-Version 0.5.3, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
+Version 0.5.4, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
 field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer. License: GNU AGPL-3.0-or-later; the data folders also CC-BY-4.0 (see License below).
 
 **Author:** Alexandr Yalovoy.
