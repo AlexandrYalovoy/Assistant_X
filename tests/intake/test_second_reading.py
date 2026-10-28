@@ -5,6 +5,7 @@ layer and scores low by its words is read again from its page images; the better
 
 from types import SimpleNamespace
 
+from assistant_x.core.formats import write_pages_info
 from assistant_x.intake import process
 from assistant_x.intake.tools import ocr_score
 from tests.corpus import documents
@@ -23,10 +24,12 @@ class FakeState:
         self.rows[tid].update(kw)
 
 
-def batch(tmp_path, row, md):
+def batch(tmp_path, row, md, source="markdown"):
     (tmp_path / "md").mkdir()
     (tmp_path / "md" / "T0001.md").write_text(md, encoding="utf-8")
-    (tmp_path / "md" / "T0001.pages.json").write_text("{}", encoding="utf-8")
+    write_pages_info(
+        tmp_path / "md" / "T0001.pages.json", {1: {"source": source, "ocr_score": 50.0, "label": None, "flags": []}}
+    )
     return SimpleNamespace(work=tmp_path, state=FakeState({"T0001": row}), base={"ocr": True})
 
 
@@ -71,7 +74,13 @@ def test_no_second_reading_for_a_good_text_a_scan_or_another_format(tmp_path, mo
     assert not process.Batch.second_reading(b, "T0001", {"rel": "a.pdf"}, {"pages": 2, "ocr_pages": 1})  # scores well
     b.state.rows["T0001"]["rel"] = "a.pdf"
     (tmp_path / "md" / "T0001.md").write_text(f"=== page 1 ===\n\n{GARBLED}\n", encoding="utf-8")
-    assert not process.Batch.second_reading(b, "T0001", {"rel": "a.pdf"}, {"pages": 2, "ocr_pages": 2})  # all OCR already
+    write_pages_info(
+        tmp_path / "md" / "T0001.pages.json", {1: {"source": "ocr", "ocr_score": 50.0, "label": None, "flags": []}}
+    )
+    assert not process.Batch.second_reading(b, "T0001", {"rel": "a.pdf"}, {"pages": 2})  # a pure scan: no layer
+    write_pages_info(
+        tmp_path / "md" / "T0001.pages.json", {1: {"source": "markdown", "ocr_score": 50.0, "label": None, "flags": []}}
+    )
     assert not process.Batch.second_reading(b, "T0001", {"rel": "a.docx"}, {"pages": 2, "ocr_pages": 0})  # no PDF
     b.base["ocr"] = False
     assert not process.Batch.second_reading(b, "T0001", {"rel": "a.pdf"}, {"pages": 2, "ocr_pages": 0})  # no Tesseract

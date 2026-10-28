@@ -10,7 +10,7 @@ from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
 from assistant_x.core.common import QUALITY
-from assistant_x.core.formats import PAGES_SUFFIX
+from assistant_x.core.formats import PAGES_SUFFIX, read_pages_info
 from assistant_x.intake import config as intake_cfg
 from assistant_x.intake import pool as intake_pool
 from assistant_x.intake import schedule, versions
@@ -616,7 +616,7 @@ class Batch:
         return None
 
     def second_reading(self, tid, row, res):
-        """A PDF whose text came (in part) from its text layer and scores below QUALITY["ocr_second"] by its words is read
+        """A PDF whose text came (in part) from its text layer (its page file) and scores below QUALITY["ocr_second"] by its words is read
         once more with its page images recognised instead of the layer, as the redo does (a poor layer of an old
         scan: rounds of 2026-10-28, N-00015 56 by the intake against 74 by the page images of the redo). The text of
         the layer and its measures are kept aside for keep_better. True when the second reading is sent."""
@@ -629,9 +629,12 @@ class Batch:
             or not str(row.get("rel", "")).lower().endswith(".pdf")
         ):
             return False
-        pages, ocr = int(res.get("pages") or row.get("pages") or 0), int(res.get("ocr_pages") or 0)
         md = self.work / "md" / f"{tid}.md"
-        if not pages or ocr >= pages or not md.exists():
+        info = read_pages_info(md.with_suffix(PAGES_SUFFIX)) or {}
+        # a page whose text is its layer: not recognised, or a legible layer kept beside its recognition. A pure scan
+        # has none (round 2 of 2026-10-28 read two scanned books of 99 and 408 pages again: the count of OCR pages of a
+        # conversion in page ranges is not in its result)
+        if not md.exists() or not any(v.get("source") != "ocr" or v.get("layer") == "kept" for v in info.values()):
             return False
         text = md.read_text(encoding="utf-8")
         score = ocr_score.score_text(text)["score"]
