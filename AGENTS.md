@@ -13,7 +13,8 @@
 - The tools of the server `assistant-x` not in your list (Codex keeps them behind its search of tools): search the
   tools for "assistant-x library_guide search_library".
 - Working on the code: everything in the repository is in US English; the Python code has no Cyrillic (a test checks
-  it); `scripts/check.ps1` runs ruff, `ruff format --check` and the tests. `INSTALL_FOR_AI.md`, this section and
+  it); `scripts/check.ps1` runs ruff, `ruff format --check` and the tests (`python scripts/check.py` the same where
+  PowerShell scripts may not run; `--log FOLDER` keeps a full record). `INSTALL_FOR_AI.md`, this section and
   `docs/CLIENTS.md` are made by `assistant-x gen-docs` from `assistant_x/templates/docs/`: edit the templates, then run
   it (`hooks/pre-commit` does; a test fails when they differ).
 <!-- assistant-x:end -->

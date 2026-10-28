@@ -8,6 +8,8 @@ The open items of the observation journal.
 
 - doctor --json names an app whose entry runs a library server of its own (made before 0.5): it holds the video card
   apart from the shared service; the fix is assistant-x connect APP and a restart of the app.
+- python scripts/check.py runs the same checks as scripts\check.ps1 (with --fast, --log FOLDER and pytest options)
+  where PowerShell scripts may not run, as in the shell of an agent.
 
 ## 0.5.2 — 2026-10-28
 
