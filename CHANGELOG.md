@@ -22,6 +22,7 @@ Fixes and hardening after 0.5.
   Studio keeps its speed.
 - scripts\check.ps1 -Log FOLDER keeps a full record of the run (every test, the slowest, junit xml); other arguments go
   to pytest.
+- embed on a video card keeps two processor threads of torch instead of dozens.
 
 ## 0.5.1 — 2026-10-28
 

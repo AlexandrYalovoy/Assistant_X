@@ -306,3 +306,16 @@ def test_reindex_tells_the_time_of_the_embeddings(own, monkeypatch, tmp_path):
     assert "Embeddings: about 5 s (6 fragments, on the processor, not measured on this PC yet)." in intake_tools.reindex(
         cpu=True
     )
+
+
+def test_embed_on_a_card_keeps_few_processor_threads(monkeypatch):
+    """embed on a video card held 85 threads of torch (pipeline-fix 2026-10-27): it keeps GPU_CPU_THREADS."""
+    from assistant_x.search import embed
+
+    seen = {}
+    fake = types.SimpleNamespace(
+        set_num_threads=lambda n: seen.update(intra=n), set_num_interop_threads=lambda n: seen.update(inter=n)
+    )
+    monkeypatch.setitem(sys.modules, "torch", fake)
+    embed.gpu_threads()
+    assert seen == {"intra": embed.GPU_CPU_THREADS, "inter": 1}

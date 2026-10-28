@@ -100,6 +100,20 @@ def seed_all(cfg, con, cache, fp):
         )
 
 
+GPU_CPU_THREADS = 2  # threads of torch on the processor while the card does the work (85 were held, pipeline-fix)
+
+
+def gpu_threads():
+    """On a video card the processor only feeds it: torch's thread pools kept at GPU_CPU_THREADS."""
+    try:
+        import torch
+
+        torch.set_num_threads(GPU_CPU_THREADS)
+        torch.set_num_interop_threads(1)
+    except (ImportError, RuntimeError):  # no torch, or the interop pool was started already
+        pass
+
+
 def main():
     ap = argparse.ArgumentParser(prog="assistant-x embed")
     ap.add_argument("--config")
@@ -163,6 +177,8 @@ def main():
         cfg["device"] = gpu_guard.check(
             cfg, "embed", units=len(misses), unit="fragments", cpu_s=CPU_S, wait=a.wait, cpu=a.cpu
         )
+        if str(cfg["device"]).startswith("cuda"):
+            gpu_threads()
         model = models.load_embedder(cfg, cfg["device"])  # torch, DirectML or int8 on the processor: the same vectors
         dim = (getattr(model, "get_embedding_dimension", None) or model.get_sentence_embedding_dimension)()  # renamed in 5.x
         if cache.dim and cache.dim != dim:
