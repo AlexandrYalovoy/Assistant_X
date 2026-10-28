@@ -2,6 +2,15 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.1 — unreleased
+
+Fixes and hardening after 0.5.
+
+- The bridge passes the events of a tool call to the app as they come: a question of the library to the user inside a
+  call (MCP elicitation, the confirmation of a change in Claude Code) reaches the app, and its answer the service; the
+  question waits at most 10 minutes. A call that reached the service but got no answer in time is no longer sent a
+  second time.
+
 ## 0.5 — 2026-10-28
 
 Connected by one sentence, and up to date by itself.

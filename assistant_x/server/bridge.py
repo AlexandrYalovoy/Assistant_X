@@ -29,6 +29,11 @@ class Gone(Exception):
     """The service does not answer (no process, refused, reset): start it again."""
 
 
+class NoAnswer(Exception):
+    """A request reached the service but no answer came in time (or the answer broke off after a part of it reached
+    the client): it may be running there, so it is not sent again."""
+
+
 class Bridge:
     def __init__(self, toolset="all", compact=False, out=None, root=None):
         self.toolset, self.compact = toolset, compact
@@ -122,8 +127,10 @@ class Bridge:
 
     # ---------- HTTP ----------
 
-    def post(self, msg, info=None):
-        """POST one message; yields the messages of the answer (none for a notification or a response)."""
+    def post(self, msg, info=None, sink=None):
+        """POST one message; the messages of the answer (none for a notification or a response). With sink every
+        message of an event stream goes to it as it comes (a request of the service inside a call, such as a question
+        to the user, reaches the client while the call is open) and none is returned."""
         info = info or self.info()
         if not info:
             raise Gone("no service")
@@ -139,10 +146,12 @@ class Bridge:
         try:
             c = http.client.HTTPConnection("127.0.0.1", int(info["port"]), timeout=CALL_TIMEOUT)
             c.request("POST", "/mcp", body=json.dumps(msg).encode("utf-8"), headers=headers)
-            r = c.getresponse()
         except (OSError, http.client.HTTPException) as e:
+            c.close()
             raise Gone(str(e)) from e
+        passed = 0  # messages of the answer already given to the sink
         try:
+            r = c.getresponse()
             sid = r.getheader("Mcp-Session-Id")
             if sid:
                 self.session = sid
@@ -160,10 +169,19 @@ class Bridge:
                     rid = msg.get("id") if isinstance(msg, dict) else None
                     return [{"jsonrpc": "2.0", "id": rid, "error": {"code": -32603, "message": f"{r.status}: {body[:300]}"}}]
             if kind == "text/event-stream":
-                return list(self.events(r))
+                if sink is None:
+                    return list(self.events(r))
+                for m in self.events(r):
+                    passed += 1
+                    sink(m)
+                return []
             body = r.read()
             return [json.loads(body)] if body.strip() else []
+        except TimeoutError as e:
+            raise NoAnswer(f"the library service did not answer in {CALL_TIMEOUT} s") from e
         except (OSError, http.client.HTTPException) as e:
+            if passed:
+                raise NoAnswer(f"the answer of the library service broke off: {e}") from e
             raise Gone(str(e)) from e
         finally:
             c.close()
@@ -213,12 +231,18 @@ class Bridge:
             self.upstream = True
 
     def forward(self, msg):
-        """Send msg to the service (a new start and one more try when it is gone) and write the answers."""
+        """Send msg to the service (a new start and one more try when it is gone before it got the message) and write
+        the answers as they come. A message the service got but did not answer in time is not sent again."""
         for attempt in (0, 1):
             try:
                 self.ensure(fresh=attempt == 1)
-                for m in self.post(msg):
+                for m in self.post(msg, sink=lambda m: self.write(self.adjust(m))):
                     self.write(self.adjust(m))
+                return
+            except NoAnswer as e:
+                self.calls.pop(msg.get("id"), None)
+                if "id" in msg and "method" in msg:
+                    self.error(msg["id"], -32603, str(e))
                 return
             except Gone as e:
                 self.upstream = False
@@ -261,7 +285,7 @@ class Bridge:
                     self.upstream = "pending"  # the client's notifications/initialized completes it
                     self.write({"jsonrpc": "2.0", "id": msg.get("id"), "result": result})
                     return
-            except Gone:
+            except (Gone, NoAnswer):
                 pass
         from assistant_x import __version__
 
@@ -282,7 +306,7 @@ class Bridge:
     def _warm(self):
         try:
             self.ensure()
-        except Gone:
+        except (Gone, NoAnswer):
             pass  # the first request tries again and reports it
 
     def handle(self, msg):
@@ -294,7 +318,7 @@ class Bridge:
                 try:
                     self.post(msg)
                     self.upstream = True
-                except Gone:
+                except (Gone, NoAnswer):
                     self.upstream = False
             return
         if method == "ping" and "id" in msg:

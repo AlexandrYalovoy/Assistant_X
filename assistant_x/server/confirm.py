@@ -26,6 +26,7 @@ from assistant_x.core import workspace
 
 TTL = 1800  # seconds a token stays valid: the user reads the plan (40 moves take a while) and answers
 FILE = "confirm_tokens.json"
+ASK_TIMEOUT = 600  # seconds the client may take to put the question to the user (less than the bridge's CALL_TIMEOUT)
 _lock = threading.Lock()
 
 
@@ -194,7 +195,11 @@ def ask_user(ctx, question):
         class Consent(BaseModel):
             confirm: bool = Field(description="Yes: make the change")
 
-        result = anyio.from_thread.run(ctx.elicit, question, Consent)
+        async def elicit():
+            with anyio.fail_after(ASK_TIMEOUT):  # a client that never answers: the token flow decides
+                return await ctx.elicit(question, Consent)
+
+        result = anyio.from_thread.run(elicit)
     except Exception:  # noqa: BLE001 — a client that says it can ask but fails: the token flow decides
         return None
     return result.action == "accept" and bool(getattr(result.data, "confirm", False))
