@@ -25,9 +25,27 @@ TEXT_CHUNK, OCR_CHUNK = 50, 5
 _open = {}  # path -> the open PDF of this process (one per document, a few at a time)
 
 
+class _Stdout:
+    """The messages of MuPDF to the sys.stdout of the moment: pymupdf keeps the stream it found at its import, and one
+    imported under a replaced, since closed stdout (a test that captured the output) failed every later conversion."""
+
+    def write(self, text):
+        out = sys.stdout or sys.__stdout__
+        if out:
+            out.write(text)
+
+    def flush(self):
+        out = sys.stdout or sys.__stdout__
+        if out:
+            out.flush()
+
+
 def open_pdf(path):
     import pymupdf
 
+    if not isinstance(getattr(pymupdf, "_ax_messages", None), _Stdout):
+        pymupdf._ax_messages = _Stdout()
+        pymupdf.set_messages(stream=pymupdf._ax_messages)
     if path not in _open:
         if len(_open) >= 2:
             _open.pop(next(iter(_open))).close()

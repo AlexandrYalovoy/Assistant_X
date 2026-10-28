@@ -33,6 +33,8 @@ Fixes and hardening after 0.5.
   (LM Studio, DeepSeek Harness, Codex) ran two services, one without models. An older folder, and the private copy of
   the Store app, is taken over by itself: the small files copied, venv, models and programs linked, nothing moved;
   doctor and connect --check name it. Reconnect the apps once: assistant-x connect auto.
+- The conversion no longer fails with I/O operation on closed file in a process that imported pymupdf under a stdout
+  closed since (a test order that failed one test): the messages of MuPDF go to the stdout of the moment.
 
 ## 0.5 — 2026-10-28
 
