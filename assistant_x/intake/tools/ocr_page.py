@@ -436,28 +436,40 @@ def beside_layer(page, png, dpi, language, tmp, layer, psm=None, t0=None, min_ne
 
 
 # a drawing sheet too big for the pixel limit of the page image is read at a low dpi (80-120 on A1/A0): labels come
-# out as noise. Its title block (the bottom right corner: name, designation, sheet; GOST 2.104 185 x 55 mm) is read
-# again at STAMP_DPI and kept instead when the reading of the whole sheet is weak or scores lower (batches b009-b011).
-STAMP_DPI, STAMP_BELOW = 300, 200  # dpi of the title block; the dpi of the sheet below which it is read
-STAMP_W, STAMP_H = 200 / 25.4 * 72, 80 / 25.4 * 72  # points: 200 x 80 mm with the frame
+# out as noise. Its title block is read again at QUALITY["title_block_dpi"] from the corners QUALITY["title_blocks"]
+# names (data, not a standard in the code) and kept instead when the reading of the whole sheet scores lower
+# (trial batches b009-b011). Only a page ocr_score.is_drawing calls a drawing sheet gets it.
+CORNERS = ("bottom-right", "bottom-left", "top-right", "top-left")
 
 
-def stamp_rect(rect):
-    """The bottom right corner of a sheet where its title block is."""
+def stamp_rects(rect):
+    """The rectangles of a sheet where its title block may be (QUALITY["title_blocks"])."""
     import pymupdf
 
-    return pymupdf.Rect(max(rect.x0, rect.x1 - STAMP_W), max(rect.y0, rect.y1 - STAMP_H), rect.x1, rect.y1)
+    out = []
+    for w_mm, h_mm, corner in QUALITY["title_blocks"]:
+        w, h = min(rect.width, w_mm / 25.4 * 72), min(rect.height, h_mm / 25.4 * 72)
+        if corner not in CORNERS:
+            raise ValueError(f"title_blocks: no corner {corner!r} ({', '.join(CORNERS)})")
+        x0 = rect.x1 - w if corner.endswith("right") else rect.x0
+        y0 = rect.y1 - h if corner.startswith("bottom") else rect.y0
+        out.append(pymupdf.Rect(x0, y0, x0 + w, y0 + h))
+    return out
 
 
 def stamp(page, displaylist, language, tmp):
-    """The reading of the title block of a drawing sheet at STAMP_DPI ((reading, clip)); its image is gray."""
+    """The best reading of the title block of a drawing sheet ((reading, clip)), or (None, None) without words."""
     import pymupdf
 
-    clip = stamp_rect(page.rect)
-    pix = displaylist.get_pixmap(matrix=pymupdf.Matrix(STAMP_DPI / 72, STAMP_DPI / 72), clip=clip, colorspace=pymupdf.csGRAY)
-    png = os.path.join(tmp, "s.png")
-    pix.save(png)
-    return recognise(png, STAMP_DPI, language, tmp, "stamp", psm=11), clip
+    dpi, best = QUALITY["title_block_dpi"], (None, None)
+    for k, clip in enumerate(stamp_rects(page.rect)):
+        pix = displaylist.get_pixmap(matrix=pymupdf.Matrix(dpi / 72, dpi / 72), clip=clip, colorspace=pymupdf.csGRAY)
+        png = os.path.join(tmp, f"s{k}.png")
+        pix.save(png)
+        r = recognise(png, dpi, language, tmp, "stamp", psm=11)
+        if r["m"]["words"] and (best[0] is None or r["m"]["score"] > best[0]["m"]["score"]):
+            best = (r, clip)
+    return best
 
 
 def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
@@ -479,7 +491,8 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         g = gray(pix)
         g.save(png)
         dpi = round(pix.width / page.rect.width * 72)  # get_pixmap lowers the dpi of a big page (a drawing sheet)
-        drawing = ocr_score.is_drawing(page.parent.page_count, page.rect.width * page.rect.height)
+        area = page.rect.width * page.rect.height
+        drawing = ocr_score.is_drawing(page.parent.page_count, area) or ocr_score.is_sheet(area)
         picture = SCAN_PAGES is not None and page.number not in SCAN_PAGES  # a text page with a picture
         if len(layer) >= MIN_WORDS or picture:
             psm = 11 if drawing or picture else None
@@ -489,11 +502,13 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
             # a drawing gets one sparse-text pass; turning and retrying did not raise its score (177 of 288 in redo)
             best = recognise(png, dpi, language, tmp, "v0", psm=11)
             tried, variant, clip = {"drawing psm 11": best["m"]["score"]}, "drawing psm 11", None
-            if dpi < STAMP_BELOW:
+            if dpi < QUALITY["title_block_below"]:
                 block, box = stamp(page, displaylist, language, tmp)
-                tried[f"title block {STAMP_DPI} dpi"] = block["m"]["score"]
-                if block["m"]["words"] and (weak(best["m"]) or block["m"]["score"] > best["m"]["score"]):
-                    best, variant, clip = block, f"title block {STAMP_DPI} dpi (the sheet read at {dpi} dpi)", box
+                name = f"title block {QUALITY['title_block_dpi']} dpi"
+                if block is not None:
+                    tried[name] = block["m"]["score"]
+                    if block["m"]["score"] > best["m"]["score"]:
+                        best, variant, clip = block, f"{name} (the sheet read at {dpi} dpi)", box
             PLAIN[page.number] = (best["plain"].strip(), not spans and clip is None)
             insert_words(page, best["words"], *best["size"], clip=clip)
             STATS[page.number] = {

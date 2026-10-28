@@ -870,6 +870,12 @@ QUALITY = {
     # the intake reads the page images of a PDF too when the text of its layer scores below this by its words, and keeps
     # the better text (process.Batch.second_reading; rounds of 2026-10-28: 5 of 20 old scans with a layer, 46-76)
     "ocr_second": 90,
+    # the title block of a drawing sheet read too coarsely (below title_block_below dpi): the corners where blocks lie,
+    # [width mm, height mm, corner], each read at title_block_dpi; the best reading is kept when it beats the sheet's.
+    # 200 x 80 mm at the bottom right holds the blocks of GOST 2.104 (185 x 55) and ISO 7200 (180 wide) with the frame
+    "title_blocks": [[200, 80, "bottom-right"]],
+    "title_block_dpi": 300,
+    "title_block_below": 200,
 }
 
 

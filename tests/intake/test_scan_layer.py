@@ -331,12 +331,64 @@ def test_the_title_block_of_a_big_drawing_sheet_is_read_at_300_dpi(tmp_path, mon
     sheet = pymupdf.open(pdf)
     ocr_page.exec_ocr(sheet[0], dpi=300, language="rus")  # as pymupdf4llm calls it for a page without text
     st = ocr_page.STATS[0]
-    assert ("stamp", ocr_page.STAMP_DPI) in seen and seen[0][1] < ocr_page.STAMP_BELOW
+    assert ("stamp", ocr_page.QUALITY["title_block_dpi"]) in seen and seen[0][1] < ocr_page.QUALITY["title_block_below"]
     assert st["variant"].startswith("title block 300 dpi") and st["drawing"]
     assert "генерального" in ocr_page.PLAIN[0][0]
     words = sheet[0].get_text("words")  # the words of the block lie in the bottom right corner of the sheet
-    assert (
-        words
-        and min(w[0] for w in words) > 3370 - ocr_page.STAMP_W - 1
-        and min(w[1] for w in words) > 2384 - ocr_page.STAMP_H - 1
-    )
+    corner = ocr_page.stamp_rects(sheet[0].rect)[0]
+    assert words and min(w[0] for w in words) >= corner.x0 - 1 and min(w[1] for w in words) >= corner.y0 - 1
+
+
+def test_a_sheet_without_a_title_block_keeps_its_reading(tmp_path, monkeypatch):
+    """A drawing of another kind (no block in the corners the settings name): nothing read there, the reading of the
+    sheet stays as before; another corner from the settings is read too."""
+    pdf = tmp_path / "sheet.pdf"
+    doc = pymupdf.open()
+    page = doc.new_page(width=3370, height=2384)
+    page.draw_rect(pymupdf.Rect(100, 100, 3000, 2000), color=(0, 0, 0), width=2)
+    doc.save(pdf)
+    monkeypatch.setattr(ocr_page, "tesseract_exe", lambda: "tesseract")
+    monkeypatch.setitem(ocr_page.QUALITY, "title_blocks", [[200, 80, "bottom-right"], [180, 60, "top-left"]])
+    seen = []
+
+    def recognise(png, dpi, language, tmp, tag, psm=None):
+        seen.append(tag)
+        text = "" if tag == "stamp" else "aeq xzqv qqvh zzkr wqx jjq vvqz"
+        words = [(10 + 60 * i, 10, 50, 20, w, (1, 1, 1)) for i, w in enumerate(text.split())]
+        m = ocr_page.measure(text, [20.0] * len(words))
+        return {"words": words, "size": (2362, 945), "text": text, "plain": text, "m": m}
+
+    monkeypatch.setattr(ocr_page, "recognise", recognise)
+    ocr_page.reset()
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)
+    sheet = pymupdf.open(pdf)
+    ocr_page.exec_ocr(sheet[0], dpi=300, language="rus")
+    assert seen.count("stamp") == 2  # both corners read
+    assert ocr_page.STATS[0]["variant"] == "drawing psm 11" and "aeq" in ocr_page.PLAIN[0][0]
+
+
+def test_the_sheets_of_a_set_of_drawings_are_drawings(tmp_path, monkeypatch):
+    """Trial batches b012-b014: a set of 10 A1/A0 sheets was read like a scan (retries at 80-160 dpi). A page of A2 and
+    up is a drawing sheet whatever the length of the document: one sparse pass and its title block."""
+    doc = pymupdf.open()
+    for _ in range(3):
+        page = doc.new_page(width=3370, height=2384)
+        page.draw_rect(pymupdf.Rect(100, 100, 3000, 2000), color=(0, 0, 0), width=2)
+    doc.new_page()  # an A4 page of the same document stays a page
+    monkeypatch.setattr(ocr_page, "tesseract_exe", lambda: "tesseract")
+    seen = []
+
+    def recognise(png, dpi, language, tmp, tag, psm=None):
+        seen.append((tag, psm))
+        text = "Лист Разраб Схема" if tag == "stamp" else "aeq xzqv qqvh zzkr wqx jjq vvqz"
+        words = [(10 + 60 * i, 10, 50, 20, w, (1, 1, 1)) for i, w in enumerate(text.split())]
+        m = ocr_page.measure(text, [40.0 if tag == "stamp" else 20.0] * len(words))
+        return {"words": words, "size": (2362, 945), "text": text, "plain": text, "m": m}
+
+    monkeypatch.setattr(ocr_page, "recognise", recognise)
+    monkeypatch.setattr(ocr_page, "orientation", lambda *a, **k: (0, 0.0))
+    ocr_page.reset()
+    monkeypatch.setattr(ocr_page, "SCAN_PAGES", None)
+    ocr_page.exec_ocr(doc[1], dpi=300, language="rus")
+    assert ocr_page.STATS[1]["drawing"] and ("v0", 11) in seen and ("stamp", 11) in seen
+    assert ocr_score.is_sheet(3370 * 2384) and not ocr_score.is_sheet(842 * 1191)  # A3 stays a page

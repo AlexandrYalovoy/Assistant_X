@@ -47,6 +47,9 @@ def test_quality_values_unchanged():
         "ocr_redo_gain": 10,
         "ocr_redo_keep": 0.8,
         "ocr_second": 90,
+        "title_blocks": [[200, 80, "bottom-right"]],
+        "title_block_dpi": 300,
+        "title_block_below": 200,
     }
 
 

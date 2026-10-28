@@ -42,6 +42,11 @@ The open items of the observation journal.
   bottom right corner with the name, the designation and the sheet - read again at 300 dpi; that reading is kept when
   the reading of the whole sheet is weak or scores lower. On one-page project drawings of a trial batch: score 68
   instead of 39, the designation read, 22 s instead of about 70 s.
+- A page of A2 and bigger is a drawing sheet whatever the length of its document: one sparse-text pass and its title
+  block, no retries (a set of 10 A1/A0 sheets of a trial batch: 127 s instead of 441 s). The corners where the title
+  block is looked for are data of the settings (QUALITY title_blocks, default the bottom right 200 x 80 mm that holds
+  the blocks of GOST 2.104 and ISO 7200); the block is kept only when it scores higher than the reading of the whole
+  sheet.
 
 ## 0.5.3 — 2026-10-28
 

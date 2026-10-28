@@ -417,6 +417,15 @@ A4_AREA = 595 * 842  # points
 DRAWING_WORDS = 150
 
 
+SHEET_AREA = 3.9 * A4_AREA  # a page this big (A2 and up) is a drawing sheet whatever the length of its document
+
+
+def is_sheet(page_area):
+    """A page of A2 and bigger: a sheet of a set of drawings (trial batches b012-b014: sets of 6-10 A1/A0 sheets were
+    read like scans, 370-490 s a set, the retries at 80-160 dpi raising nothing)."""
+    return page_area >= SHEET_AREA
+
+
 def is_drawing(pages, page_area, words=None):
     """A drawing sheet: 1-2 pages bigger than A3 with little text. Its score says nothing of the
     recognition: it gets one sparse-text pass (psm 11), no retries, no redo and no "to update" line."""
