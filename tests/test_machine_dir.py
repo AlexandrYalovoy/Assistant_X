@@ -90,3 +90,36 @@ def test_nothing_to_take_over_elsewhere(tmp_path, monkeypatch):
     if sys.platform != "win32":
         monkeypatch.delenv("AX_MACHINE_DIR")
         assert workspace.legacy_machine_dirs() == []
+
+
+@windows
+def test_models_kept_in_the_store_package_are_moved_into_the_folder_of_the_pc(pc):
+    """The models of the PC lived in the private copy of the Store app of Claude Desktop, linked from the folder of the
+    PC: removing or resetting that app deletes them. They are moved into the folder of the PC (a rename on one drive)
+    when nothing holds them; until then doctor names it with the fix."""
+    home, local = pc
+    store = older(local / "Packages" / "Claude_x" / "LocalCache" / "Local" / "AssistantX")
+    workspace.migrate_machine_dir()
+    new = home / ".assistant_x"
+    assert os.path.realpath(new / "models") == os.path.realpath(store / "models")
+    assert [n["code"] for n in workspace.models_notes()] == ["models-in-app-package"]
+    assert workspace.adopt_models() == f"the models moved from {store / 'models'} into {new / 'models'}"
+    assert not os.path.islink(new / "models") and not workspace._is_junction(new / "models")
+    assert (new / "models" / "bge-m3" / "config.json").is_file() and not (store / "models").exists()
+    assert workspace.models_notes() == [] and workspace.adopt_models() == ""  # once
+
+
+@windows
+def test_models_held_open_stay_where_they_are(pc, monkeypatch):
+    home, local = pc
+    store = older(local / "Packages" / "Claude_x" / "LocalCache" / "Local" / "AssistantX")
+    workspace.migrate_machine_dir()
+
+    def busy(a, b):
+        raise PermissionError(32, "the file is used by another process")
+
+    monkeypatch.setattr(workspace.os, "rename", busy)
+    assert "held" in workspace.adopt_models()
+    new = home / ".assistant_x"
+    assert os.path.realpath(new / "models") == os.path.realpath(store / "models")  # the link is back
+    assert (new / "models" / "bge-m3" / "config.json").is_file()

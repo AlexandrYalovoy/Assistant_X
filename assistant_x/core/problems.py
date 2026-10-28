@@ -24,6 +24,12 @@ PROBLEMS = {
         "assistant-x connect auto",
     ),
     "app-not-connected": ("The app has no entry of Assistant X.", "assistant-x connect {app}"),
+    "models-in-app-package": (
+        "The models of the PC lie in the folder of an app from the Microsoft Store: removing or resetting that app "
+        "deletes them.",
+        "close the apps of the library for a minute (the library service then stops), then run any assistant-x "
+        "command: it moves the models into the folder of the PC",
+    ),
     "app-in-process": (
         "The app starts a library server of its own (an entry made before 0.5): it holds the models and the video "
         "card apart from the shared service of the other apps.",

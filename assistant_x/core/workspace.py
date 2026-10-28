@@ -104,13 +104,73 @@ def migrate_machine_dir():
     return done
 
 
+def _is_junction(path):
+    is_junction = getattr(os.path, "isjunction", None)  # Python 3.12
+    if is_junction:
+        return is_junction(path)
+    try:
+        return bool(os.lstat(path).st_file_attributes & 0x400) and not os.path.islink(path)  # a reparse point
+    except (OSError, AttributeError):
+        return False
+
+
+def _in_app_package(path):
+    """Is path inside the private folder of a Store app (…\\Packages\\<app>\\LocalCache\\…)? Removing or resetting
+    that app deletes it."""
+    parts = [p.lower() for p in Path(os.path.realpath(path)).parts]
+    return "packages" in parts and "localcache" in parts
+
+
+def _models_link():
+    """The models of the folder of the PC when they are a link into the folder of a Store app: (link, target) or None."""
+    link = machine_dir() / "models"
+    if os.name != "nt" or not (os.path.islink(link) or _is_junction(link)):
+        return None
+    target = Path(os.path.realpath(link))
+    return (link, target) if _in_app_package(target) and target.is_dir() else None
+
+
+def adopt_models():
+    """Move the models out of the folder of a Store app into the folder of the PC (a rename on one drive: no copy); the
+    link is put back when they cannot move now (a running library service holds them). What happened, "" when nothing
+    was to do."""
+    found = _models_link()
+    if not found:
+        return ""
+    link, target = found
+    os.rmdir(link)  # the junction only: its target stays
+    try:
+        os.rename(target, link)
+    except OSError as e:
+        _link(link, target)
+        return f"the models stay in {target} for now: held ({e.strerror or e}); close the apps of the library and run any assistant-x command"
+    return f"the models moved from {target} into {link}"
+
+
+def models_notes():
+    """The doctor items about the models of the PC: kept in the folder of a Store app ([] when they are not)."""
+    from assistant_x.core import problems
+
+    found = _models_link()
+    return (
+        [
+            dict(
+                problems.item("models-in-app-package"),
+                message=f"The models of the PC lie in {found[1]}, the folder of an app from the Microsoft Store: removing or resetting that app deletes them.",
+            )
+        ]
+        if found
+        else []
+    )
+
+
 def take_over():
-    """migrate_machine_dir() at the start of a command, a bridge or a service: what it did on stderr (stdout may be
-    MCP); a failure is said there too and the command runs anyway (doctor says what is left)."""
+    """migrate_machine_dir() and adopt_models() at the start of a command, a bridge or a service: what they did on
+    stderr (stdout may be MCP); a failure is said there too and the command runs anyway (doctor says what is left)."""
     import sys
 
     try:
-        for line in migrate_machine_dir():
+        for line in migrate_machine_dir() + [x for x in [adopt_models()] if x]:
             print(f"the folder of the PC {machine_dir()}: {line}", file=sys.stderr)
     except Exception as e:  # noqa: BLE001
         print(f"the older folders of the PC were not taken over: {e}", file=sys.stderr)

@@ -2,6 +2,14 @@
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.4 — unreleased
+
+The open items of the observation journal.
+
+- The models of the PC no longer stay in the folder of the Microsoft Store app of Claude Desktop (which removing or
+  resetting the app would delete): any command moves them into %USERPROFILE%\.assistant_x when nothing holds them, and
+  doctor names the state until then.
+
 ## 0.5.3 — 2026-10-28
 
 The first part of the open items of the observation journal.

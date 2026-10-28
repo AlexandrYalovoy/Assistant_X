@@ -238,6 +238,7 @@ def diagnose(w):
         remarks.append(PB.item("model-missing"))
     for line in workspace.split_note():
         remarks.append(dict(PB.item("older-folder"), message=line))
+    remarks += workspace.models_notes()
     try:
         from assistant_x.clients import connect
 

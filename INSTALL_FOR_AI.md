@@ -91,6 +91,7 @@ their settings), then run both checks again. `ok: true` and every app `"ok": tru
 | `vectors-missing` | Fragments without meaning vectors are found by words only. | assistant-x embed |
 | `older-folder` | An older folder of the PC (before 0.5.1, or the private copy of Claude Desktop from the Microsoft Store) may still be used by an app connected before. | assistant-x connect auto |
 | `app-not-connected` | The app has no entry of Assistant X. | assistant-x connect {app} |
+| `models-in-app-package` | The models of the PC lie in the folder of an app from the Microsoft Store: removing or resetting that app deletes them. | close the apps of the library for a minute (the library service then stops), then run any assistant-x command: it moves the models into the folder of the PC |
 | `app-in-process` | The app starts a library server of its own (an entry made before 0.5): it holds the models and the video card apart from the shared service of the other apps. | assistant-x connect {app}, then restart the app |
 | `app-check-failed` | The entry of the app does not answer the handshake, the tool list or a search. | assistant-x connect --check {app} --json; if it fails again: assistant-x debug-report |
 | `search-words-only` | The search of the app answers by words only (no model or no vectors). | assistant-x doctor --json (it names the missing model or vectors) |
