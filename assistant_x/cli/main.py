@@ -161,6 +161,11 @@ def init(argv):
     if had and not made:
         print("  nothing was missing")
     print(f"Put your documents into {w.inbox}, then: assistant-x intake run")
+    if not had:  # the one choice of the intake that stays the user's own: said once, never set by init (audit 6)
+        print(
+            "Each batch of your documents is shown to you as a plan before it goes into the library. To skip the plan "
+            f"for batches without a warning, write auto_apply = true under [intake] in {w.local_config} (this PC only)."
+        )
     return 0
 
 

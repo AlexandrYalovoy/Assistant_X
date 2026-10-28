@@ -16,6 +16,8 @@ The open items of the observation journal.
   models of a medium in the folder of the PC of the session, fixed.
 - prepare-media --check reports a second build of a pinned package beside the pinned one (two builds of torch were in
   order).
+- assistant-x init says how to let batches without warnings go into the library without the plan (auto_apply in
+  assistant_x.local.toml); it never turns it on itself.
 
 ## 0.5.2 — 2026-10-28
 

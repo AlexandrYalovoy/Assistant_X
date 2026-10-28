@@ -111,10 +111,14 @@ def test_init_and_doctor(tmp_path, monkeypatch, capsys):
     assert "Documents: 0." in (ws / "index" / "CATALOG.md").read_text(encoding="utf-8")
     assert "## Open" in (ws / "index" / "sources_to_update.md").read_text(encoding="utf-8")
     assert "personal = true" in (ws / workspace.CONFIG).read_text(encoding="utf-8")
+    first = capsys.readouterr().out  # the one choice left to the user is named, not made (audit 6)
+    assert "auto_apply = true under [intake]" in first and "auto_apply" not in (ws / workspace.CONFIG).read_text(
+        encoding="utf-8"
+    ).replace("# auto_apply", "")
     (ws / "index" / "CATALOG.md").write_text("# my own catalog\n", encoding="utf-8")
-    capsys.readouterr()
     assert main.main(["init", str(ws)]) == 0  # repeated: nothing overwritten
-    assert "nothing was missing" in capsys.readouterr().out
+    again = capsys.readouterr().out
+    assert "nothing was missing" in again and "auto_apply" not in again
     assert (ws / "index" / "CATALOG.md").read_text(encoding="utf-8") == "# my own catalog\n"
     (ws / "index" / "CATALOG.md").unlink()
     assert main.main(["init", str(ws)]) == 0 and (ws / "index" / "CATALOG.md").exists()  # completed
