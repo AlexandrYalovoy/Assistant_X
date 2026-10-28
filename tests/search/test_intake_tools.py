@@ -74,7 +74,10 @@ def test_background_job_is_tracked(proj, monkeypatch):
     assert any("Background job run" in x and "intake_run(resume=True)" in x for x in intake_tools.interrupted())
     ok, text = intake_tools._start("q", [sys.executable, "-c", "import sys; print('the lock is busy'); sys.exit(3)"])
     assert not ok and "code 3" in text and "the lock is busy" in text
-    assert intake_tools.state("q") == ("failed", 3) and "exit code 3" in intake_tools.state_text("q")
+    # code 3: the job did not start (the PC is busy, or it waits for the user's yes to run on the processor): no
+    # failure (audit 5: a reindex waiting for the yes was "failed (exit code 3)")
+    assert intake_tools.state("q") == ("failed", 3) and "did not start" in intake_tools.state_text("q")
+    assert "failed" not in intake_tools.state_text("q") and not any("job q" in x for x in intake_tools.interrupted())
     ok, text = intake_tools._start("f", [sys.executable, "-c", "print('done')"])
     assert not ok and intake_tools.state("f") == ("finished", 0)
     assert not any("job f" in x for x in intake_tools.interrupted())

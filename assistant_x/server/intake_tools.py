@@ -46,6 +46,7 @@ def jobs_dir():
 BUSY = 3  # machine_lock.BUSY, gpu_guard.BUSY: not started, the output says why
 TAIL = 40
 QUICK = 8  # seconds _start waits: a job that ends by then (lock busy, nothing to do) answers at once
+NOT_STARTED = 3  # the exit code of a task that did not start (core/lock.py busy, core/gpu_guard.py: no yes for the CPU)
 
 
 def _cwd():
@@ -250,6 +251,11 @@ def state_text(kind, job=None):
     s, code = state(kind, job)
     if s == "running" and job and job.get("detached") is False:
         return "running (in the job object of the app: closing the app stops it)"
+    if s == "failed" and code == NOT_STARTED:
+        return (
+            "did not start: another heavy task holds the PC, or it waits for the user's yes to run on the processor "
+            "(its log says which)"
+        )
     if s == "failed":
         return f"failed (exit code {code})"
     if s == "stopped":
@@ -274,7 +280,8 @@ def interrupted():
         "base_remove",
     ):
         job = _job(kind)
-        if state(kind, job)[0] in ("failed", "stopped"):
+        s, code = state(kind, job)
+        if s == "stopped" or (s == "failed" and code != NOT_STARTED):
             out.append(f"Background job {kind} (started {_ago(job)} ago): {state_text(kind, job)}.")
     return out
 

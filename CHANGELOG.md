@@ -10,6 +10,8 @@ The open items of the observation journal.
   apart from the shared service; the fix is assistant-x connect APP and a restart of the app.
 - python scripts/check.py runs the same checks as scripts\check.ps1 (with --fast, --log FOLDER and pytest options)
   where PowerShell scripts may not run, as in the shell of an agent.
+- A background job that did not start (another heavy task holds the PC, or it waits for the user's yes to run on the
+  processor) is no longer reported as failed with exit code 3.
 
 ## 0.5.2 — 2026-10-28
 
