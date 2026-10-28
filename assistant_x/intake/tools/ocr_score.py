@@ -28,7 +28,7 @@ A document: the mean of its page scores weighted by the counted words of the pag
 The vocabulary is cached in .assistant_x/ocr_vocab.txt of the workspace; rebuilt by `assistant-x intake vocab` (or when the file is missing).
 """
 
-import collections, functools, glob, os, re
+import collections, functools, glob, os, re, time
 
 from assistant_x.core import lang
 from assistant_x.core.common import QUALITY, stemmer_for
@@ -168,6 +168,9 @@ def group_of(code):
     return re.sub(r"^([A-Z]-\d{5})-\d{2,3}$", r"\1", code)
 
 
+REPLACE_TRIES = 5
+
+
 def build_vocab(texts=None, out=None, df_min=VOCAB_DF):
     """Count the documents of every word form of the texts (default: the library texts) and write the forms seen in
     df_min or more documents to out (default: the vocabulary of the workspace). Returns the count."""
@@ -185,7 +188,9 @@ def build_vocab(texts=None, out=None, df_min=VOCAB_DF):
     for words in groups.values():
         sdf.update({stem(w) for w in words if len(w) >= STEM_MIN})
     stems = sorted(s for s, n in sdf.items() if n >= df_min)
-    tmp = out + ".tmp"
+    # a temporary file of this process: the workers of a batch in a new workspace build the missing vocabulary at the
+    # same time, and one common .tmp failed them with "Permission denied" on Windows (trial batch b014)
+    tmp = f"{out}.{os.getpid()}.tmp"
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(
@@ -195,7 +200,17 @@ def build_vocab(texts=None, out=None, df_min=VOCAB_DF):
         f.writelines(w + "\n" for w in known)
         f.write("# stems\n")
         f.writelines("~" + s + "\n" for s in stems)
-    os.replace(tmp, out)
+    for attempt in range(REPLACE_TRIES):
+        try:
+            os.replace(tmp, out)
+            break
+        except PermissionError:  # another process replaces or reads it this moment
+            if attempt == REPLACE_TRIES - 1:
+                if not os.path.exists(out):
+                    raise
+                os.remove(tmp)  # the same vocabulary another worker wrote: it is there
+                break
+            time.sleep(0.2 * (attempt + 1))
     _read_vocab.cache_clear()
     return len(known), len(stems), len(groups)
 

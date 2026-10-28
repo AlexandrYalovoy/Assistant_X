@@ -47,6 +47,9 @@ The open items of the observation journal.
   block is looked for are data of the settings (QUALITY title_blocks, default the bottom right 200 x 80 mm that holds
   the blocks of GOST 2.104 and ISO 7200); the block is kept only when it scores higher than the reading of the whole
   sheet.
+- The workers of a batch in a new workspace no longer fail a file with Permission denied while they build the missing
+  vocabulary of the recognition score at the same time: each writes a temporary file of its own and a busy replace is
+  tried again.
 
 ## 0.5.3 — 2026-10-28
 

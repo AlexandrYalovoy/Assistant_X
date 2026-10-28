@@ -280,3 +280,26 @@ def test_a_replaced_text_is_kept_aside(tmp_path):
     (texts / "N-00001.md").write_text("newer", encoding="utf-8")
     ocr_redo.keep_aside(texts, "N-00001", aside)  # a second run the same day keeps the first copy
     assert (aside / "N-00001.md").read_text(encoding="utf-8") == "old" and len(list(aside.glob("*_N-00001.md"))) == 1
+
+
+def test_workers_building_the_vocabulary_at_once_do_not_fail(tmp_path, monkeypatch):
+    """Trial batch b014: the workers of a batch in a new workspace built the missing vocabulary at the same time into
+    one ocr_vocab.txt.tmp; one of them failed a file with "Permission denied". Each writes a temporary file of its
+    own, and a replace the other process holds this moment is tried again."""
+    d = tmp_path / "texts"
+    d.mkdir()
+    (d / "N-00001.md").write_text(f"=== page 1 ===\n\n{CLEAN}\n", encoding="utf-8")
+    out = str(tmp_path / "ocr_vocab.txt")
+    real, calls = os.replace, []
+
+    def busy_once(src, dst):
+        calls.append(src)
+        if len(calls) == 1:
+            raise PermissionError(13, "the other process has it open")
+        return real(src, dst)
+
+    monkeypatch.setattr(ocr_score.os, "replace", busy_once)
+    monkeypatch.setattr(ocr_score.time, "sleep", lambda s: None)
+    ocr_score.build_vocab(str(d), out, df_min=1)
+    assert len(calls) == 2 and str(os.getpid()) in calls[0] and os.path.exists(out)
+    assert not [p for p in os.listdir(tmp_path) if p.endswith(".tmp")]
