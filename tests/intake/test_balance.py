@@ -21,15 +21,28 @@ PC24 = {
 PC4 = {"logical": 4, "physical": 2, "ecores": None, "ram_gb": 8, "avail_gb": 5, "gpu": None}
 
 
+def test_the_budget_says_what_limits_the_workers():
+    """M-079: the start message names what set the number of workers (the cores, the free memory, the setting, the
+    number of documents, the weak profile), so a run held by the memory is told from one held by the cores."""
+    o = balance.options({})
+    assert balance.budget(PC24, o, cap=8, worker_mb=3072)["limit"] == "the workers setting"
+    assert balance.budget(PC24, o, cap=0)["limit"] == "the free memory"
+    assert balance.budget(PC4, o, cap=8)["limit"] == "the free memory"
+    assert balance.budget(PC24, o, cap=8, worker_mb=3072, tasks=3)["limit"] == "the number of documents"
+    assert balance.budget(PC24, balance.options({"profile": "weak"}), cap=8)["limit"] == "the weak profile"
+    b = balance.budget(PC24, o, cap=0)
+    assert "limited by the free memory" in balance.describe(PC24, b, o)
+
+
 def test_budget_from_the_pc():
     o = balance.options({})
     b = balance.budget(PC24, o, cap=8, worker_mb=3072)  # a worker is one core; the cap of the settings: 8
-    assert b == {"workers": 8, "threads": 1, "free": 8, "active": 8}
+    assert b == {"workers": 8, "threads": 1, "free": 8, "active": 8, "limit": "the workers setting"}
     assert balance.budget(PC24, o, cap=0)["workers"] == 20  # memory: (20 - 4.8) GB / 0.75 GB = 20 (22 CPUs past the reserve)
     small = balance.budget(PC4, o, cap=8)  # 5 GB free past the reserve of 4: one worker
-    assert small == {"workers": 1, "threads": 1, "free": 1, "active": 1}
+    assert small == {"workers": 1, "threads": 1, "free": 1, "active": 1, "limit": "the free memory"}
     weak = balance.budget(PC24, balance.options({"profile": "weak"}), cap=8)
-    assert weak == {"workers": 2, "threads": 1, "free": 2, "active": 2}
+    assert weak == {"workers": 2, "threads": 1, "free": 2, "active": 2, "limit": "the weak profile"}
     with pytest.raises(ValueError):
         balance.options({"profile": "turbo"})
     few = balance.budget(PC24, o, cap=8, worker_mb=3072, tasks=3)  # 3 documents: a worker each, the cores shared

@@ -176,14 +176,17 @@ def budget(hw, o, cap=0, worker_mb=INTAKE["worker_memory_mb"], tasks=0):
     by_mem = max(1, int((hw["avail_gb"] - reserve_gb(hw, o)) * 1024 // (worker_mb / WORKER_SHARE))) if worker_mb else usable
     if o["profile"] == "weak":
         n = max(1, min(2, by_mem, cap or 2))
-        return {"workers": n, "threads": 1, "free": n, "active": n}
+        limit = "the free memory" if by_mem < min(2, cap or 2) else "the weak profile"
+        return {"workers": n, "threads": 1, "free": n, "active": n, "limit": limit}
     threads = int(o["threads"]) or 1  # a worker is one core (the Tesseract threads are ocr_threads, apart)
-    free = max(1, min(usable // threads, by_mem, cap or usable))
+    bounds = {"the processor cores": usable // threads, "the free memory": by_mem, "the workers setting": cap or usable}
+    limit = min(bounds, key=lambda k: (bounds[k], k != "the free memory"))  # a tie: the memory is the one to watch
+    free = max(1, bounds[limit])
     if tasks and tasks < free and not int(o["threads"]):
-        free, threads = tasks, max(1, min(THREADS_MAX, usable // tasks))
+        free, threads, limit = tasks, max(1, min(THREADS_MAX, usable // tasks)), "the number of documents"
     cores = hw["physical"] - 2 if hw["physical"] > 3 else 1
     active = max(1, min(free, cores, round(logical * float(o["cpu_share_active"]) / threads)))
-    return {"workers": free, "threads": threads, "free": free, "active": active}
+    return {"workers": free, "threads": threads, "free": free, "active": active, "limit": limit}
 
 
 def disk_slow(s, state, ms=DISK_LAT_MS):
@@ -596,6 +599,7 @@ def describe(hw, b, o):
         f"PC: CPU {hw['logical']} logical / {hw['physical']} cores ({kind}), RAM {hw['ram_gb']:.0f} GB "
         f"({hw['avail_gb']:.0f} free), {g}. Profile {o['profile']}: up to {b['workers']} workers of {b['threads']} "
         f'threads; "{FREE}" — {b["free"]}, "{ACTIVE}" — {b["active"]}'
+        + (f"; limited by {b['limit']}" if b.get("limit") else "")
     )
 
 

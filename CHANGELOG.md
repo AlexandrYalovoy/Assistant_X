@@ -18,6 +18,8 @@ The open items of the observation journal.
   order).
 - assistant-x init says how to let batches without warnings go into the library without the plan (auto_apply in
   assistant_x.local.toml); it never turns it on itself.
+- The intake says at its start what limits the number of its workers: the processor cores, the free memory, the workers
+  setting or the number of documents.
 
 ## 0.5.2 — 2026-10-28
 
