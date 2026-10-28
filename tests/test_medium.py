@@ -112,6 +112,9 @@ def test_the_installer_takes_the_medium(tmp_path, monkeypatch):
     (med / "programs" / "7-Zip" / "7z.exe").write_bytes(b"MZ")
     monkeypatch.setenv("AX_MEDIUM", str(med))
     monkeypatch.setenv("AX_PROGRAMS", str(tmp_path / "programs"))
+    # a folder of the PC of its own: the models it copies would change the fingerprint of the model for every later
+    # test of the session (a shuffled run: the package vectors of test_inspect and test_hostile no longer fit)
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "pc"))
     ws = tmp_path / "ws"
     before = os.environ["AX_WORKSPACE"]
     install.use_workspace(ws)

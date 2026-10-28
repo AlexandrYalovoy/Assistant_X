@@ -12,6 +12,8 @@ The open items of the observation journal.
   where PowerShell scripts may not run, as in the shell of an agent.
 - A background job that did not start (another heavy task holds the PC, or it waits for the user's yes to run on the
   processor) is no longer reported as failed with exit code 3.
+- The tests can run in a shuffled order (AX_TEST_SHUFFLE=SEED); the first shuffled run found a test that left the
+  models of a medium in the folder of the PC of the session, fixed.
 
 ## 0.5.2 — 2026-10-28
 

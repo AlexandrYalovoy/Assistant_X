@@ -26,3 +26,22 @@ for _name in ("AX_CONFIG", "AX_SEARCH_CONFIG", "AX_HEAVY_LOCK"):
 
 def pytest_unconfigure(config):
     shutil.rmtree(_ROOT, ignore_errors=True)
+
+
+def pytest_collection_modifyitems(config, items):
+    """AX_TEST_SHUFFLE=SEED runs the tests in an order shuffled by SEED, the modules and the tests in each: a test that
+    passes only after another one shows up (the order-dependent failure of audit 7). The seed is printed, so a failing
+    order can be run again."""
+    seed = os.environ.get("AX_TEST_SHUFFLE")
+    if not seed:
+        return
+    import random
+
+    rnd = random.Random(seed)
+    modules = {}
+    for item in items:
+        modules.setdefault(item.module.__name__ if item.module else "", []).append(item)
+    order = list(modules)
+    rnd.shuffle(order)
+    items[:] = [i for m in order for i in rnd.sample(modules[m], len(modules[m]))]
+    print(f"\ntests shuffled with AX_TEST_SHUFFLE={seed}")
