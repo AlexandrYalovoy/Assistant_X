@@ -86,6 +86,31 @@ def test_the_torch_reranker_gives_logits(monkeypatch):
     assert isinstance(seen["activation_fn"], torch.nn.Identity) and seen["max_length"] == 1024
 
 
+def test_the_reranker_on_a_video_card_is_float16(monkeypatch):
+    """On the 40 questions of the author's library float16 kept the ranks (page first 24, MRR 0.734) and took a third
+    of the time (p50 1.58 s -> 0.53 s) and less video memory (peak 4.6 -> 2.9 GB) (M-096, M-097)."""
+    pytest.importorskip("torch")
+    halved = []
+
+    class Net:
+        def __init__(self, kind):
+            self.device = types.SimpleNamespace(type=kind)
+
+        def half(self):
+            halved.append(self.device.type)
+            return self
+
+    class Cross:
+        def __init__(self, model, device=None, **kw):
+            self.model = Net(device)
+
+    monkeypatch.setitem(sys.modules, "sentence_transformers", types.SimpleNamespace(CrossEncoder=Cross))
+    models.load_reranker({"rerank_model": "x"}, "cpu")
+    assert halved == []  # float32 on the processor
+    models.load_reranker({"rerank_model": "x"}, "cuda")
+    assert halved == ["cuda"]
+
+
 def test_onnx_encoder_reads_its_dimension(monkeypatch, tmp_path):
     """The dimension comes from the output of the session, not from a constant; the vectors are normalized."""
 

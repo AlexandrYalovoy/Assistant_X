@@ -17,6 +17,9 @@ Fixes and hardening after 0.5.
   tell agents to run doctor --json first.
 - The hint of search_library ends with the citation of the best page in brackets ([code, PDF N]): small local models
   cited pages in other forms or named a standard in words.
+- The reranker runs in float16 on a video card: on 40 control questions the ranks stayed the same, a search takes 0.5 s
+  instead of 1.6 s and the search models need 2.9 GB of video memory instead of 4.6 GB, so a local language model in LM
+  Studio keeps its speed.
 
 ## 0.5.1 — 2026-10-28
 
