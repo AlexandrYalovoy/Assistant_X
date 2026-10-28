@@ -20,6 +20,8 @@ Usage: python -m assistant_x.setup.install [--workspace DIR] [--profile NAME] [-
   --profile NAME   the profile of a new workspace: general (default) or oil-gas-ru
   --dry-run      show what would be done, change nothing
   --yes          ask nothing (also AX_YES=1): for a run without a window or keyboard
+  --json         the messages to stderr and one JSON object on stdout at the end (an agent installs it): ok, version,
+                 python, command, workspace, device, apps, problems, next, downloads
   --venv DIR     put the environment into another folder (to check the installation)
   --no-register  leave the settings of Claude Desktop and Claude Code alone
   --online       install the packages from the internet even when the media has the packages folder
@@ -105,6 +107,8 @@ def __getattr__(name):  # install.ROOT and the others for the callers
 
 PROFILE = None  # --profile: the profile of a workspace this installation makes
 YES = env.flag("YES")  # --yes: no question, no waiting for a key
+JSON = False  # --json: the messages go to stderr, a summary to stdout
+DOWNLOAD_GB = {"packages": 1.0, "packages_cuda": 3.5, "models": 4.5}  # what an online installation downloads, about
 
 
 class Stop(Exception):
@@ -112,7 +116,7 @@ class Stop(Exception):
 
 
 def say(msg=""):
-    print(msg, flush=True)
+    print(msg, file=sys.stderr if JSON else sys.stdout, flush=True)
 
 
 def writable(d):
@@ -903,6 +907,56 @@ def self_check(py, dry):
     return [l[2:].strip() for l in block.splitlines() if l.startswith("- ") and "No obvious problems found" not in l]
 
 
+def command_of(py):
+    """The assistant-x program of the environment of py."""
+    d = os.path.dirname(py)
+    return os.path.join(d, "assistant-x.exe" if os.name == "nt" else "assistant-x")
+
+
+def downloads(offline, device):
+    """{what: GB} an online installation downloads now or later (the models: assistant-x download-models)."""
+    out = {}
+    if not offline:
+        out["packages"] = DOWNLOAD_GB["packages_cuda" if device == "cuda" else "packages"]
+    if not os.path.isdir(os.path.join(str(P.MODELS), "bge-m3")):
+        out["models (assistant-x download-models)"] = DOWNLOAD_GB["models"]
+    return out
+
+
+def report(summary, problems, device, error=None):
+    """--json: the summary on stdout; the exit code of the installation."""
+    if not JSON:
+        return 1 if error else 0
+    from assistant_x import __version__
+
+    apps = []
+    try:
+        from assistant_x.clients import connect
+
+        apps = [r["app"] for r in connect.listing() if r["connected"]]
+    except Exception as e:  # noqa: BLE001 — the summary still goes out
+        problems = problems + [f"the apps could not be listed: {e}"]
+    nxt = []
+    if "models (assistant-x download-models)" in (summary.get("downloads") or {}):
+        nxt.append("ask the user, then: <command> download-models (about 4.5 GB)")
+    nxt += ["<command> connect --check", "restart the connected apps (Claude Desktop: the icon by the clock, Quit)"]
+    if summary.get("python") and "lmstudio" not in apps:
+        from assistant_x import clients
+        from assistant_x.clients import lmstudio
+
+        summary["lmstudio_link"] = lmstudio.link(clients.entry(summary["python"], "reader", True, P.ROOT))
+    summary.update(
+        ok=error is None,
+        version=__version__,
+        device=device,
+        apps=apps,
+        problems=list(dict.fromkeys(problems)) + ([error] if error else []),
+        next=[] if error else nxt,
+    )
+    print(json.dumps(summary, ensure_ascii=False), flush=True)
+    return 0 if error is None else 1
+
+
 def main():
     ap = argparse.ArgumentParser(prog="assistant-x install")
     ap.add_argument("--dry-run", action="store_true")
@@ -911,6 +965,7 @@ def main():
     ap.add_argument("--online", action="store_true")
     ap.add_argument("--cpu", action="store_true", help="torch for the processor even when there is an NVIDIA video card")
     ap.add_argument("--yes", action="store_true", help="ask nothing (also AX_YES=1)")
+    ap.add_argument("--json", action="store_true", help="messages to stderr, one JSON summary on stdout")
     ap.add_argument("--workspace", help="the workspace of the data (default: AX_WORKSPACE, else Documents\\Assistant X)")
     ap.add_argument("--profile", help="the profile of a new workspace: general (default) or oil-gas-ru")
     ap.add_argument("--base", help="a base package to install right after (.axbase or its folder)")
@@ -921,8 +976,9 @@ def main():
         help="install from a medium whose packages carry no sha256 (not recommended: make the medium again)",
     )
     a = ap.parse_args()
-    global YES, PROFILE
+    global YES, PROFILE, JSON
     YES = YES or a.yes
+    JSON = a.json
     PROFILE = a.profile
     if a.workspace:
         use_workspace(a.workspace)
@@ -933,6 +989,7 @@ def main():
         f"Program: {CODE}\n"
     )
     problems = []
+    summary = {"ok": False, "dry_run": dry, "workspace": P.ROOT, "python": None, "command": None, "device": device}
     try:
         say("License")
         license_note()
@@ -963,11 +1020,13 @@ def main():
         vdir = pick_venv(a.venv)
         say(f"2. Environment: {vdir}")
         py = make_venv(vdir, dry)
+        summary.update(python=py, command=command_of(py))
         say("3. Workspace and models")  # the models first: the device may need their ONNX export (DirectML)
         problems += check_workspace(dry)
         problems += copy_models(dry)
         say("4. Video card")
         device = choose_device(a.cpu, offline)
+        summary["downloads"] = downloads(offline, device)
         say("5. Packages and base")
         device = install_packages(py, offline, dry, device)
         problems += check_data()
@@ -989,10 +1048,12 @@ def main():
             problems += install_base(py, a.base, a.keep, dry)
     except Stop as e:
         say(f"\nInstallation stopped: {e}")
-        return 1
+        return report(summary, problems, device, error=str(e))
     except KeyboardInterrupt:
         say("\nInstallation interrupted (Ctrl+C). Run Setup.bat once more: what is done is not done again.")
-        return 1
+        return report(summary, problems, device, error="interrupted")
+    if JSON:
+        return report(summary, problems, device)
     say()
     if problems:
         say("The installation is finished, but there are remarks:")

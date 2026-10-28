@@ -190,3 +190,31 @@ def test_install_makes_the_chosen_workspace(tmp_path, monkeypatch):
         )
     finally:
         install.use_workspace(before)
+
+
+def test_install_json_for_an_agent(tmp_path, capsys, monkeypatch):
+    """--json: the messages on stderr, one JSON summary on stdout, the downloads named before anything is installed."""
+    import json
+
+    from assistant_x.setup import install
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["install", "--dry-run", "--json", "--yes", "--no-register", "--cpu", "--workspace", str(tmp_path / "ws")],
+    )
+    monkeypatch.setattr(install, "self_check", lambda py, dry: [])
+    from assistant_x.clients import connect
+
+    monkeypatch.setattr(connect, "listing", lambda: [])  # not the apps of this PC
+    before = os.environ.get("AX_WORKSPACE")
+    try:
+        assert install.main() == 0
+    finally:
+        install.JSON = False
+        install.use_workspace(before)
+    out = capsys.readouterr().out.strip().splitlines()
+    s = json.loads(out[-1])
+    assert len(out) == 1 and s["ok"] and s["dry_run"] and s["device"] == "cpu" and s["workspace"].endswith("ws")
+    assert s["command"].endswith(("assistant-x.exe", "assistant-x")) and "connect --check" in " ".join(s["next"])
+    assert "packages" in s["downloads"] and s["lmstudio_link"].startswith("lmstudio://")
