@@ -16,6 +16,20 @@ from tests.search.conftest import build, make_library
 from tests.search.fake_embedder import embed
 
 
+def rmtree(path):
+    """shutil.rmtree, once more after a moment when Windows still holds a file it was writing (WinError 145: the
+    folder not empty yet, a check of the full run of 0.5.3)."""
+    import time
+
+    for wait in (0.2, 0.5, 1.0, 0):
+        try:
+            return shutil.rmtree(path)
+        except OSError:
+            if not wait:
+                raise
+            time.sleep(wait)
+
+
 def model_folder(root, weights=b"weights"):
     d = os.path.join(root, "bge-m3")
     os.makedirs(d, exist_ok=True)
@@ -142,7 +156,7 @@ def test_the_cache_stays_when_vector_files_are_swept(tmp_path):
 
 def test_seed_cache_from_a_base_embedded_before_the_cache(tmp_path, monkeypatch, capsys):
     path, cfg = embedded(str(tmp_path / "lib"))
-    shutil.rmtree(V.folder(cfg))  # a base of 2026-10-24: vectors, no cache, no note
+    rmtree(V.folder(cfg))  # a base of 2026-10-24: vectors, no cache, no note
     con = connect(cfg["db"])
     con.execute("DELETE FROM meta WHERE key IN ('vector_cache_seeded', 'embed_fingerprint')")
     con.commit()
@@ -158,7 +172,7 @@ def test_seed_cache_from_a_base_embedded_before_the_cache(tmp_path, monkeypatch,
 
 def test_a_base_without_the_note_is_seeded_by_embed_itself(tmp_path, monkeypatch):
     path, cfg = embedded(str(tmp_path / "lib"))
-    shutil.rmtree(V.folder(cfg))
+    rmtree(V.folder(cfg))
     con = connect(cfg["db"])
     con.execute("DELETE FROM meta WHERE key='vector_cache_seeded'")
     con.commit()
@@ -171,7 +185,7 @@ def test_a_base_without_the_note_is_seeded_by_embed_itself(tmp_path, monkeypatch
 
 def test_no_seeding_from_vectors_of_another_state_of_the_model(tmp_path):
     path, cfg = embedded(str(tmp_path / "lib"))
-    shutil.rmtree(V.folder(cfg))
+    rmtree(V.folder(cfg))
     con = connect(cfg["db"])
     con.execute("UPDATE meta SET value='0000000000000000' WHERE key='embed_fingerprint'")
     con.commit()
@@ -187,7 +201,7 @@ def test_without_the_model_what_the_cache_has_goes_in(tmp_path):
     with open(text, "a", encoding="utf-8") as f:
         f.write("A new paragraph about the gas outlet of the separator.\n")
     build(path)
-    shutil.rmtree(cfg["embed_model"])
+    rmtree(cfg["embed_model"])
     import sys
     from assistant_x.search import embed as embed_mod
     from tests.search.fake_embedder import fake_models
