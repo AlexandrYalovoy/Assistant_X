@@ -26,6 +26,8 @@ Fixes and hardening after 0.5.
 - AX_LOG_LEVEL (DEBUG, INFO, WARNING, ERROR) sets the level of the service log; at DEBUG every bridge writes a line per
   message into bridge-<id>.log beside it, for a debug run. By default the service log no longer gets the INFO lines of
   sentence_transformers.
+- The note that the uploaded skill of Claude Desktop is outdated goes to Claude Desktop only, once; the shared service
+  no longer gives it to LM Studio, DeepSeek Harness or Codex.
 
 ## 0.5 — 2026-10-28
 

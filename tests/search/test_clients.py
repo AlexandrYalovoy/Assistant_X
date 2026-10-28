@@ -228,7 +228,8 @@ def test_check_through_a_connected_app(home, mini, tmp_path, monkeypatch):
     connect.connect(["lmstudio"], python=sys.executable, root=mini["root"], say=lambda s: None)
     try:
         r = connect.check(["lmstudio"], say=lambda s: None)["lmstudio"]
-        assert r["ok"] and r["tools"] == 8 and r["initialize_s"] < 5, r
+        assert r["tools"] == 8 and r["initialize_s"] < 5 and "search_s" in r, r
+        assert not r["ok"] and "no meaning vectors" in r["error"]  # the mini library has none: said, not "in order"
     finally:
         from assistant_x.server import service
         import psutil
@@ -287,3 +288,8 @@ def test_claude_desktop_hears_once_that_its_skill_is_outdated(tmp_path, monkeypa
     p.write_text("---\nname: x\n---\nold skill\n", encoding="utf-8")
     [note] = mcp_server.desktop_skill_note()
     assert "before 0.4" in note and "upload it again" in note
+    # only Claude Desktop hears it (the shared service answers LM Studio and the others too), and once
+    monkeypatch.setattr(mcp_server, "_noticed", True)
+    monkeypatch.setattr(mcp_server, "_desktop_noticed", False)
+    assert mcp_server.start_notice("lms-loop") == "" and mcp_server.start_notice("") == ""
+    assert "upload it again" in mcp_server.start_notice("claude-ai") and mcp_server.start_notice("claude-ai") == ""

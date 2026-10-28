@@ -297,6 +297,7 @@ def search_library(
     year_from: int | None = None,
     year_to: int | None = None,
     scope: str = "all",
+    ctx: Context | None = None,
 ) -> str:
     """Find fragments of the library for a question (words + meaning). Returns the code, the PDF page and the text; a
     designation in the question ("GOST 1510-84") puts the card of that document first.
@@ -339,7 +340,7 @@ def search_library(
         + ", ".join(f"{r['code']}:{r['page']}" for r in res[:5])
     )
     note = search_note(stats, light, query, res)
-    pending = "\n".join(x for x in (start_notice(), common.stale_note(lib().cfg), note) if x)
+    pending = "\n".join(x for x in (start_notice(client_name(ctx)), common.stale_note(lib().cfg), note) if x)
     pending = f"{pending}\n\n" if pending else ""
     if not res:
         return pending + "Nothing found. Try other terms or remove the filters."
@@ -364,17 +365,37 @@ def search_library(
 
 
 _noticed = False  # the start notice was given once in this server
+_desktop_noticed = False  # the note on the uploaded skill was given to Claude Desktop once
 
 
-def start_notice():
-    """Once per server: the background jobs that failed or stopped before the end and the base changes left half-done
-    (an earlier server was closed during them), for Claude to tell the user; "" when there are none."""
-    global _noticed
-    if _noticed:
-        return ""
-    _noticed = True
+def client_name(ctx):
+    """The clientInfo name of the app of this request ("" without one): the bridge passes the app's own."""
     try:
-        lines = intake_tools.interrupted() + base_tools.open_journals() + desktop_skill_note()
+        session = ctx.request_context.session
+        params = getattr(session, "client_params", None)
+        info = getattr(params, "clientInfo", None) or getattr(session, "client_info", None)
+        return str(getattr(info, "name", "") or "")
+    except Exception:  # noqa: BLE001 — no context (a direct call, a test)
+        return ""
+
+
+def is_claude_desktop(name):
+    return "claude-ai" in name.lower() or "claude desktop" in name.lower()
+
+
+def start_notice(client=""):
+    """Once per server: the background jobs that failed or stopped before the end and the base changes left half-done
+    (an earlier server was closed during them), for the assistant to tell the user; once to Claude Desktop (client):
+    its uploaded skill is outdated. "" when there is nothing to say."""
+    global _noticed, _desktop_noticed
+    lines = []
+    try:
+        if not _noticed:
+            _noticed = True
+            lines += intake_tools.interrupted() + base_tools.open_journals()
+        if is_claude_desktop(client) and not _desktop_noticed:  # the other apps have no uploaded skill
+            _desktop_noticed = True
+            lines += desktop_skill_note()
     except Exception as e:  # noqa: BLE001 — a notice only: never a reason for the search to fail
         debuglog.log_error("start notice", e)
         return ""
@@ -712,9 +733,9 @@ def _asker(ctx):
 
 @tool("Inbox")
 @logged
-def intake_list() -> str:
+def intake_list(ctx: Context | None = None) -> str:
     """What lies in inbox (the user's own documents to sort) and whether an intake is running now."""
-    note = start_notice()
+    note = start_notice(client_name(ctx))
     return (f"{note}\n\n" if note else "") + intake_tools.inbox_list()
 
 
