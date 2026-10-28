@@ -290,24 +290,3 @@ def test_a_phrase_repeated_many_times_is_no_doubled_text():
     clean = " ".join(documents.sentences(741, 4))
     assert ocr_score.repeated(native) >= ocr_score.DOUBLED and not ocr_score.is_doubled(native)
     assert ocr_score.is_doubled(f"{clean} {clean}")
-
-
-def test_redo_drops_the_doubled_issue_of_an_undoubled_text(tmp_path):
-    """A card whose text was doubled says so in its issues; once the text is no longer doubled the issue goes (run
-    2a4: every hit of 125 redone documents still warned that the text appears twice)."""
-    from assistant_x.core import card
-
-    doubled = {"what": "Every phrase of the extracted text appears twice (a plain and a bold copy)", "need": "x"}
-    garbled = {"what": "3 pages with garbled recognition", "need": "y"}
-    c = {
-        "code": "N-00001",
-        "schema": card.SCHEMA_VERSION,
-        "doc": card.empty_doc(),
-        "file": {**card.empty_file(), "issues": [doubled, garbled]},
-    }
-    card.dump(c, tmp_path / "N-00001.json")
-    page = " ".join(documents.sentences(760, 3))
-    assert ocr_redo.clear_doubled_issue(tmp_path, "N-00001", f"=== page 1 ===\n\n{page}\n{page}\n\n") == 0  # doubled
-    assert ocr_redo.clear_doubled_issue(tmp_path, "N-00001", f"=== page 1 ===\n\n{page}\n\n") == 1
-    assert card.load(tmp_path / "N-00001.json")["file"]["issues"] == [garbled]
-    assert ocr_redo.clear_doubled_issue(tmp_path, "N-00002", "") == 0  # no card

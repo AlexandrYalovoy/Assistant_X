@@ -12,6 +12,8 @@ the build and the apply.
     assistant-x intake build           cards, texts, catalog rows, events, moves (build.py)
     assistant-x intake apply [--dry-run]  move into library, index, manifest, journal (apply.py)
     assistant-x intake journal         build index\\journal.md (core/journal.py)
+    assistant-x intake reflag [--dry-run] [CODE ...]  page flags and text notes of the cards made again from the texts
+                                       of the library, no OCR (text_notes.py)
 
 The work folder of a batch: intake/work/<DATE> (state.sqlite, md/, meta_draft.jsonl, summary.md, intake_quality.md);
 paths and programs: assistant_x.toml (intake/config.py). The parts: batch.py (shared helpers), prepare.py, process.py,
@@ -138,7 +140,14 @@ def cmd_ocr(cfg, a):
     return getattr(ocr_quality, "cmd_" + a.cmd.replace("-", "_"))(cfg, a)
 
 
-LOCKED = ("run", "requeue", "build", "apply", "redo")
+def cmd_reflag(cfg, a):
+    from assistant_x.intake import text_notes
+
+    text_notes.reflag(cfg, a.codes, a.dry_run, say=say)
+    return 0
+
+
+LOCKED = ("run", "requeue", "build", "apply", "redo", "reflag")
 HEAVY = ("run", "build", "apply", "redo")  # also take the machine lock (core/lock.py) and the priority of assistant_x.toml
 
 
@@ -170,6 +179,7 @@ def main(argv=None):
         "ocr-score": cmd_ocr,
         "sample": cmd_ocr,
         "redo": cmd_ocr,
+        "reflag": cmd_reflag,
     }
     for name in commands:
         p = sub.add_parser(name)
@@ -207,6 +217,9 @@ def main(argv=None):
             p.add_argument("--write", action="store_true")
         if name == "journal":
             p.add_argument("--check", action="store_true")
+        if name == "reflag":
+            p.add_argument("codes", nargs="*", help="codes (default: every card of the library)")
+            p.add_argument("--dry-run", action="store_true", help="count what would change, write nothing")
         if name in ("ocr-score", "redo"):
             p.add_argument("codes", nargs="*", help="codes (default: all the texts of index\\texts)")
         if name == "ocr-score":

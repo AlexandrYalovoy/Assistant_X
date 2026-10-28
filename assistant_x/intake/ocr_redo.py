@@ -20,7 +20,8 @@ for a broken font encoding). Known words count once per page, so a doubled old t
 row in index/intake_events.tsv ("recognized again: …", why the text was or was not replaced); a replaced one gets
 its new row in ocr_quality.tsv (source "redo"). The work goes to intake/work/redo/<date>_<time>/; the library PDF is
 copied there, library is only read. A replaced text and its page file are copied to inbox/_to_delete/redo_<date>/
-first.
+first. The page flags and the text notes of the card of every document read are made again from its text in the
+library (text_notes.refresh: garbled and doubled pages, recognition score, the score of the file).
 
 The documents are read as the intake reads them (process.Batch): the tasks prep, convert and, for a long scan, the OCR
 in page ranges (schedule.shard_count) on the persistent workers with the load regulator (process.regulated_pool); the
@@ -29,11 +30,11 @@ text replaced as soon as its last reading is back (a stopped run keeps what it f
 folder has a line a document). After replacements: build_index.py and embed.py.
 """
 
-import datetime, hashlib, heapq, itertools, json, os, re, shutil, time
+import datetime, hashlib, heapq, itertools, json, os, shutil, time
 from concurrent.futures import FIRST_COMPLETED, wait
 from pathlib import Path
 
-from assistant_x.intake import config as intake_cfg
+from assistant_x.intake import config as intake_cfg, text_notes
 
 from assistant_x.intake.tools import ocr_score
 from assistant_x.core.common import QUALITY
@@ -467,9 +468,14 @@ def cmd_redo(cfg, a):
             ocr_score.write_tsv(tsv, rows)
             replaced += 1
         if not a.dry_run and (texts / f"{code}.md").exists():
-            dropped = clear_doubled_issue(cfg.index / "cards", code, (texts / f"{code}.md").read_text(encoding="utf-8"))
-            if dropped:
-                say(f"    the card no longer says the text is doubled ({dropped} issue)")
+            # the page flags and the notes of the card on the text made again from the text now in the library (a
+            # replaced one, or a kept one whose notes an older code wrote): text_notes
+            n = text_notes.refresh(cfg.index, code, date, aside=aside, rows=rows)
+            if n.get("changed"):
+                say(
+                    f"    notes of the text: page flags {n['flags']}, issues -{len(n['removed'])} +{len(n['added'])}"
+                    + (f", score of the file {n['score'][0]} -> {n['score'][1]}" if n["score"] else "")
+                )
         if not a.dry_run:
             journal.append_events(events_path, [event(cfg, date, code, r)])
         results[code] = r
@@ -537,29 +543,6 @@ def apply_text(texts, code, r, aside, rows, date):
         old_info.unlink()
     detail = json.loads(Path(r["detail"]).read_text(encoding="utf-8")) if r.get("detail") else ocr_score.score_text(new_md)
     rows[code] = ocr_score.row_of(code, detail, "redo", date)
-
-
-# an issue of a card that says the text is doubled (written with the card at the intake; the issues are in English)
-DOUBLED_ISSUE = re.compile(r"appears twice|doubled", re.I)
-
-
-def clear_doubled_issue(cards, code, md):
-    """Drop the issues "the text is doubled" from the card of a code whose text md is no longer doubled (run 2a4: 125
-    cards kept the issue after their text was replaced, and every hit of those documents warned of it). Returns how
-    many were dropped."""
-    from assistant_x.core import card
-
-    path = Path(cards) / f"{code}.json"
-    if not path.exists() or doubling(md)[0] >= UNDOUBLED_MEAN:
-        return 0
-    c = card.load(path)
-    issues = (c.get("file") or {}).get("issues") or []
-    keep = [i for i in issues if not DOUBLED_ISSUE.search(str(i.get("what", "")))]
-    if len(keep) == len(issues):
-        return 0
-    c["file"]["issues"] = keep
-    card.dump(c, path)
-    return len(issues) - len(keep)
 
 
 def event(cfg, date, code, r):
