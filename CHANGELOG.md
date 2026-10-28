@@ -16,6 +16,12 @@ The open items of the observation journal.
 - The documents for people have Russian twins (README.ru.md, CHANGELOG.ru.md, docs/*.ru.md and the rest), with a line
   to switch the language at the top; gen-docs makes INSTALL_FOR_AI.ru.md and docs/CLIENTS.ru.md from Russian templates,
   and a test keeps every pair together (headings, code blocks, links, versions).
+- Card drafts (Q6): capitals spaced out over several words are split again by the seed vocabulary
+  (УСТАНОВКАОСУШКИГАЗА), a word OCR broke into pieces or at a hyphen is joined, the English title is left out of the
+  title of a Russian standard, a garbled head line still gives the title of a standard, a series line is no title, a
+  textbook is no plain book, the imprint line gives the year, and an OCR tilde in an RD designation reads as a dash. On
+  the 40 hard documents of the rounds the titles came right 32 times instead of 26 (year 36/39, designation 35/35); the
+  recognition snapshot moved only for the intended patterns.
 
 ## 0.5.3 — 2026-10-28
 

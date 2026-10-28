@@ -284,3 +284,65 @@ def test_a_legal_database_export_quotes_the_amendment_line():
     d = metadraft.draft(md, "Изменение N 1 ГОСТ 12.2.063-2015.pdf")
     assert d["amends"] == "ГОСТ 12.2.063-2015" and d["doc_type"] == "standard"
     assert d["title"]["ru"].startswith("Изменение N 1 ГОСТ 12.2.063-2015") and "en" not in d["title"]
+
+
+# ---------- titles of the rounds of 2026-10-28 (Q6) ----------
+
+
+def test_spaced_capitals_of_several_words_are_split_again():
+    """A slide title in spaced capitals: joined, the letters of three words are split by the seed vocabulary."""
+    md = page(1, "**У С Т А Н О В К А О С У Ш К И Г А З А** Лекция №5\n\n28.02.2023 г.")
+    assert metadraft.draft(md, "lecture.pdf")["title"]["ru"] == "Установка осушки газа. Лекция №5"
+
+
+def test_a_word_ocr_broke_into_pieces_is_joined():
+    assert metadraft.tidy("Морские промы словы е сооружения") == "Морские промысловые сооружения"
+    assert metadraft.tidy("тепло- и массообменные аппараты") == "тепло- и массообменные аппараты"
+    assert metadraft.tidy("Процессы и аппараты нефтегазо- переработки") == "Процессы и аппараты нефтегазопереработки"
+
+
+def test_a_long_term_is_not_split_into_short_words():
+    assert "противовыбросовое" in metadraft.tidy("ОБОРУДОВАНИЕ ПРОТИВОВЫБРОСОВОЕ").lower()
+
+
+def test_a_series_line_is_no_title_and_the_imprint_gives_the_year():
+    md = (
+        page(1, "СЕРИЯ «ПРОЦЕССЫ И АППАРАТЫ ХИМИЧЕСКОЙ И НЕФТЕХИМИЧЕСКОЙ ТЕХНОЛОГИИ»")
+        + page(
+            2,
+            "Ю.К. Молоканов\n\n# Процессы и аппараты нефтегазо- переработки\n\nДопущено Министерством "
+            "нефтеперерабатывающей промышленности в качестве учебника\n\nМОСКВА «ХИМИЯ» 1980",
+        )
+        + page(3, "Кунин Л. Промышленное псевдоожижение, 1976. Соколов В. И. Центрифугирование, 1976.")
+    )
+    d = metadraft.draft(md, "book.pdf")
+    assert d["title"]["ru"] == "Процессы и аппараты нефтегазопереработки"
+    assert d["year"] == 1980 and d["doc_type"] == "textbook"
+
+
+def test_the_english_title_of_a_national_standard_is_left_out():
+    md = page(
+        1,
+        "**Н А Ц И О Н А Л Ь Н Ы Й** ГОСТ Р исо **С Т А Н Д А Р Т Р О С С И Й С К О Й** 13680 — **Ф Е Д Е Р А Ц И И** 2011\n\n"
+        "ТРУБЫ БЕСШОВНЫЕ ОБСАДНЫЕ\n\nТехнические условия\n\n**ISO 13680:2010**\n\n"
+        "**Petroleum and natural gas industries — Corrosion-resistant alloy seamless tubes — Technical delivery "
+        "conditions (IDT)**\n\nИздание официальное",
+    )
+    d = metadraft.draft(md, "ГОСТ Р ИСО 13680-2011.pdf")
+    assert d["title"]["ru"] == "Трубы бесшовные обсадные. Технические условия"
+
+
+def test_a_garbled_head_line_still_gives_the_title_of_a_standard():
+    """Two text layers mixed the head line with Latin letters beyond is_head: the title starts at the first line in
+    capitals made of words, the subtitle follows."""
+    md = page(
+        1,
+        "ГОСТ 30768-2001\n\nМMEEЕЖГTOОСCYУДDAPАРС CTEEERELE ТВЕННЫЙ\n\nС CTAB ТАНД RAPT А Р Т\n\n"
+        "ОБОРУДОВАНИЕ УСТЬЕВОЕ НЕФТЕПРОМЫСЛОВОЕ\n\nМетоды испытаний\n\nИздание официальное",
+    )
+    d = metadraft.draft(md, "ГОСТ 30768-2001.pdf")
+    assert d["title"]["ru"] == "Оборудование устьевое нефтепромысловое. Методы испытаний"
+
+
+def test_an_ocr_tilde_in_a_designation_reads_as_a_dash():
+    assert metadraft.designation("РД 0352 ~ 95-85") == "РД 0352-95-85"

@@ -25,6 +25,7 @@
     "ASME"
   ],
   "not_title": [
+    "series\\s*[«\"“]",
     "isbn",
     "©",
     "copyright",

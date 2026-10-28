@@ -25,6 +25,9 @@ PUBLISHED = re.compile(
     rf"(?m)(?:^|\s)({lang.alt('publish_places')})\s*[:.]\s*"
     r"([^,\n]{2,60}),\s*((?:19|20)\d{2})"
 )
+# the imprint line of a title page without the colon: "MOSCOW <<CHEMISTRY>> 1980" (a list of the books of a series on a
+# page before it names other years)
+IMPRINT = re.compile(rf"(?mi)^[ \t]*({lang.alt('publish_places')})(?![^\W\d_])[^\n]{{0,60}}?((?:19|20)\d{{2}})[ \t.]*$")
 PUBLISHER = re.compile(rf"(?i)({lang.alt('publisher_words')})\s*[«\"]?([^»\"\n,]{{2,50}})")
 ORG = re.compile(rf"((?:{lang.alt('company_forms')})\s*[«\"][^»\"\n]{{2,60}}[»\"])")
 FOREIGN_ORG = re.compile(rf"\b({lang.alt('known_publishers')})\b")
@@ -37,8 +40,9 @@ NOT_HEADING_LINE = re.compile(rf"(?i)^({lang.alt('not_heading')})")  # a service
 AMENDMENT = re.compile(rf"(?i)^(?:#+\s*)?[\"'«“„]?({lang.alt('amendment')})\b")  # quoted by a legal database too
 DASHES = " .-–—"
 # the genres the words of the first pages suggest (doc_type_words of the packs and the profile), in the order of the
-# genres of schemas/card-1.json; the first rule that matches wins (a designation of a standard comes before all of them)
-TYPE_ORDER = tuple(t for t in config.doc_types() if t != "other")
+# genres of schemas/card-1.json, a book last ("a textbook for ..." is a book too); the first rule that matches wins (a
+# designation of a standard comes before all of them)
+TYPE_ORDER = tuple(t for t in config.doc_types() if t not in ("other", "book")) + ("book",)
 TYPE_RULES = [(t, re.compile("(?i)" + "|".join(lang.lists("doc_type_words").get(t, [])))) for t in TYPE_ORDER]
 PAGES_RX = re.compile(rf"(?:^|\n)=== (?:{PAGE_WORDS}) \d+ ===\n")
 UPPER = lang.chars("upper")
@@ -77,10 +81,58 @@ REPEAT_PHRASE = re.compile(r"(?i)\b([\w-]+(?: [\w-]+){1,7}) \1\b")
 def tidy(line):
     """A line of the texts of national standards from the registry site: two text layers give a drop cap with
     the word spaced out ("I INTERSTATE N T E R S T A T E") and repeats ("GENERAL GENERAL REQUIREMENTS REQUIREMENTS"):
-    spaced letters joined, a drop cap with the word and its spaced rest made one word, repeats dropped."""
+    spaced letters joined, a drop cap with the word and its spaced rest made one word, repeats dropped. Spaced
+    letters of several words joined into one ("GASDRYINGUNIT") are split again by the vocabulary, a word OCR broke
+    into pieces ("offs hore") is joined (mend_words)."""
     s = SPACED.sub(lambda m: m.group(0).replace(" ", ""), line)
     s = DROP_CAP.sub(lambda m: m.group(2) if (m.group(1) + m.group(3)).upper() == m.group(2).upper() else m.group(0), s)
-    return " ".join(drop_repeats(s.split()))
+    return " ".join(drop_repeats(mend_words(s.split())))
+
+
+JOIN_MAX = 4  # pieces of one broken word at most
+SPLIT_WORD = 4  # letters of every word a glued token of capitals is split into; of the rest of a word after a hyphen
+HYPHEN_END = re.compile(r"^([^\W\d_]+)[-‐­]$")  # "petro-" before the rest of the word on the line
+
+
+def mend_words(tokens):
+    """The tokens of a title line made whole by the seed vocabulary of the packs (never the vocabulary of the library:
+    the draft of a text does not change with the library): a token of capitals glued from several words split into
+    them ("GASDRYINGUNIT" -> "GAS DRYING UNIT"), a run of 2-4 pieces none of which is a word joined when together they
+    are one ("offs hore" -> "offshore"), a word broken at a hyphen before the lowercase rest of it joined ("petro-
+    leum"); a hyphen before a short conjunction ("heat- and mass-transfer") stays. A split keeps words of SPLIT_WORD
+    letters and more only: a long term the seed does not know is no glue of short words ("anti blow out")."""
+    from assistant_x.intake.tools import ocr_score as sc
+
+    vocab = (frozenset(), frozenset())
+    letters = lambda t: t.isalpha()  # noqa: E731
+    known = lambda t: sc.known(sc.norm(t), vocab)  # noqa: E731
+    out = []
+    for t in tokens:
+        parts = sc.segment(t, vocab) if letters(t) and t.isupper() else None
+        if parts and min(map(len, parts)) >= SPLIT_WORD:
+            out += parts
+        else:
+            out.append(t)
+    i, res = 0, []
+    while i < len(out):
+        t = out[i]
+        m = HYPHEN_END.match(t)
+        nxt = out[i + 1] if i + 1 < len(out) else ""
+        if m and letters(nxt) and nxt.islower() and len(nxt) >= SPLIT_WORD:
+            res.append(m.group(1) + out[i + 1])
+            i += 2
+            continue
+        for k in range(min(JOIN_MAX, len(out) - i), 1, -1):
+            run = out[i : i + k]
+            if all(map(letters, run)) and not any(len(p) >= 2 and known(p) for p in run) and len("".join(run)) >= 6:
+                if known("".join(run)):
+                    res.append("".join(run))
+                    i += k
+                    break
+        else:
+            res.append(t)
+            i += 1
+    return res
 
 
 def drop_repeats(tokens):
@@ -109,12 +161,15 @@ NOT_STANDARDS = re.compile(rf"({lang.alt('not_standards')})\b")  # designations 
 def gost_title(pages):
     """Title of a national standard by its title page: the lines in capitals after the head line ("… STANDARD") up to
     the end line ("Official edition"): "ELECTRIC DRILLS" + "GENERAL TECHNICAL REQUIREMENTS" -> "Electric drills. General
-    technical requirements"."""
+    technical requirements". When two text layers garbled the head line beyond is_head, the title starts at the first
+    line in capitals made of words (caps_title_line)."""
     lines = [tidy(plain(x)).strip(" .:-–") for x in (pages[0] if pages else "").split("\n")]
     lines = [x for x in lines if x]
     start = next((i + 1 for i, x in enumerate(lines) if is_head(x)), None)
     if start is None:
-        return ""
+        start = next((i for i, x in enumerate(lines[:CAPS_LINES]) if caps_title_line(x)), None)
+        if start is None:
+            return ""
     parts = []
     for x in lines[start:]:
         if GOST_END.match(x) or GOST_END.search(x.split(" ", 1)[-1]):
@@ -122,10 +177,31 @@ def gost_title(pages):
         first = x.split()[0]
         if DESIGNATION_START.match(x) or sum(c.isalpha() for c in first) < 3 or not first[0].isupper():
             continue  # the designation again, a catalogue code ("11—98B3"), a line of plain text
-        if SKIP_TITLE.match(x) or (LATIN_LINE.match(x) and not LATIN_LINE.match(lines[start - 1])):
+        if SKIP_TITLE.match(x) or (LATIN_LINE.match(x) and not LATIN_LINE.match(lines[max(start - 1, 0)])):
             continue  # a service line among the title lines ("OF THE USSR", "COMMITTEE"); the English title of a Russian one
         parts.append(sentence(x))
     return ". ".join(parts[:3])
+
+
+CAPS_KNOWN = 0.6  # the share of the words of 3 letters and more a line in capitals needs in the seed vocabulary
+CAPS_LINES = 10  # the lines of a title page where such a title line is looked for
+
+
+def caps_title_line(line):
+    """A title line in capitals of a title page whose head line two text layers garbled ("MMEEZHGTOOC..."): two words
+    at least, all in capitals, no service line or designation, no word mixing two alphabets, most words known."""
+    from assistant_x.intake.tools import ocr_score as sc
+
+    toks = re.findall(r"[^\W\d_]+", line)
+    long = [t for t in toks if len(t) >= 3]
+    if len(toks) < 2 or len(long) < 2 or line.upper() != line or SKIP_TITLE.match(line) or DESIGNATION_START.match(line):
+        return False
+    if HEAD_LOOSE.search(line) or GOST_HEAD.search(line.lower()):
+        return False  # a head line itself ("NATIONAL GOSTR STANDARD 51906 ..."), glued beyond is_head
+    if not all(any(rx.fullmatch(t) for rx in sc.SCRIPT.values()) for t in toks):
+        return False  # a word of letters of two packs
+    vocab = (frozenset(), frozenset())
+    return sum(sc.known(sc.norm(t), vocab) for t in long) >= CAPS_KNOWN * len(long)
 
 
 def is_head(line):
@@ -217,7 +293,7 @@ def designations_in(text):
         return []
     out = []
     for m in DESIG_ANY.finditer(text):
-        d = re.sub(r"\s+", " ", m.group(0)).strip(DASHES)
+        d = re.sub(r"\s*~\s*", "-", re.sub(r"\s+", " ", m.group(0))).strip(DASHES)  # OCR reads a dash as "~"
         if d and designation_number(d):
             out.append((m.start(), m.start() + len(m.group(0).rstrip(DASHES)), d))
     ends = {}
@@ -301,7 +377,7 @@ def amendment_of(pages):
     return None
 
 
-LATIN_LINE = re.compile(r"^[A-Za-z][A-Za-z0-9 ,.;:()'/&-]+$")
+LATIN_LINE = re.compile(r"^[A-Za-z][A-Za-z0-9 ,.;:()'/&\u2013\u2014-]+$")
 
 
 def en_title_line(pages, desig):
@@ -335,6 +411,9 @@ def year_of(text, desig=None):
     m = PUBLISHED.search(text)
     if m:
         return m.group(3)
+    m = IMPRINT.search(text)
+    if m:
+        return m.group(2)
     years = [int(y) for y in YEAR.findall(text) if 1900 <= int(y) <= now + 1]
     if not years:
         return ""

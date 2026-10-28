@@ -123,7 +123,7 @@ print(json.dumps({"api": metadraft.designation("API RP 14C Analysis"), "gost": m
     assert out["oil-gas-ru"]["en"] == "Pumps-General-Requirements" and out["general"]["en"] == ""
     assert out["general"]["gost"] == out["oil-gas-ru"]["gost"] == "ГОСТ Р 51858-2002"  # state standards: the packs
     card = importlib.import_module("assistant_x.core.card")
-    assert out["general"]["types"] == [t for t in card.doc_types() if t != "other"]
+    assert out["general"]["types"] == [t for t in card.doc_types() if t not in ("other", "book")] + ["book"]  # a book last
 
 
 @pytest.mark.parametrize(
