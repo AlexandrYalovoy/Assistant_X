@@ -224,16 +224,16 @@ def skeleton(text):
     the folding of the languages (lang.fold: Russian yo as ye) and of look-alike letters of two scripts
     (lang.homoglyphs), every dash of the language packs ("dashes") as "-" and every quote ("quotes") as a double quote,
     the soft hyphen, the marks of Markdown and the underscores of italics at the edges of words dropped, a word broken
-    at a line end joined (join_hyphens: «забрако- ваны» as «забракованы»), white space collapsed."""
+    at a line end joined (join_hyphens: 'separa- tor' as 'separator'), white space collapsed."""
     t = unicodedata.normalize("NFKC", text.replace(SOFT_HYPHEN, ""))
     t = EDGE_UNDERSCORE_RX.sub("", MARKDOWN_MARK_RX.sub(" ", t))
     t = lang.homoglyphs(lang.fold(join_hyphens(" ".join(t.split()).lower()))).translate(_skeleton_map())
     return " ".join(t.split())
 
 
-# the underscores of Markdown italics («_прямолинейность», «части_»): an underscore not between two letters or digits
+# the underscores of Markdown italics ('_straightness', 'part_'): an underscore not between two letters or digits
 EDGE_UNDERSCORE_RX = re.compile(r"(?<![^\W_])_+|_+(?![^\W_])")
-# a word broken at a line end that a converter joined into one line with its hyphen: «забрако- ваны», «separa- tor»
+# a word broken at a line end that a converter joined into one line with its hyphen: 'separa- tor'
 INLINE_HYPHEN_RX = re.compile(r"([^\W\d_]{2,})[-‐][ \t]+([^\W\d_]+)")
 
 
@@ -243,11 +243,11 @@ def _suspended():
 
 
 def join_hyphens(text, known=None):
-    """Words broken at a line end and left on one line with the hyphen and a space («забрако- ваны») joined into one
-    («забракованы»): the second part goes on in lower case (or both parts are capitals) and is not a word of
-    "hyphen_suspended" of the language packs, which ends a suspended compound («нефте- и газопроводы», "pre- and
-    post-"). known: the vocabulary of the library (lower case, folded); with it a word is joined only when the
-    vocabulary knows the whole word, as dehyphenate does (a text written to the library); without it every such word
+    """Words broken at a line end and left on one line with the hyphen and a space ('separa- tor') joined into one
+    ('separator'): the second part goes on in lower case (or both parts are capitals) and is not a word of
+    "hyphen_suspended" of the language packs, which ends a suspended compound ("pre- and post-processing").
+    known: the vocabulary of the library (lower case, folded); with it a word is joined only when the vocabulary knows
+    the whole word, as dehyphenate does (a text written to the library); without it every such word
     is joined (the search text and the comparison of quotes, where a wrong join of a rare compound costs nothing)."""
     if "- " not in text and "-\t" not in text and "‐" not in text:
         return text
@@ -488,8 +488,8 @@ CHUNK_VERSION = "5"
 
 
 # running headers and footers: a line among the first or the last RUNNING_EDGE lines of a page that stands there on
-# RUNNING_SHARE of the pages of a document of RUNNING_MIN_PAGES pages or more (its digits aside: "Страница 40 из 331",
-# "Документ предоставлен … Дата сохранения: 21.10.2026", "ГОСТ 33213— 2014"). The step 1 audit of the library: 68 of
+# RUNNING_SHARE of the pages of a document of RUNNING_MIN_PAGES pages or more (its digits aside: the page "40 of 331", the
+# title of the standard, "document provided by ... saved on 21.10.2026"). The step 1 audit of the library: 68 of
 # 336 documents, N-00001 on 144 of its 152 pages; a question with the title words of such a document found only it
 RUNNING_EDGE, RUNNING_SHARE, RUNNING_MIN_PAGES = 4, 0.5, 5
 
