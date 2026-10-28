@@ -107,9 +107,10 @@ class Bridge:
         raise Gone(f"the library service did not start in {START_TIMEOUT} s (its log: {paths['log']})")
 
     def spawn(self, log):
-        """The service, detached and hidden (core/proc.py): it outlives the bridge and the app."""
+        """The service, detached and hidden (core/proc.py): it outlives the bridge and the app. While the bridge lives
+        it waits for it, so a service that ends is no zombie of the bridge (Linux)."""
         with open(log, "ab") as f:
-            proc.popen(
+            p = proc.popen(
                 [proc.python(), "-m", "assistant_x.server.service"],
                 env=proc.python_env(dict(os.environ, PYTHONUTF8="1")),
                 stdin=proc.DEVNULL,
@@ -117,6 +118,7 @@ class Bridge:
                 stderr=f,
                 detach=True,
             )
+        threading.Thread(target=p.wait, daemon=True).start()
 
     # ---------- HTTP ----------
 

@@ -87,6 +87,19 @@ def place(mini, tmp_path, monkeypatch):
             pass
 
 
+def gone(pid, timeout=30):
+    """Wait until the process is gone (or a zombie: its parent has not reaped it yet)."""
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        try:
+            if psutil.Process(pid).status() == psutil.STATUS_ZOMBIE:
+                return
+        except psutil.NoSuchProcess:
+            return
+        time.sleep(0.2)
+    raise AssertionError(f"process {pid} still runs")
+
+
 def services(since):
     out = []
     for p in psutil.process_iter(["cmdline", "create_time"]):
@@ -119,7 +132,7 @@ def test_three_apps_one_service_and_a_killed_one_comes_back(place, mini):
     assert refused["error"]["message"] == "Unknown tool: intake_run"  # not in the reader set
 
     psutil.Process(info["pid"]).kill()  # gone: the next call starts it again
-    psutil.Process(info["pid"]).wait(timeout=30) if psutil.pid_exists(info["pid"]) else None
+    gone(info["pid"])
     again = apps[0].ask(
         "tools/call", {"name": "read_pages", "arguments": {"code": "N-00001", "start_page": 1, "end_page": 1}}
     )
@@ -135,10 +148,7 @@ def test_an_idle_service_exits(place, mini, monkeypatch):
     a.hello()
     assert a.ask("tools/call", {"name": "library_guide", "arguments": {}})["result"]["content"][0]["text"]
     pid = service.read_info(mini["root"])["pid"]
-    end = time.monotonic() + 60
-    while psutil.pid_exists(pid) and time.monotonic() < end:
-        time.sleep(0.5)
-    assert not psutil.pid_exists(pid) or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
+    gone(pid, timeout=60)
     assert service.read_info(mini["root"]) is None
 
 
