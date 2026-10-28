@@ -57,7 +57,7 @@ LINKED = ("venv", "models", "app", "programs", "src")  # big folders: linked, ne
 
 
 def legacy_machine_dirs():
-    r"""The older folders of the PC on Windows (before 0.5.1): %USERPROFILE%\.assistant_x, and the private copies of it
+    r"""The older folders of the PC on Windows (before 0.5.1): %LOCALAPPDATA%\AssistantX, and the private copies of it
     that Claude Desktop from the Microsoft Store keeps in its package (Packages\Claude_*\LocalCache\Local\AssistantX).
     None with AX_MACHINE_DIR or elsewhere."""
     local = os.environ.get("LOCALAPPDATA")

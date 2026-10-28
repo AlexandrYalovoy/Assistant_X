@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| 0.5 (the current one) | yes |
+| 0.5.1 (the current one) | yes |
 
 Only the latest released version gets security fixes. Assistant X is a prototype: a fix comes as a new version, not
 as a patch of an old one.
