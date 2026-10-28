@@ -45,6 +45,22 @@ def is_archive(name):
     return bool(archive_ext(name))
 
 
+VOLUME = re.compile(r"^(.*)\.(\d{3})$")  # "X.7z.002": a volume of an archive split in parts
+
+
+def volumes(archive):
+    """The next volumes beside the first one of a split archive ("X.7z.001" -> [X.7z.002, X.7z.003 ...] that exist),
+    in order; [] for any other archive. 7-Zip reads them with the first one; they go aside with it."""
+    m = VOLUME.match(str(archive))
+    if not m or m.group(2) != "001":
+        return []
+    out, k = [], 2
+    while Path(f"{m.group(1)}.{k:03d}").exists():
+        out.append(Path(f"{m.group(1)}.{k:03d}"))
+        k += 1
+    return out
+
+
 def safe_name(name):
     """Relative path parts of a member (in the NFC form), or Refused for an absolute path, .., a colon (an NTFS
     stream), a device name of Windows or a part ending in a dot or a space: the rules of a base package

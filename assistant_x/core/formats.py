@@ -100,6 +100,8 @@ EXTENSIONS = {
     **dict.fromkeys(("doc", "docx", "docm", "rtf", "odt", "ppt", "pptx", "pps", "ppsx", "odp"), "office"),
     **dict.fromkeys(("jpg", "jpeg", "png", "tif", "tiff", "bmp"), "image"),
     **dict.fromkeys(("zip", "7z", "rar", "tar", "tgz", "tar.gz", "tar.bz2", "tar.xz", "gz"), "archive"),
+    # the first volume of an archive split in parts (7-Zip reads the next ones .002, .003 … beside it)
+    **dict.fromkeys(("7z.001", "zip.001", "rar.001", "001"), "archive"),
     **dict.fromkeys(("msg", "eml", "oft"), "letter"),
     **dict.fromkeys(("xls", "xlsx", "xlsm", "xlsb", "ods"), "spreadsheet"),
     **dict.fromkeys(("epub", "fb2", "mobi", "xps", "oxps"), "ebook"),

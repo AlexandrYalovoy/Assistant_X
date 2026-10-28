@@ -154,6 +154,21 @@ def prepare(cfg, state, dry=False):
                 state.update(tid, status="error", why=f"nested archive not unpacked: {item['why']}")
                 problems.append(f"nested archive not unpacked: {win(left)} — {item['why']}")
             dest = "inbox\\" + win(os.path.relpath(rep["dest"], intake_cfg.lp(cfg.inbox)))
+            for vol in unpack.volumes(full):  # the next volumes of a split archive go aside with its first one
+                vrel = os.path.relpath(vol, intake_cfg.lp(cfg.inbox)).replace("\\", "/")
+                vsize = os.path.getsize(vol)
+                vplace = move_aside(cfg, str(vol), vrel, "_to_delete")
+                events.append(
+                    [
+                        today(),
+                        "inbox\\" + win(vrel),
+                        vsize,
+                        "—",
+                        "—",
+                        vplace,
+                        f"to delete: a volume of the archive unpacked into {dest}",
+                    ]
+                )
             place = move_aside(cfg, full, rel, "_to_delete")
             events.append(
                 [today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: the archive is unpacked into {dest}"]

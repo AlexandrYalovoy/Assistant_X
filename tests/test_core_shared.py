@@ -93,7 +93,12 @@ def test_one_table_of_file_kinds():
         formats.extensions("image")
     )
     assert batch.LETTERS == {"msg", "eml", "oft"} and batch.EXCEL == {"xls", "xlsx", "xlsm", "xlsb", "ods"}
-    assert unpack.ARCHIVES == (".zip", ".7z", ".rar", ".tar", ".tgz", ".tar.gz", ".tar.bz2", ".tar.xz", ".gz")
+    assert unpack.ARCHIVES == (".zip", ".7z", ".rar", ".tar", ".tgz", ".tar.gz", ".tar.bz2", ".tar.xz", ".gz") + (
+        ".7z.001",
+        ".zip.001",
+        ".rar.001",
+        ".001",
+    )  # the first volume of a split archive
     assert [
         formats.file_kind(n)
         for n in ("A.PDF", "b.tar.gz", "c.docx", "d.eml", "e.xlsb", "f.djvu", "h.epub", "i.md", "j.htm", "k.xyz", "g")

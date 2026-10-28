@@ -109,3 +109,24 @@ def test_names_windows_does_not_take_are_refused(tmp_path, name):
     assert e.value.kind == "unsafe"
     assert unpack.safe_name(r"Папка\.\sub/doc.pdf") == ["Папка", "sub", "doc.pdf"]
     assert unpack.safe_name("e\u0301.pdf") == ["\u00e9.pdf"]  # a macOS name: made NFC, not refused
+
+
+def test_an_archive_split_in_volumes_is_unpacked_from_its_first_one(tmp_path):
+    """Trial batch b007: "X.7z.001" was left as a file the intake does not process. The first volume is an archive,
+    the next ones go with it."""
+    from assistant_x.core.formats import file_kind
+    from assistant_x.intake import config as intake_cfg
+
+    data = make_zip(tmp_path / "whole.zip", {"doc.txt": b"x" * 5000, "b/two.txt": b"y" * 5000}).read_bytes()
+    half = len(data) // 2
+    (tmp_path / "X.zip.001").write_bytes(data[:half])
+    (tmp_path / "X.zip.002").write_bytes(data[half:])
+    assert file_kind("X.7z.001") == file_kind("X.001") == "archive" and file_kind("X.7z.002") != "archive"
+    assert unpack.volumes(tmp_path / "X.zip.001") == [tmp_path / "X.zip.002"]
+    assert unpack.volumes(tmp_path / "whole.zip") == [] and unpack.volumes(tmp_path / "X.zip.002") == []
+    assert unpack.target_dir(tmp_path / "X.zip.001") == tmp_path / "X"
+    sevenzip = intake_cfg.find_sevenzip()
+    if not sevenzip:
+        pytest.skip("no 7-Zip on this PC")
+    rep = unpack.unpack(tmp_path / "X.zip.001", sevenzip=str(sevenzip))
+    assert rep["error"] is None and files_under(rep["dest"]) == ["b/two.txt", "doc.txt"]

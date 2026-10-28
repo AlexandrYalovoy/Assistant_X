@@ -35,6 +35,9 @@ The open items of the observation journal.
 - Letters: the small pictures of a letter body (a logo, a signature: an attachment with a Content-ID, under 100 KB)
   stay in the letter instead of becoming documents of the batch; the summary counts them. A bigger picture (a
   screenshot pasted into the letter) and the real attachments are taken out as before.
+- An archive split in volumes (X.7z.001, X.zip.001, X.001 with .002, .003 … beside it) is unpacked from its first
+  volume by 7-Zip; the next volumes go aside with it. Before, the first volume was left as a file the intake does not
+  process.
 
 ## 0.5.3 — 2026-10-28
 
