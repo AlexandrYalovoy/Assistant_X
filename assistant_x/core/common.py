@@ -865,6 +865,9 @@ QUALITY = {
     "ocr_replace": 50,  # … and below this the intake proposes to replace the file (a better scan)
     "ocr_redo_gain": 10,  # assistant-x intake redo replaces a library text only when the score grows this much …
     "ocr_redo_keep": 0.8,  # … and the new text keeps this share of the known words of the old one
+    # the intake reads the page images of a PDF too when the text of its layer scores below this by its words, and keeps
+    # the better text (process.Batch.second_reading; rounds of 2026-10-28: 5 of 20 old scans with a layer, 46-76)
+    "ocr_second": 90,
 }
 
 

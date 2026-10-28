@@ -3,12 +3,13 @@
 """Processing a batch (intake run, step 2): the files of inbox registered, the exact and the content duplicates,
 the pool of workers (PDF, hidden text, Markdown, OCR), the state of every file."""
 
-import collections, os, time
+import collections, os, shutil, time
 from array import array
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from pathlib import Path
 
+from assistant_x.core.common import QUALITY
 from assistant_x.core.formats import PAGES_SUFFIX
 from assistant_x.intake import config as intake_cfg
 from assistant_x.intake import pool as intake_pool
@@ -605,9 +606,76 @@ class Batch:
                 return None
             self.state.update(tid, **upd)
         self.mine[tid] = cand
-        self.state.update(tid, status="done", why=row.get("why") if row.get("imgocr") else None)
+        if self.second_reading(tid, row, res):
+            return intake_work.prep, self.job(self.state.get(tid))
+        if row.get("layer_text"):
+            self.keep_better(tid, self.state.get(tid))
+            row = self.state.get(tid)
+        self.state.update(tid, status="done", why=row.get("why") if row.get("imgocr") or row.get("second") else None)
         self.draft(tid)
         return None
+
+    def second_reading(self, tid, row, res):
+        """A PDF whose text came (in part) from its text layer and scores below QUALITY["ocr_second"] by its words is read
+        once more with its page images recognised instead of the layer, as the redo does (a poor layer of an old
+        scan: rounds of 2026-10-28, N-00015 56 by the intake against 74 by the page images of the redo). The text of
+        the layer and its measures are kept aside for keep_better. True when the second reading is sent."""
+        from assistant_x.intake.tools import ocr_score
+
+        if (
+            row.get("imgocr")
+            or row.get("layer_text")
+            or not self.base["ocr"]
+            or not str(row.get("rel", "")).lower().endswith(".pdf")
+        ):
+            return False
+        pages, ocr = int(res.get("pages") or row.get("pages") or 0), int(res.get("ocr_pages") or 0)
+        md = self.work / "md" / f"{tid}.md"
+        if not pages or ocr >= pages or not md.exists():
+            return False
+        text = md.read_text(encoding="utf-8")
+        score = ocr_score.score_text(text)["score"]
+        if score is None or score >= QUALITY["ocr_second"]:
+            return False
+        keep = self.work / "mdtmp" / tid
+        keep.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(md, keep / f"{tid}.layer.md")
+        if md.with_suffix(PAGES_SUFFIX).exists():
+            shutil.copyfile(md.with_suffix(PAGES_SUFFIX), keep / f"{tid}.layer{PAGES_SUFFIX}")
+        self.state.update(
+            tid,
+            imgocr=True,
+            nodup=True,
+            layer_text=str(keep / f"{tid}.layer.md"),
+            layer_res={k: v for k, v in res.items() if isinstance(v, (int, float, str, bool, type(None)))},
+            layer_score=score,
+            why=f"a poor text layer (score {score:.0f} by its words): the page images are recognized too",
+        )
+        return True
+
+    def keep_better(self, tid, row):
+        """After the second reading (second_reading): the text of the page images stays when it keeps
+        QUALITY["ocr_redo_keep"] of the known words of the layer text and scores more by its words; otherwise the
+        layer text and its measures come back (redo.best_variant)."""
+        from assistant_x.intake.tools import ocr_score
+
+        md, layer = self.work / "md" / f"{tid}.md", Path(row["layer_text"])
+        new = md.read_text(encoding="utf-8") if md.exists() else ""
+        old = layer.read_text(encoding="utf-8") if layer.exists() else ""
+        new_s, old_s = ocr_score.score_text(new)["score"] or 0, row.get("layer_score") or 0
+        images = bool(new) and (
+            ocr_score.known_distinct(new) >= QUALITY["ocr_redo_keep"] * ocr_score.known_distinct(old) and new_s > old_s
+        )
+        upd = {"layer_text": None, "second": f"page images {new_s:.0f} against the layer {old_s:.0f}"}
+        if images or not old:
+            upd["why"] = f"a poor text layer: the page images read instead ({upd['second']})"
+        else:
+            os.replace(layer, md)
+            side = layer.with_name(f"{tid}.layer{PAGES_SUFFIX}")
+            if side.exists():
+                os.replace(side, md.with_suffix(PAGES_SUFFIX))
+            upd.update(row.get("layer_res") or {}, imgocr=False, why=f"the text layer kept ({upd['second']})")
+        self.state.update(tid, **upd)
 
     def draft(self, tid):
         """The card draft of a done file at once (meta_draft.jsonl, appended): Claude can write the cards of the files
