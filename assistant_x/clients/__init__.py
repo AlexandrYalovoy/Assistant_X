@@ -152,3 +152,35 @@ def by_hand(e, fmt="json"):
     if fmt == "json":
         return json.dumps({"mcpServers": {SERVER: e}}, ensure_ascii=False, indent=2)
     return fmt
+
+
+# ---------- the connections of this PC (assistant-x update, the service refreshes the skills) ----------
+
+
+def connections_path():
+    from assistant_x.core import workspace
+
+    return workspace.machine_dir() / "connections.json"
+
+
+def connections():
+    """{app: {toolset, compact, python, workspace, version, time}} of the apps connect wrote, {} when none."""
+    try:
+        data = json.loads(connections_path().read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def remember(name, settings=None):
+    """Record (settings) or forget (None) the connection of an app."""
+    data = connections()
+    if settings is None:
+        data.pop(name, None)
+    else:
+        data[name] = settings
+    p = connections_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, p)

@@ -114,6 +114,17 @@ def drop_info(path):
         pass
 
 
+def refresh():
+    """The outdated skills of the connected apps written again (clients/connect.py): a new version of the program
+    brings its rules to every app at the first start of its service."""
+    try:
+        from assistant_x.clients import connect
+
+        connect.refresh_skills(say=lambda s: print(f"library service: {s}", file=sys.stderr))
+    except Exception as e:  # noqa: BLE001 — a skill left as it was is no reason to stop the service
+        print(f"library service: the skills were not refreshed: {e}", file=sys.stderr)
+
+
 def main(argv=None):
     from assistant_x import __version__
     from assistant_x.core import env
@@ -135,6 +146,9 @@ def main(argv=None):
     from assistant_x.core import debuglog
     from assistant_x.server import mcp_server as S
 
+    import logging
+
+    logging.getLogger("mcp").setLevel(logging.WARNING)  # no line per session in the log of the service
     token, token_path = S.http_token()
     health = {"version": __version__, "pid": os.getpid(), "workspace": str(workspace.find())}
     app = Activity(S.mcp_app(port), health)
@@ -152,6 +166,7 @@ def main(argv=None):
                 server.should_exit = True
 
     threading.Thread(target=watch, daemon=True).start()
+    threading.Thread(target=refresh, daemon=True).start()
     write_info(paths["info"], {**health, "port": port, "started": time.time(), "token_file": token_path})
     print(f"library service: http://127.0.0.1:{port}/mcp (pid {os.getpid()})", file=sys.stderr)
     try:

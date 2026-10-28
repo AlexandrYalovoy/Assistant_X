@@ -13,6 +13,10 @@ from assistant_x import clients as K
 
 NAME, TITLE = "dsh", "DeepSeek Harness"
 TOOLSET, COMPACT = "reader", False
+SETTINGS = (
+    "`~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x`"
+)
+SKILL = "`~/.dsh/skills/assistant-x`"
 BEGIN = "# >>> assistant-x (assistant-x connect dsh; assistant-x disconnect dsh removes it)\n"
 END = "# <<< assistant-x\n"
 HEAD = "# The user patch layer of every dsh profile: a YAML array of loader patches.\n"

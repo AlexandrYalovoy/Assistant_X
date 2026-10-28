@@ -11,6 +11,8 @@ from assistant_x.core import proc
 
 NAME, TITLE = "claude_code", "Claude Code"
 TOOLSET, COMPACT = "all", False
+SETTINGS = "`claude mcp add-json -s user` (`~/.claude.json`)"
+SKILL = "`~/.claude/skills/assistant-x`"
 
 
 def exe():

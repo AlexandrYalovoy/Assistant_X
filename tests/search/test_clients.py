@@ -236,3 +236,54 @@ def test_check_through_a_connected_app(home, mini, tmp_path, monkeypatch):
         info = service.read_info(mini["root"])
         if info:
             psutil.Process(info["pid"]).kill()
+
+
+def test_update_and_the_skills_refreshed_by_the_service(home, tmp_path, monkeypatch):
+    """connect records the connection; update writes it again with its own settings; the service start refreshes an
+    outdated skill and leaves one edited by hand alone."""
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
+    (home / ".dsh").mkdir()
+    (home / ".codex").mkdir()
+    connect.connect(["dsh", "codex"], python=sys.executable, say=lambda s: None)
+    rec = K.connections()
+    assert rec["dsh"]["toolset"] == "reader" and rec["codex"]["toolset"] == "all" and rec["dsh"]["version"]
+    import assistant_x
+
+    monkeypatch.setattr(assistant_x, "__version__", "9.9")
+    codex_skill = home / ".agents" / "skills" / "assistant-x" / "SKILL.md"
+    codex_skill.write_text(codex_skill.read_text(encoding="utf-8") + "mine\n", encoding="utf-8")
+    out = dict(connect.refresh_skills())
+    assert out == {str(home / ".dsh" / "skills" / "assistant-x" / "SKILL.md"): "skill updated"}
+    assert codex_skill.read_text(encoding="utf-8").endswith("mine\n")
+    assert sorted(connect.update(say=lambda s: None)) == ["codex", "dsh"]
+    assert K.connections()["dsh"]["version"] == "9.9" and dsh.read()["args"][-2:] == ["--tools", "reader"]
+    connect.disconnect(["dsh"], say=lambda s: None)
+    assert "dsh" not in K.connections()
+
+
+def test_the_lmstudio_link():
+    import base64, urllib.parse
+
+    e = entry("reader", True)
+    link = lmstudio.link(e)
+    assert link.startswith("lmstudio://add_mcp?name=assistant-x&config=")
+    config = urllib.parse.unquote(link.split("config=", 1)[1])
+    assert json.loads(base64.b64decode(config)) == e
+
+
+def test_claude_desktop_hears_once_that_its_skill_is_outdated(tmp_path, monkeypatch):
+    """The uploaded skill of Claude Desktop cannot be refreshed: the start notice of the server asks for a new upload
+    when the skill of the workspace is of an older version; none when it is current or missing."""
+    from assistant_x.server import mcp_server
+
+    ws = tmp_path / "ws"
+    (ws / "skill").mkdir(parents=True)
+    (ws / "assistant_x.toml").write_text('profile = "general"\n', encoding="utf-8")
+    monkeypatch.setenv("AX_WORKSPACE", str(ws))
+    assert mcp_server.desktop_skill_note() == []
+    p = ws / "skill" / "SKILL.md"
+    p.write_text(skill.render("general"), encoding="utf-8")
+    assert mcp_server.desktop_skill_note() == []
+    p.write_text("---\nname: x\n---\nold skill\n", encoding="utf-8")
+    [note] = mcp_server.desktop_skill_note()
+    assert "before 0.4" in note and "upload it again" in note

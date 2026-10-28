@@ -12,6 +12,8 @@ from assistant_x import clients as K
 
 NAME, TITLE = "codex", "Codex and the ChatGPT desktop app"
 TOOLSET, COMPACT = "all", False
+SETTINGS = "`~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60`"
+SKILL = "`~/.agents/skills/assistant-x`"
 TABLE = f"mcp_servers.{K.SERVER}"
 HEADER = re.compile(r"^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*(?:#.*)?$")
 

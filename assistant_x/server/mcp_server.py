@@ -356,11 +356,31 @@ def start_notice():
         return ""
     _noticed = True
     try:
-        lines = intake_tools.interrupted() + base_tools.open_journals()
+        lines = intake_tools.interrupted() + base_tools.open_journals() + desktop_skill_note()
     except Exception as e:  # noqa: BLE001 — a notice only: never a reason for the search to fail
         debuglog.log_error("start notice", e)
         return ""
     return ("Before the answer, tell the user: " + " ".join(lines)) if lines else ""
+
+
+def desktop_skill_note():
+    """The skill Claude Desktop holds is a zip the user uploaded: when the one of the workspace (<workspace>/skill,
+    written by assistant-x skill) is of an older version, one line asks to write and upload it again."""
+    from assistant_x import __version__
+    from assistant_x.core import workspace
+    from assistant_x.setup import skill
+
+    path = workspace.current().root / "skill" / "SKILL.md"
+    if not path.exists():
+        return []
+    version, _ = skill.stamped(path.read_text(encoding="utf-8"))
+    if version == __version__:
+        return []
+    return [
+        f"if they use Claude Desktop, its uploaded skill is of an older version ({version or 'before 0.4'}, the program "
+        f"is {__version__}): run assistant-x skill, zip the folder {path.parent} and upload it again in Claude "
+        "(Settings, Capabilities, Skills)."
+    ]
 
 
 DENSE_PENDING = (

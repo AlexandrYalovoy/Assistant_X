@@ -5,11 +5,15 @@
     assistant-x connect APP|auto [--full | --reader] [--compact] [--dry-run]   write the entry (and the skill)
     assistant-x connect --list                                                  the apps, found and connected
     assistant-x connect --check [APP]                                           the handshake and a search, per app
+    assistant-x connect lmstudio --link                                         the "Add to LM Studio" link
     assistant-x disconnect APP|all [--dry-run]                                  take the entry out
+    assistant-x update                                                          every connected app again
 
 APP: claude_desktop, claude_code, codex, dsh, lmstudio; auto: every one found on this PC. The tool set of an app is
 its default (the reading tools for DeepSeek Harness and LM Studio, all for Claude and Codex) unless --full (all, no
-compact answers) or --reader; LM Studio gets the compact answers by default."""
+compact answers) or --reader; LM Studio gets the compact answers by default. Every connection is recorded in
+connections.json of the machine folder: `update` writes them again (a new version of the program, another python),
+and the library service refreshes their outdated skills when it starts."""
 
 import argparse, json, os, sys, threading, time
 
@@ -37,6 +41,20 @@ def connect(names, toolset=None, compact=None, dry=False, python=None, root=None
         done[name] = a.connect(e, dry)
         if a.skill_dir() is not None and not dry:
             done[name] += skills.install(name)
+        if not dry and any(s in ("written", "unchanged") for _, s in done[name]):
+            from assistant_x import __version__
+
+            K.remember(
+                name,
+                {
+                    "toolset": ts,
+                    "compact": "--compact" in e["args"],
+                    "python": e["command"],
+                    "workspace": e["env"]["AX_WORKSPACE"],
+                    "version": __version__,
+                    "time": time.strftime("%Y-%m-%d %H:%M"),
+                },
+            )
         for path, status in done[name]:
             say(f"{a.TITLE}: {path}: {status}")
     if not done:
@@ -53,6 +71,8 @@ def disconnect(names, dry=False, say=print):
         done[name] = a.disconnect(dry)
         if a.skill_dir() is not None and not dry:
             done[name] += skills.remove(name)
+        if not dry:
+            K.remember(name, None)
         for path, status in done[name]:
             say(f"{a.TITLE}: {path}: {status}")
     return done
@@ -176,6 +196,7 @@ def main(argv=None, disconnecting=False):
         ap.add_argument("--list", action="store_true", help="the apps: found, connected")
         ap.add_argument("--check", action="store_true", help="the handshake and a search through every entry")
         ap.add_argument("--json", action="store_true", help="the result as JSON")
+        ap.add_argument("--link", action="store_true", help="lmstudio: print the Add to LM Studio link, write nothing")
     a = ap.parse_args(argv)
     if disconnecting:
         if not a.apps:
@@ -201,11 +222,48 @@ def main(argv=None, disconnecting=False):
         ap.error("name the app (or auto)")
     toolset = "all" if a.full else "reader" if a.reader else None
     compact = False if a.full else True if a.compact else None
+    if a.link:
+        from assistant_x.clients import lmstudio
+
+        if a.apps != ["lmstudio"]:
+            ap.error("--link is for lmstudio")
+        print(lmstudio.link(K.entry(None, toolset or lmstudio.TOOLSET, lmstudio.COMPACT if compact is None else compact)))
+        return 0
     done = connect(a.apps, toolset, compact, a.dry_run, say=(lambda s: None) if a.json else print)
     if a.json:
         print(json.dumps({k: [list(x) for x in v] for k, v in done.items()}, ensure_ascii=False))
     refused = [s for v in done.values() for _, s in v if s.startswith(("left alone", "refused"))]
     return 1 if refused or not done else 0
+
+
+def update(say=print):
+    """connect again every app of connections.json with its own settings (the python of this program)."""
+    done = {}
+    for name, s in K.connections().items():
+        if name in K.APPS:
+            done.update(connect([name], s.get("toolset"), s.get("compact"), root=s.get("workspace"), say=say))
+    if not done:
+        say("No app is connected: assistant-x connect auto")
+    return done
+
+
+def refresh_skills(say=lambda s: None):
+    """The outdated skills of the connected apps written again (one edited by hand stays): at the start of the
+    library service, so a new version of the program brings its rules to every app by itself."""
+    from assistant_x.clients import skills
+
+    out = []
+    for name in K.connections():
+        if name in K.APPS and skills.state(name) == "outdated":
+            out += skills.install(name)
+    for path, status in out:
+        say(f"{path}: {status}")
+    return out
+
+
+def update_main(argv=None):
+    argparse.ArgumentParser(prog="assistant-x update", description=update.__doc__).parse_args(argv)
+    return 0 if update() else 1
 
 
 def disconnect_main(argv=None):

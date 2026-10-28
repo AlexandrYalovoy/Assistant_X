@@ -9,6 +9,8 @@ from assistant_x import clients as K
 
 NAME, TITLE = "claude_desktop", "Claude Desktop"
 TOOLSET, COMPACT = "all", False
+SETTINGS = r"`%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers`"
+SKILL = "a zip the user uploads (`assistant-x skill`)"
 FILE = "claude_desktop_config.json"
 
 
