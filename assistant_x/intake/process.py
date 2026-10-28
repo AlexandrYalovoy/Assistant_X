@@ -702,5 +702,5 @@ def register(cfg, state):
         if name.startswith("~$"):
             r = state.by_rel(rel)
             if r["status"] == "queued":
-                state.update(r["tid"], status="skipped", why="a temporary Word file (~$): reject")
+                state.update(r["tid"], status="skipped", why="a temporary Office file (~$): reject")
     return n

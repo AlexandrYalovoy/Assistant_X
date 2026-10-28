@@ -15,7 +15,7 @@ def test_every_file_has_one_outcome(tmp_path):
     state.update(t[1], status="dup", why="the same SHA-256", dup_of="N-00001")
     state.update(t[2], status="error", why="the PDF does not open")
     state.update(t[3], status="skipped", why="the pipeline does not process .exe: decide by hand")
-    state.update(t[4], status="skipped", why="a temporary Word file (~$): reject")
+    state.update(t[4], status="skipped", why="a temporary Office file (~$): reject")
     state.set_meta("moved", [["mail/letter.msg", 20, "to delete: a letter"]])
     counts, total = ledger.write(tmp_path, state)
     assert total == 7

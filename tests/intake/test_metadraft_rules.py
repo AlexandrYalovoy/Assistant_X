@@ -346,3 +346,9 @@ def test_a_garbled_head_line_still_gives_the_title_of_a_standard():
 
 def test_an_ocr_tilde_in_a_designation_reads_as_a_dash():
     assert metadraft.designation("РД 0352 ~ 95-85") == "РД 0352-95-85"
+
+
+def test_a_drawing_without_words_takes_its_title_from_the_file_name():
+    d = metadraft.draft(page(1, "1 2 3 A-A"), "Drawing/66291_005_2014-02 Power Details - Sheet 5.pdf")
+    assert d["title"]["en" if "en" in d["title"] else next(iter(d["title"]))] == "66291 005 2014-02 Power Details - Sheet 5"
+    assert metadraft.name_title("scan_0001.pdf") == "" and metadraft.name_title("IMG_2041.jpg") == ""

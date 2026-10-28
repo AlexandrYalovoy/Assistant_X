@@ -45,7 +45,7 @@ def test_the_line_of_the_load():
     load = balance.Load()
     load.add({"ours": 30}, 8, 8, 4)
     load.add({"ours": 50}, 4, 8, 120)
-    assert balance.load_line(load.data()) == "Load: mean CPU share 40 %, paused 2 min"
+    assert balance.load_line(load.data()) == "Load: mean CPU share 40 %, workers held back by the regulator 2 min"
 
 
 def test_time_left_by_cost(tmp_path):
@@ -81,5 +81,5 @@ def test_no_time_left_before_five_files(tmp_path):
 
 def test_load_in_the_summary(tmp_path):
     (tmp_path / "load.json").write_text(json.dumps({"mean_ours": 63.4, "paused_s": 600}), encoding="utf-8")
-    assert review.load_of(tmp_path) == "Load: mean CPU share 63 %, paused 10 min"
+    assert review.load_of(tmp_path) == "Load: mean CPU share 63 %, workers held back by the regulator 10 min"
     assert review.load_of(tmp_path / "none") == ""

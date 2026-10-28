@@ -26,6 +26,9 @@ The open items of the observation journal.
   inbox has exactly one outcome - done, duplicate, error, unsupported (a kind of file the intake does not process),
   skipped, moved aside (a letter, an unpacked archive, personal papers) or queued - with its pages, OCR pages,
   recognition score and seconds, so the totals add up to what the folder held.
+- Intake summary and ledger wording: the load line says how long the regulator held workers back (it was called
+  paused), a temporary Office file (~$) is no longer called a Word file, and a card draft whose text gives no title (a
+  drawing, a scan without words) takes the name of the file.
 
 ## 0.5.3 — 2026-10-28
 

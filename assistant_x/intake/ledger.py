@@ -7,7 +7,7 @@ outcome, so that the totals add up to what the folder held:
     duplicate    a copy of a file of the library or of the batch (by SHA-256 or by its content)
     error        it failed; why says where
     unsupported  a kind of file the intake does not process (a program, a drawing, a video): left in inbox
-    skipped      left for another reason (no LibreOffice, a temporary Word file …)
+    skipped      left for another reason (no LibreOffice, a temporary Office file …)
     moved        taken aside before the work: a letter (its attachments are files of the batch), an unpacked archive
                  (its files are files of the batch), personal papers, a macOS service file
     queued       not processed yet (the batch was stopped)

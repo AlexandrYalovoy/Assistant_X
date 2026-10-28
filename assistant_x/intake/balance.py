@@ -18,7 +18,7 @@ work only "at the computer" and only by its latency (a mean transfer over DISK_L
 its busy share, which a fast SSD reaches at no cost. Emergencies: memory < 1.5 GB, CPU > 90 % or a disk 90 % busy with
 a latency over DISK_EMERGENCY_MS for 15 s — half the workers stop; memory < 1 GB — all.
 Every minute the log gets a line of the load even when nothing changed; load.json beside it keeps the mean CPU share
-and the minutes with paused workers for the summary of the batch.
+and the minutes with workers held back (fewer busy than the batch has) for the summary of the batch.
 
 assistant_x.toml: profile "auto" (default) | "day" (always "at the computer") | "weak" (1-2 workers, 1 thread, always
 "at the computer") | "night" (always "free"); workers = upper limit (0: by the PC); threads, priority, affinity
@@ -589,7 +589,9 @@ def load_line(data):
     """'Load: mean CPU share x %, paused y min' of the load.json of a batch; '' without it."""
     if not data or data.get("mean_ours") is None:
         return ""
-    return f"Load: mean CPU share {data['mean_ours']:.0f} %, paused {data.get('paused_s', 0) / 60:.0f} min"
+    # the time some slots wait while the regulator keeps fewer workers busy than the batch has, not a stop of the batch
+    held = data.get("paused_s", 0) / 60
+    return f"Load: mean CPU share {data['mean_ours']:.0f} %, workers held back by the regulator {held:.0f} min"
 
 
 def describe(hw, b, o):

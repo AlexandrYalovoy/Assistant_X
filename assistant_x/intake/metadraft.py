@@ -641,6 +641,16 @@ def units_of(pages):
     return [{"kind": "article", "title": title, "pdf_from": page} for _, title, page, _ in textmap.toc_entries(pages)][:300]
 
 
+NAME_LETTERS = 6  # letters a file name needs to give a title ("scan_0001", "IMG_2041" give none)
+
+
+def name_title(rel):
+    """The title a file name gives when the text gives none ("66291_005_2014-02 Power Details - Sheet 5.pdf" ->
+    "66291 005 2014-02 Power Details - Sheet 5"); "" for a name of few letters (scan_0001)."""
+    stem = re.sub(r"\s+", " ", Path(rel).stem.replace("_", " ")).strip(" .-")
+    return stem if sum(c.isalpha() for c in stem) >= NAME_LETTERS else ""
+
+
 def draft(md, rel="", profile=None, given=None):
     """Draft meta of one document from its Markdown text (fields of meta_schema; 'draft': true). The searchable texts
     are maps in the language of the document: Claude adds English (and the other card languages)."""
@@ -662,6 +672,7 @@ def draft(md, rel="", profile=None, given=None):
     quoted = quoted_title(pages) if not amends else ""
     title = (amends[0] if amends else "") or quoted or gost or title_of(pages, desig) or desig or ""
     title = title.lstrip(" \"'«»“”„.,:;–—-")  # the rest of a quoted designation line: ". Interstate standard. …"
+    title = title or name_title(rel)  # a drawing, a scan without words: the name of the file is the best guess
     out = {
         "tid": None,
         "sec": shelf_of(doc_type, profile),
