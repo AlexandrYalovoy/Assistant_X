@@ -180,6 +180,8 @@ def prepare(cfg, state, dry=False):
     if not dry:
         state.set_meta("archives_refused", sorted(refused))
     page_folders(cfg, st, events, problems, dry)
+    html_folders(cfg, st, events, problems, dry)
+    sent_away(cfg, st, events, dry)
     for full, rel in list(walk(cfg.inbox)):
         word = personal(cfg, rel)
         if word:  # before anything opens it
@@ -266,6 +268,67 @@ def page_folders(cfg, st, events, problems, dry=False):
             events.append([today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: a page joined into {where}"])
         st["page_folders"] += 1
         st["page_scans"] += len(pages)
+
+
+# a folder of HTML pages (an e-book or a site saved page by page: an encyclopedia of 50-100 articles a folder): one
+# HTML document of them (tools/chm.assemble, the pages in the natural order of their names), not a document a page
+HTML_PAGES = (".htm", ".html")
+HTML_MIN = 10  # pages a folder needs
+
+
+def html_folders(cfg, st, events, problems, dry=False):
+    """Every folder of inbox with HTML_MIN HTML pages and more gets one HTML document of them beside them, named after
+    the folder; the pages go to _to_delete (their pictures, scripts and styles stay where they are)."""
+    from assistant_x.intake.tools import chm
+
+    folders = collections.defaultdict(list)
+    for full, rel in walk(cfg.inbox):
+        if "/" in rel and Path(rel).suffix.lower() in HTML_PAGES and not personal(cfg, rel):
+            folders[rel.rsplit("/", 1)[0]].append((full, rel))
+    for folder, pages in sorted(folders.items()):
+        if len(pages) < HTML_MIN:
+            continue
+        name = intake_cfg.safe_name(folder.rsplit("/", 1)[-1]) or "pages"
+        out = free_target(cfg.inbox / folder / f"{name}.book.html")
+        if dry:
+            say(f"  {len(pages)} HTML pages into one document: {win(folder)}")
+            continue
+        try:
+            text, n, _ = chm.assemble(intake_cfg.lp(cfg.inbox / folder), name, depth=1)
+            if not n:
+                continue
+            Path(intake_cfg.lp(out)).write_text(text, encoding="utf-8")
+        except Exception as e:  # noqa: BLE001 — the pages stay documents of their own
+            problems.append(f"HTML pages of {win(folder)} not joined into one document: {e!r}"[:300])
+            continue
+        where = "inbox\\" + win(str(Path(out).relative_to(cfg.inbox)))
+        for full, rel in pages:
+            size = os.path.getsize(full)
+            place = move_aside(cfg, full, rel, "_to_delete")
+            events.append([today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: a page joined into {where}"])
+        st["html_folders"] += 1
+        st["html_pages"] += len(pages)
+
+
+def sent_away(cfg, st, events, dry=False):
+    """The files of the extensions of [intake] to_delete_ext (the user's choice: a format of a program nobody reads
+    here) to _to_delete\\<ext>\\, keeping their folders; an archive unpacked before this brings its own."""
+    exts = cfg.get("to_delete_ext") or {}
+    if not exts:
+        return
+    for full, rel in list(walk(cfg.inbox)):
+        ext = Path(rel).suffix.lower().lstrip(".")
+        if ext not in exts:
+            continue
+        st["sent_away"] += 1
+        if dry:
+            say(f"  to delete (.{ext}, to_delete_ext of the settings): {win(rel)}")
+            continue
+        size = os.path.getsize(full)
+        place = move_aside(cfg, full, rel, f"_to_delete/{intake_cfg.safe_name(exts[ext])}")
+        events.append(
+            [today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: .{ext} (to_delete_ext of the settings)"]
+        )
 
 
 def letters(cfg, st, events, problems, dry=False):

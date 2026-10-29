@@ -53,14 +53,14 @@ def body_of(text):
     return DROP.sub(" ", m.group(1) if m else text)
 
 
-def assemble(folder, title=""):
-    """(one HTML document of the pages of a taken-out help file, the number of pages, the pages left out)."""
+def assemble(folder, title="", depth=None):
+    """(one HTML document of the pages of a taken-out help file, or of a folder of HTML pages (depth=1: its own pages
+    only), the number of pages, the pages left out)."""
     from assistant_x.core.formats import natural_key
 
     folder = Path(folder)
-    pages = {
-        str(p.relative_to(folder)).replace("\\", "/").lower(): p for p in folder.rglob("*") if p.suffix.lower() in PAGE_EXT
-    }
+    found = folder.glob("*") if depth == 1 else folder.rglob("*")
+    pages = {str(p.relative_to(folder)).replace("\\", "/").lower(): p for p in found if p.suffix.lower() in PAGE_EXT}
     order, seen = [], set()
     for name, local in contents(folder):
         key = local.lstrip("/").lower()

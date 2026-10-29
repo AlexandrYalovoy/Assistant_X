@@ -20,6 +20,12 @@ The trial intake of a big real folder in batches, continued.
 - Sets of drawing sheets drawn in curves (A2 and up, no picture, no text layer) are planned by what they cost: about 25
   s a sheet, and a set of them goes in page ranges on several workers. Before, such a set of 16-18 sheets went to one
   worker as a cheap text file while the others idled (450-500 s, CPU 19 %).
+- A folder of HTML pages (an e-book or a site saved article by article, 10 pages and more) becomes one HTML document
+  named after the folder, its pages in the natural order of the names, scripts and pictures left out; the pages go to
+  _to_delete.
+- [intake] to_delete_ext names the extensions the user sends away (a list, or a table of extension = folder: dwg, cdw
+  and bak into one folder): prepare moves such files, loose or out of an archive, to _to_delete\<folder>\ keeping their
+  folders, a line of the journal each.
 
 ## 0.5.4 — 2026-10-29
 

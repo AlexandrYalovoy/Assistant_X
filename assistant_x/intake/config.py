@@ -108,6 +108,12 @@ def load(path=None):
     # [intake] personal = true: every batch is marked personal (intake.personal of its cards); by default false: the user's
     # documents go onto the same shelves as an installed base package (build --personal marks one batch on request)
     cfg["personal"] = bool(raw.get("personal", False))
+    # [intake] to_delete_ext: the files of these extensions the user sends away, loose or out of an archive (prepare
+    # moves them to _to_delete\<folder>\ keeping their folders, a line of the journal each): a list (the folder is the
+    # extension: ["gsfx"]) or a table of extension = folder ({dwg = "dwg", cdw = "dwg", bak = "dwg"})
+    given = raw.get("to_delete_ext") or {}
+    pairs = given.items() if isinstance(given, dict) else ((e, str(e).lower().lstrip(".")) for e in given)
+    cfg["to_delete_ext"] = {str(e).lower().lstrip("."): str(f).strip("\\/ ") or "other" for e, f in pairs}
     cfg["fingerprints"] = w.fingerprints  # the one cache of the duplicate check (tools/dupcheck.py), of the workspace
     cfg["ocr_vocab"] = root / ".assistant_x" / "ocr_vocab.txt"
     cfg["soffice"] = find_soffice(raw.get("soffice"))

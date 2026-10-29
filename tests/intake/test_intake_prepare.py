@@ -190,3 +190,40 @@ def test_a_folder_of_page_scans_becomes_one_pdf(project, tmp_path):
     assert (cfg.inbox / "_to_delete" / "Книги" / "Электротехника 1985" / "page10.png").exists()
     assert len(list((cfg.inbox / "Сайт" / "img").glob("*.png"))) == 12  # icons: no page scans
     assert sum("joined into" in e[-1] for e in events) == 10
+
+
+def test_a_folder_of_html_pages_becomes_one_document(project, tmp_path):
+    """Trial intake: an encyclopedia saved as 50-100 HTML articles a folder would be a document an article. A folder of
+    10 HTML pages and more becomes one HTML document named after it; a folder of a few pages stays as it is."""
+    root, cfg = project
+    enc = cfg.inbox / "Энциклопедия" / "Антенны"
+    for i in range(1, 13):
+        write(enc / f"a{i}.htm", f"<html><body><p>Статья {i} об антеннах.</p><script>x()</script></body></html>")
+    write(cfg.inbox / "Сайт" / "index.html", "<html><body>Главная</body></html>")
+    state, counts, events, problems = run_prepare(cfg, tmp_path)
+    book = enc / "Антенны.book.html"
+    assert not problems and counts["html_folders"] == 1 and counts["html_pages"] == 12
+    text = book.read_text(encoding="utf-8")
+    assert text.index("Статья 2 ") < text.index("Статья 10 ") and "<script" not in text
+    assert not list(enc.glob("a*.htm")) and (cfg.inbox / "Сайт" / "index.html").exists()
+
+
+def test_the_extensions_the_user_sends_away_go_to_delete(project, tmp_path):
+    """The author: «gsfx под удаление». [intake] to_delete_ext sends such files to _to_delete/<ext>/ with their
+    folders, a line of the journal each; other files stay."""
+    from assistant_x.intake import config as intake_cfg
+
+    root, cfg = project
+    intake_cfg.save({"to_delete_ext": [".GSFX"]}, cfg.path)
+    assert intake_cfg.load(cfg.path)["to_delete_ext"] == {"gsfx": "gsfx"}
+    intake_cfg.save({"to_delete_ext": {"gsfx": "gsfx", "dwg": "dwg", "bak": "dwg"}}, cfg.path)
+    cfg = intake_cfg.load(cfg.path)
+    write(cfg.inbox / "Кусты" / "Чертежи" / "лист.bak", "a backup of a drawing")
+    write(cfg.inbox / "Кусты" / "Расчёт" / "схема.gsfx", "binary")
+    write(cfg.inbox / "Кусты" / "Расчёт" / "отчёт.pdf", "pdf")
+    state, counts, events, _ = run_prepare(cfg, tmp_path)
+    assert counts["sent_away"] == 2
+    assert (cfg.inbox / "_to_delete" / "gsfx" / "Кусты" / "Расчёт" / "схема.gsfx").exists()
+    assert (cfg.inbox / "_to_delete" / "dwg" / "Кусты" / "Чертежи" / "лист.bak").exists()  # with the drawings
+    assert (cfg.inbox / "Кусты" / "Расчёт" / "отчёт.pdf").exists()
+    assert any("to_delete_ext" in e[-1] for e in events)
