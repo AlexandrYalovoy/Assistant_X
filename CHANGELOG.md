@@ -73,6 +73,9 @@ The trial intake of a big real folder in batches, continued.
 - A Word document (.docx, .docm) LibreOffice cannot draw even with the doubled memory (a report of 87 embedded PDFs
   went past 6 GB) is read from its parts: its text (headings, tables) and the PDFs embedded in it (an Acrobat object or
   a PDF part) are laid out as one PDF.
+- Intake: drawing sheets (A2 and up) with a text layer lose their line art past 10 000 vector paths, and those whose
+  text is drawn as curves (fewer than 300 characters in the layer) are read from their image; a set of A1/A0 drawings
+  took 34 minutes, now 3.
 
 ## 0.5.4 — 2026-10-29
 

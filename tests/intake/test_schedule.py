@@ -299,3 +299,26 @@ def test_a_page_of_text_and_too_many_lines_loses_its_line_art(tmp_path, monkeypa
     copy = pymupdf.open(tmp_path / "copy.pdf")
     assert not copy[0].get_drawings() and "gas treatment unit" in copy[0].get_text()
     assert "a page of text" in copy[1].get_text()
+
+
+def test_a_drawing_sheet_with_text_loses_its_line_art_sooner(monkeypatch):
+    """Trial batch b081: A1/A0 sheets of 20 000-90 000 paths with a text layer took 7-15 minutes a sheet in the layout
+    analysis. A sheet (A2 and up) loses its line art past VECTOR_SHEET_MAX; a page of A4 keeps it to VECTOR_TEXT_MAX."""
+    import pymupdf
+
+    monkeypatch.setattr(intake_work, "VECTOR_TEXT_MAX", 200)
+    monkeypatch.setattr(intake_work, "VECTOR_SHEET_MAX", 50)
+    doc = pymupdf.open()
+    for w, h in ((2384, 1684), (595, 842)):
+        page = doc.new_page(width=w, height=h)
+        for i in range(80):
+            page.draw_line((10 + 5 * i, 10), (20 + 5 * i, 500))
+        for k in range(3):
+            page.insert_text((20, 600 + 20 * k), "Compressor casing, general arrangement")
+    texts = [p.get_text() for p in doc]
+    assert intake_work.line_art_pages(doc, texts) == [1]
+    assert intake_work.line_art_pages(doc, texts, limit=20) == [1, 2]  # after the watchdog
+    # an A0 sheet of 108 characters in its layer had its text drawn as curves: read from its image (OCR), not stripped
+    assert intake_work.vector_pages(doc, texts) == [1]
+    monkeypatch.setattr(intake_work, "SHEET_TEXT", 50)
+    assert intake_work.vector_pages(doc, texts) == []

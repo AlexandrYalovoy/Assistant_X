@@ -630,6 +630,13 @@ VECTOR_MAX = 20000  # vector paths of a page without a text layer past which it 
 # vector paths of a page with a text layer past which its line art is dropped (its text and pictures kept): a plan of
 # 485 000 paths held the layout analysis for more than half an hour (trial batch b075); a page of tables has thousands
 VECTOR_TEXT_MAX = 100_000
+# the same on a drawing sheet (A2 and up): its layout analysis took 7-15 minutes a sheet of 20 000-90 000 paths and
+# 50 s one of 12 000-18 000 (trial batch b081: sets of A1/A0 compressor drawings, 15-34 minutes a file); its lines are
+# the drawing, its text and its title block stay
+VECTOR_SHEET_MAX = 10_000
+# characters of the text layer of such a sheet below which its text is mostly drawn as curves (an A0 sheet of 108
+# characters in its layer: OCR of its image read 1 263 letters, its layer without the lines 88): read from its image
+SHEET_TEXT = 300
 FLAT_PIXELS = 12000  # the longer side of the image of such a page at most (300 dpi on A1, about 130 dpi on 2.4 m)
 
 
@@ -637,25 +644,35 @@ def vector_pages(doc, texts, limit=VECTOR_MAX):
     """The pages (from 1) without a text layer drawn of more than VECTOR_MAX vector paths: a drawing sheet whose text is
     curves, a scheme of 2 x 6 m. The layout analysis of pymupdf4llm took more than 10 minutes on one of 88 000 paths
     (trial batch b061: a project volume of 174 pages, 40 minutes); its image renders in half a second. limit 0: every
-    page without a text layer and a picture (after the watchdog stopped a conversion)."""
+    page without a text layer and a picture (after the watchdog stopped a conversion). A drawing sheet (A2 and up) of
+    fewer than SHEET_TEXT characters in its layer counts as one without a text layer past VECTOR_SHEET_MAX paths."""
+    from assistant_x.intake.tools.ocr_score import is_sheet
+
     out = []
     for i, (p, text) in enumerate(zip(doc, texts)):
-        if len(text.strip()) >= TEXT_PAGE or p.get_images():
+        sheet = is_sheet(abs(p.rect))
+        if len(text.strip()) >= (SHEET_TEXT if sheet else TEXT_PAGE) or p.get_images():
             continue
         count = p.get_cdrawings if hasattr(p, "get_cdrawings") else p.get_drawings
-        if len(count()) > limit:
+        if len(count()) > (min(limit, VECTOR_SHEET_MAX) if sheet else limit):
             out.append(i + 1)
     return out
 
 
 def line_art_pages(doc, texts, limit=None):
-    """The pages (from 1) with a text layer drawn of more than VECTOR_TEXT_MAX vector paths: their line art goes."""
+    """The pages (from 1) with a text layer drawn of more than VECTOR_TEXT_MAX vector paths (VECTOR_SHEET_MAX on a
+    drawing sheet): their line art goes."""
+    from assistant_x.intake.tools.ocr_score import is_sheet
+
     out = []
     for i, (p, text) in enumerate(zip(doc, texts)):
         if len(text.strip()) < TEXT_PAGE:
             continue
+        most = VECTOR_TEXT_MAX if limit is None else limit
+        if is_sheet(abs(p.rect)):
+            most = min(most, VECTOR_SHEET_MAX)
         count = p.get_cdrawings if hasattr(p, "get_cdrawings") else p.get_drawings
-        if len(count()) > (VECTOR_TEXT_MAX if limit is None else limit):
+        if len(count()) > most:
             out.append(i + 1)
     return out
 
