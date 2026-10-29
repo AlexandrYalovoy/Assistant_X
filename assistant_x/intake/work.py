@@ -460,6 +460,8 @@ def prep(job: Job) -> Prep:
     if not job.get("imgocr"):
         _link(job["src"], src)
     pdf = w / "pdf" / f"{tid}.pdf"
+    if not job.get("imgocr") and os.path.getsize(src) == 0:  # no error of the intake (trial b072: an empty .txt)
+        return {"status": "skipped", "why": "an empty file (0 bytes): nothing to read"}
     kind = EXTENSIONS.get(ext, "")
     lo_why = None  # LibreOffice failed a workbook its cells were read from instead
     if ext == "pdf":

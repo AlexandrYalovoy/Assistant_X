@@ -634,3 +634,22 @@ def test_a_workbook_libreoffice_cannot_draw_is_read_from_its_cells(tmp_path, mon
     assert res["status"] == "prepped" and res["pages"] >= 1 and "read directly" in res["why"]
     text = "".join(p.get_text() for p in pymupdf.open(res["pdf"]))
     assert "Расчёт" in text and "45.5" in text
+
+
+def test_an_empty_file_is_skipped_not_an_error(tmp_path):
+    empty = tmp_path / "note.txt"
+    empty.write_bytes(b"")
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(empty),
+        "ext": "txt",
+        "ocr": False,
+        "imgocr": False,
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 1024,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "skipped" and "empty" in res["why"]

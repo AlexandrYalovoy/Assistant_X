@@ -63,6 +63,7 @@ The trial intake of a big real folder in batches, continued.
   unpacked too (before, it was left as a file nobody read).
 - A workbook (.xlsx, .xlsm) LibreOffice cannot draw (it crashed on a book of 83 sheets every time) is read from its
   cells: each sheet under its name as a table on text pages, the why naming the crash; before, the file was an error.
+- An empty file (0 bytes) is skipped as nothing to read instead of failing as an error of the batch.
 
 ## 0.5.4 — 2026-10-29
 
