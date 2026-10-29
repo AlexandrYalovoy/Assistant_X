@@ -78,6 +78,8 @@ The trial intake of a big real folder in batches, continued.
   took 34 minutes, now 3.
 - Intake: words of a legacy code page shown as Latin-1 in a text layer (the stamp of the sheets of a CAD export) are
   read back in the code page of the document language.
+- OCR: a scanned page that stays weak after the retries is also read turned (the turn Tesseract guessed, else 180°)
+  when Tesseract cannot tell its orientation; an upside-down offer of six pages went from 25-30 to 82-87 points.
 
 ## 0.5.4 — 2026-10-29
 

@@ -41,6 +41,10 @@ from assistant_x.intake.tools import ocr_score
 from assistant_x.intake.tools.ocr_score import QUALITY
 
 OSD_CONF = 2.0  # orientation confidence of Tesseract that a turn is trusted at
+# a page still scoring below TURN_TRY after the retries, read upright, is read turned too (the turn OSD guessed below
+# OSD_CONF, else 180): trial batch b095, a scanned offer of 6 pages upside down, OSD sure of one (88 points turned),
+# unsure of five (0-1.7), which scored 25-30; the turned reading is taken when it scores TURN_GAIN more
+TURN_TRY, TURN_GAIN = 50, 10
 RETRY_DPI = 400
 MIN_WORDS = 8  # a page with fewer recognised words is not tried again (a stamp, a page number)
 LOST_SHARE = 0.6  # the Markdown of a page keeps less than this share of the recognised words: take the plain text
@@ -530,11 +534,13 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
         sample = sampled_turn(state)
         if sample and not weak(tried[str(dpi)]["m"]):
             rotate, rconf = sample
+            guess = rotate
         else:
             half = pymupdf.Pixmap(g)
             half.shrink(1)
             half.save(os.path.join(tmp, "h.png"))
             rotate, rconf = orientation(os.path.join(tmp, "h.png"), tmp, dpi // 2)
+            guess = rotate
             if rotate not in (90, 180, 270) or rconf < OSD_CONF:
                 rotate = 0
             if len(state["osd"]) < OSD_SAMPLE:
@@ -562,6 +568,13 @@ def exec_ocr(page, dpi=300, pixmap=None, language=None, keep_ocr_text=False):
                 tried[f"b/w{tag}"] = recognise(k, dpi, language, tmp, "v3")
             key = choose(tried, rotate)
             state["wins"].append(win_kind(key))
+            if not turned and (tried[key]["m"]["score"] or 0) < TURN_TRY:
+                guess = guess if guess in (90, 180, 270) else 180
+                turn(pix, guess, os.path.join(tmp, "r.png"))
+                name = f"rotate {guess}"
+                tried[name] = recognise(os.path.join(tmp, "r.png"), dpi, language, tmp, "v4")
+                if (tried[name]["m"]["score"] or 0) >= (tried[key]["m"]["score"] or 0) + TURN_GAIN:
+                    key, rotate = name, guess
         best = tried[key]
         if "rotate" in key:
             OVERRIDE[page.number] = best["plain"].strip()

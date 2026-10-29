@@ -201,6 +201,36 @@ def test_turned_pages_are_read(tmp_path, monkeypatch):
 
 
 @pytest.mark.slow
+def test_a_page_upside_down_osd_is_unsure_of_is_read_turned(tmp_path, monkeypatch):
+    """Trial batch b095: five pages of a scanned offer upside down, OSD unsure of them (0-1.7), scored 25-30. A page
+    still weak after the retries is read turned by 180 too, and the turned reading wins when it is clearly better."""
+    import numpy as np
+    import pymupdf
+    from tests.intake.intake_fixtures import FONT
+    from assistant_x.intake.tools import convert_md
+
+    tesseract_env(monkeypatch)
+    monkeypatch.setattr(ocr_page, "orientation", lambda *a, **k: (0, 0.5))  # OSD cannot tell
+    src = pymupdf.open()
+    page = src.new_page()
+    page.insert_textbox(pymupdf.Rect(50, 60, 545, 780), (CLEAN + "\n\n") * 4, fontsize=14, fontname="ru", fontfile=FONT)
+    pix = pymupdf.Pixmap(pymupdf.csGRAY, page.get_pixmap(dpi=200))
+    a = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.stride)[:, : pix.width]
+    doc = pymupdf.open()
+    for k in (0, 2):  # upright, upside down
+        r = np.ascontiguousarray(np.rot90(a, k=k))
+        img = pymupdf.Pixmap(pymupdf.csGRAY, r.shape[1], r.shape[0], r.tobytes(), 0)
+        p = doc.new_page(width=r.shape[1] * 72 / 200, height=r.shape[0] * 72 / 200)
+        p.insert_image(p.rect, pixmap=img)
+    path = tmp_path / "upside_down.pdf"
+    doc.save(path)
+    res, stats = convert_md.markdown(str(path), 0, [0, 1], True)
+    assert stats[1]["rotate"] == 0 and "rotate 180" not in stats[1]["tried"]  # a good upright page: no turn tried
+    assert stats[2]["rotate"] == 180 and stats[2]["score"] > 80, stats[2]
+    assert "плотности газа" in res[2].lower()
+
+
+@pytest.mark.slow
 def test_redo_replaces_only_a_better_text(project, monkeypatch):
     """K11: a scan whose library text is garbage gets the new text; the second run finds no gain and keeps it."""
     from assistant_x.intake import ocr_redo
