@@ -35,6 +35,8 @@ from assistant_x.intake.tools import unpack  # noqa: F401 — re-exported for th
 
 def cmd_run(cfg, a):
     work = work_dir(cfg, a.work, new=not getattr(a, "resume", False))  # --resume: the latest batch, its done files stay
+    if getattr(a, "spreadsheets", None):
+        cfg["spreadsheets"] = a.spreadsheets
     if not cfg.inbox.is_dir():
         sys.exit(f"No folder {cfg.inbox}")
     t0 = time.time()
@@ -196,6 +198,11 @@ def main(argv=None):
         if name == "run":
             p.add_argument("--workers", type=int, help="at most this many processes (0: everything in this process)")
             p.add_argument("--resume", action="store_true", help="continue the latest batch: done files are skipped")
+            p.add_argument(
+                "--spreadsheets",
+                choices=("skip", "include"),
+                help="this batch only: hold the spreadsheets in inbox (skip) or read them (include); [intake] spreadsheets",
+            )
         if name == "apply":
             p.add_argument("--resume", action="store_true", help="continue an interrupted apply (its journal)")
         if name == "build":

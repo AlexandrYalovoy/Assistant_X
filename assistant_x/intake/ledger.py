@@ -8,6 +8,7 @@ outcome, so that the totals add up to what the folder held:
     error        it failed; why says where
     unsupported  a kind of file the intake does not process (a program, a drawing, a video): left in inbox
     skipped      left for another reason (no LibreOffice, a temporary Office file …)
+    held         a spreadsheet left in inbox, untouched ([intake] spreadsheets = "skip", the default): it can be taken
     moved        taken aside before the work: a letter (its attachments are files of the batch), an unpacked archive
                  (its files are files of the batch), personal papers, a macOS service file
     queued       not processed yet (the batch was stopped)
@@ -17,9 +18,14 @@ The rows of moved files come from the preparation of the folder (state meta "mov
 import csv
 
 UNSUPPORTED = "the pipeline does not process"  # the why of work.prep for an extension it does not know
+HELD = "held:"  # the why of work.prep for a file held in inbox by a setting
+HELD_SHEET = (
+    'held: a spreadsheet, left in inbox (not taken by default; to take it: [intake] spreadsheets = "include", or '
+    "intake run --spreadsheets include)"
+)
 COLUMNS = ("tid", "file", "size", "outcome", "why", "pages", "ocr_pages", "score", "garbled_pages", "seconds")
 SECONDS = ("prep_seconds", "convert_seconds", "ocr_seconds")  # the stages of a file (state data)
-OUTCOMES = ("done", "duplicate", "error", "unsupported", "skipped", "moved", "queued")
+OUTCOMES = ("done", "duplicate", "error", "unsupported", "skipped", "held", "moved", "queued")
 
 
 def outcome(row):
@@ -29,7 +35,8 @@ def outcome(row):
     if s == "dup":
         return "duplicate"
     if s == "skipped":
-        return "unsupported" if (row.get("why") or "").startswith(UNSUPPORTED) else "skipped"
+        why = row.get("why") or ""
+        return "unsupported" if why.startswith(UNSUPPORTED) else "held" if why.startswith(HELD) else "skipped"
     if s == "error":
         return "error"
     return "queued"

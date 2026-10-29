@@ -475,6 +475,10 @@ def prep(job: Job) -> Prep:
     if not job.get("imgocr") and os.path.getsize(src) == 0:  # no error of the intake (trial b072: an empty .txt)
         return {"status": "skipped", "why": "an empty file (0 bytes): nothing to read"}
     kind = EXTENSIONS.get(ext, "")
+    if kind == "spreadsheet" and job.get("spreadsheets") == "skip":
+        from assistant_x.intake.ledger import HELD_SHEET
+
+        return {"status": "skipped", "why": HELD_SHEET}
     lo_why = None  # LibreOffice failed a workbook its cells were read from instead
     if ext == "pdf":
         pdf = src

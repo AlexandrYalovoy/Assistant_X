@@ -60,7 +60,10 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
     c = collections.Counter(r["status"] for r in rows)
     dups = [r for r in rows if r["status"] == "dup"]
     sha = sum("SHA-256" in (r.get("why") or "") for r in dups)
-    skipped = [r for r in rows if r["status"] == "skipped"]
+    from assistant_x.intake.ledger import HELD
+
+    held = [r for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(HELD)]
+    skipped = [r for r in rows if r["status"] == "skipped" and r not in held]
     no_lo = sum("LibreOffice" in (r.get("why") or "") for r in skipped)
     errors = [r for r in rows if r["status"] == "error"]
     hidden = [r for r in rows if r.get("hidden")]
@@ -69,7 +72,8 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         "",
         f"- Work folder: {work}",
         f"- Files in the batch: {len(rows)}; done (text obtained) {c['done']}, duplicates {c['dup']} "
-        f"(by SHA-256 {sha}, by content {len(dups) - sha}), skipped {c['skipped']} (no LibreOffice {no_lo}), "
+        f"(by SHA-256 {sha}, by content {len(dups) - sha}), skipped {len(skipped)} (no LibreOffice {no_lo}), "
+        f"held in inbox {len(held)}, "
         f"errors {c['error']}, still queued {c['queued'] + c['running']}"
         + (f", moved into the library {c['applied']}" if c["applied"] else ""),
         f"- Preparing the folder: archives unpacked {prep_counts.get('archives', 0)} (files from them {prep_counts.get('archive_files', 0)}), "
@@ -84,6 +88,10 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"- {quality_report.summary_line(quality)}" if quality else "- Quality: no documents done",
         f"- Time: {seconds / 60:.1f} min" + (f"; {load}" if (load := load_of(work)) else ""),
     ]
+    if held:  # spreadsheets left in inbox ([intake] spreadsheets = "skip"): the user decides whether to take them
+        L += ["", f"## Held in inbox ({len(held)}): spreadsheets, not taken by default", ""]
+        L += [f"- {win(r['rel'])}" for r in held[:200]]
+        L += ["", 'To take them: [intake] spreadsheets = "include" in the settings, or intake run --spreadsheets include.']
     for title, items in (("Errors", errors), ("Skipped", skipped), ("Duplicates", dups)):
         if items:
             L += ["", f"## {title} ({len(items)})", ""]
@@ -128,10 +136,13 @@ def status_data(work, state, started=None, now=None):
             item["ocr_seconds"] = ocr_seconds(work, r["tid"])
         running.append(item)
     queued = [r["tid"] for r in rows if r["status"] == "queued"]
+    from assistant_x.intake.ledger import HELD
+
+    held = [r["rel"] for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(HELD)]
     errors = [
         {"tid": r["tid"], "rel": r["rel"], "status": r["status"], "why": r.get("why")}
         for r in rows
-        if r["status"] in ("error", "skipped")
+        if r["status"] in ("error", "skipped") and r["rel"] not in held
     ]
     eta = time_left(rows, running, started, now)
     return {
@@ -142,6 +153,7 @@ def status_data(work, state, started=None, now=None):
         "running": running,
         "queued": queued,
         "errors": errors,
+        "held": held,
         "eta_seconds": eta,
         "started": started,
         "ocr_seconds": round(sum(r.get("ocr_seconds") or 0 for r in done)),

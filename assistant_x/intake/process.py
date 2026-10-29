@@ -119,6 +119,7 @@ class Batch:
             "env": self.env,
             "ocr_threads": cfg.ocr_threads,
             "inproc": cfg.stage_mode == "inproc",
+            "spreadsheets": cfg.get("spreadsheets", "include"),
         }
         self.lib, self.mine, self.crashed = {}, {}, collections.Counter()
         self.lib_editions = {}  # code -> (pages, designation) of a library text, read once

@@ -59,6 +59,7 @@ priority "high".
 | `ocr_shards` | `auto` — the OCR of a long scan (60 scanned pages and more) is cut into page ranges that every worker reads, the text is assembled when all are back; `off` — a document in one task, as in 0.1 | `auto` |
 | `ocr_threads` | `subprocess` — processes of `convert_md.py` / `reocr_empty.py` per document | 2 |
 | `worker_memory_mb` | the memory cap of a worker process and of every program it starts (with all its children); `workers` × the cap no more than the RAM | 3072 |
+| `spreadsheets` | `skip` — spreadsheets (xls xlsx xlsm xlsb ods, loose or out of an archive or a letter) stay in inbox untouched: "held" in `ledger.csv`, listed in `summary.md` and in `intake_status` with how to take them; `include` — they are read (below). One batch: `intake run --spreadsheets include` | `skip` |
 | `timeouts` | seconds: `soffice`, `hidden`, `convert` (the whole document), `unpack` | 900, 1800, 14400, 1800 |
 | `unpack` | `max_total_gb` (the total unpacked), `max_depth` (nested archives) | 5, 3 |
 | `auto_apply` | `true` — `intake_apply()` applies a batch whose `check-meta` finds no error at once, without the plan and its token, unless the plan needs the user (below); read **only** from `assistant_x.local.toml` | `false` |
@@ -181,7 +182,7 @@ the card): the pages of a citation are the pages of that PDF, so they stay the s
 |------|------------|-----|
 | pdf | pdf | as it is; scanned pages by OCR |
 | office | doc docx docm rtf odt ppt pptx pps ppsx odp | LibreOffice → PDF |
-| spreadsheet | xls xlsx xlsm xlsb ods | LibreOffice → PDF for the pages; every sheet a Markdown table `## Sheet: <name>` at the end of the page that shows its first cells (`tools\sheets.py`; XLS, XLSB, ODS made XLSX by LibreOffice first; 2000 rows and 60 columns of a sheet at most, a note says so) |
+| spreadsheet | xls xlsx xlsm xlsb ods | held in inbox by default (`spreadsheets = "skip"`); with `include`: LibreOffice → PDF for the pages; every sheet a Markdown table `## Sheet: <name>` at the end of the page that shows its first cells (`tools\sheets.py`; XLS, XLSB, ODS made XLSX by LibreOffice first; 2000 rows and 60 columns of a sheet at most, a note says so) |
 | ebook | epub fb2 mobi xps oxps | PyMuPDF lays it out on A4 pages, its table of contents kept as bookmarks (MOBI as far as PyMuPDF opens it) |
 | text | txt md markdown html htm xhtml | PyMuPDF lays it out on A4 pages; a TXT or Markdown file is read as UTF-8, else in the legacy code page of a language pack that gives the most stop words (`encodings` of the packs: cp1251, koi8-r, cp866, cp1252); Markdown is laid out as it is written |
 | djvu | djvu djv | DjVuLibre (`ddjvu -format=pdf`) → PDF of page images, then OCR; skipped without it |

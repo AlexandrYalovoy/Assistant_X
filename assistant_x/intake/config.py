@@ -25,6 +25,7 @@ from assistant_x.core.txn import lp  # noqa: F401 — intake_cfg.lp for the inta
 
 FOLDERS = ("inbox", "library", "index", "work", "reports")
 PROGRAMS = settings.LOCAL_KEYS
+SPREADSHEETS = ("skip", "include")  # [intake] spreadsheets: held in inbox, or read
 STAGE_MODES = ("inproc", "subprocess")
 # service folders of inbox: never scanned, never removed
 SERVICE = ("_duplicates", "_to_delete", "_rejected")
@@ -96,6 +97,9 @@ def load(path=None):
     except ValueError as e:
         sys.exit(f"{path}: {e}")
     cfg["heavy_mb"] = float(raw.get("heavy_mb", default["heavy_mb"]))
+    cfg["spreadsheets"] = str(raw.get("spreadsheets") or default["spreadsheets"])
+    if cfg["spreadsheets"] not in SPREADSHEETS:
+        sys.exit(f"{path}: spreadsheets {cfg['spreadsheets']!r}, one of these is needed: {', '.join(SPREADSHEETS)}")
     from assistant_x.intake import schedule
 
     cfg["ocr_shards"] = str(raw.get("ocr_shards") or default["ocr_shards"])

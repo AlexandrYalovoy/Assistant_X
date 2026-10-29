@@ -84,6 +84,10 @@ The trial intake of a big real folder in batches, continued.
   file to get again, not as a failure of LibreOffice.
 - Intake: a document of 300 text pages and more is converted in page ranges of 100 pages at least on every worker, as a
   long scan is; a workbook laid out on 1 029 pages took 33 minutes of one worker, now 7.
+- Intake: spreadsheets (xls, xlsx, xlsm, xlsb, ods) are held in inbox by default ([intake] spreadsheets = "skip"):
+  untouched, "held" in the ledger, listed in the summary and in intake_status with how to take them ([intake]
+  spreadsheets = "include", or intake run --spreadsheets include). A workbook is mostly a dataset, not a document to
+  cite.
 
 ## 0.5.4 — 2026-10-29
 

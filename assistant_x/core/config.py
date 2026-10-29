@@ -48,6 +48,10 @@ INTAKE = {
     "ocr_shards": "auto",
     "ocr_threads": 2,
     "worker_memory_mb": 3072,
+    # spreadsheets (core/formats kind "spreadsheet": xls, xlsx, xlsm, xlsb, ods): "skip" holds them in inbox, untouched,
+    # listed in the summary and the ledger ("held"); "include" reads them (the author, 2026-10-29: a workbook is mostly
+    # a dataset, not a document to cite; a monthly regime of 2 000 wells came out as 1 029 pages)
+    "spreadsheets": "skip",
     # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
     # without a text layer are then read from their images)
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},

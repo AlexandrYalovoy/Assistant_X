@@ -59,6 +59,7 @@ osd; 193 МБ), LibreOffice (без справки, со словарями ru �
 | `ocr_shards` | `auto` — распознавание длинного скана (от 60 сканированных страниц) режется на диапазоны страниц, которые читают все рабочие процессы, а текст собирается, когда вернутся все; `off` — документ одной задачей, как в 0.1 | `auto` |
 | `ocr_threads` | в режиме `subprocess` — число процессов `convert_md.py` / `reocr_empty.py` на документ | 2 |
 | `worker_memory_mb` | предел памяти рабочего процесса и каждой запущенной им программы (вместе со всеми её дочерними процессами); `workers` × предел — не больше объёма RAM | 3072 |
+| `spreadsheets` | `skip` — таблицы (xls xlsx xlsm xlsb ods, отдельные или из архива и письма) остаются во входящих нетронутыми: «held» в `ledger.csv`, список в `summary.md` и в `intake_status` с подсказкой, как их взять; `include` — они читаются (ниже). Для одной партии: `intake run --spreadsheets include` | `skip` |
 | `timeouts` | секунды: `soffice`, `hidden`, `convert` (весь документ), `unpack` | 900, 1800, 14400, 1800 |
 | `unpack` | `max_total_gb` (общий объём распакованного), `max_depth` (глубина вложенности архивов) | 5, 3 |
 | `auto_apply` | `true` — `intake_apply()` сразу применяет пакет разбора, в котором `check-meta` не находит ошибок, без плана и его токена, если только план не требует участия пользователя (см. ниже); читается **только** из `assistant_x.local.toml` | `false` |
@@ -182,7 +183,7 @@ meta.jsonl: по строке на файл — документ `{tid, sec, doc
 |------|------------|-----|
 | pdf | pdf | как есть; сканированные страницы — через OCR |
 | office | doc docx docm rtf odt ppt pptx pps ppsx odp | LibreOffice → PDF |
-| spreadsheet | xls xlsx xlsm xlsb ods | LibreOffice → PDF для страниц; каждый лист — Markdown-таблица `## Sheet: <name>` в конце той страницы, где видны его первые ячейки (`tools\sheets.py`; XLS, XLSB, ODS сначала переводятся LibreOffice в XLSX; не больше 2000 строк и 60 столбцов листа, об усечении сообщает примечание) |
+| spreadsheet | xls xlsx xlsm xlsb ods | по умолчанию остаются во входящих (`spreadsheets = "skip"`); с `include`: LibreOffice → PDF для страниц; каждый лист — Markdown-таблица `## Sheet: <name>` в конце той страницы, где видны его первые ячейки (`tools\sheets.py`; XLS, XLSB, ODS сначала переводятся LibreOffice в XLSX; не больше 2000 строк и 60 столбцов листа, об усечении сообщает примечание) |
 | ebook | epub fb2 mobi xps oxps | PyMuPDF раскладывает книгу по страницам A4, её оглавление сохраняется как закладки (MOBI — насколько его открывает PyMuPDF) |
 | text | txt md markdown html htm xhtml | PyMuPDF раскладывает текст по страницам A4; файл TXT или Markdown читается как UTF-8, а если не получается — в устаревшей кодовой странице того языкового пакета, который даёт больше всего стоп-слов (`encodings` пакетов: cp1251, koi8-r, cp866, cp1252); Markdown раскладывается так, как написан |
 | djvu | djvu djv | DjVuLibre (`ddjvu -format=pdf`) → PDF из изображений страниц, затем OCR; без DjVuLibre файл пропускается |

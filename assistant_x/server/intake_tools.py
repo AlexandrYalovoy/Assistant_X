@@ -437,6 +437,13 @@ def batch_words(data):
         parts.append(_minutes(data["eta_seconds"]) + " left")
     lines = ["; ".join(parts) + "."]
     lines += [f"  {e['tid']} [{e['status']}] {e['rel']} — {e.get('why')}" for e in data["errors"][:30]]
+    held = data.get("held") or []
+    if held:  # tell the user: they decide whether to take them
+        lines.append(
+            f"Held in inbox, not taken by default: {len(held)} spreadsheets (tell the user; to take them: [intake] "
+            'spreadsheets = "include", or intake run --spreadsheets include):'
+        )
+        lines += [f"  {rel}" for rel in held[:30]] + ([f"  … and {len(held) - 30} more"] if len(held) > 30 else [])
     return "\n".join(lines)
 
 
