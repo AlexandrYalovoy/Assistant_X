@@ -474,6 +474,13 @@ def prep(job: Job) -> Prep:
             err = soffice(job, src, w / "pdf", "pdf", log)
             if err and kind == "spreadsheet" and ext in ("xlsx", "xlsm") and not err.get("retry"):
                 lo_failed = err  # its cells read directly, laid out below (trial b070: LibreOffice crashed on a book)
+            elif err and ext in ("docx", "docm") and (not err.get("retry") or job.get("memory_retried")):
+                # its text and its embedded PDFs read directly (trial b075: 87 embedded PDFs past 6 GB in LibreOffice)
+                from assistant_x.intake.tools import docxtext
+
+                if docxtext.to_pdf(src, pdf, w / "pdf" / f"{tid}.md"):
+                    return err
+                lo_why = f"{err['why']}: its text and its embedded PDFs read directly"
             elif err:
                 return err
         if kind == "spreadsheet":

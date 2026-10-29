@@ -653,3 +653,51 @@ def test_an_empty_file_is_skipped_not_an_error(tmp_path):
     }
     res = intake_work.prep(job)
     assert res["status"] == "skipped" and "empty" in res["why"]
+
+
+def test_a_word_document_libreoffice_cannot_draw_is_read_from_its_parts(tmp_path, monkeypatch):
+    """Trial batch b075: a report of 87 embedded PDFs went past 6 GB in LibreOffice twice. Its text (headings, tables)
+    and its embedded PDFs are read directly and laid out as one PDF."""
+    from assistant_x.intake.tools import docxtext
+
+    inner = tmp_path / "inner.pdf"
+    text_pdf(inner, ["Приложение 2. Расчёт осушки газа"])
+    w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    xml = (
+        f'<w:document xmlns:w="{w}"><w:body>'
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Осушка газа</w:t></w:r></w:p>'
+        "<w:tbl><w:tr><w:tc><w:p><w:r><w:t>Параметр</w:t></w:r></w:p></w:tc>"
+        "<w:tc><w:p><w:r><w:t>Значение</w:t></w:r></w:p></w:tc></w:tr>"
+        "<w:tr><w:tc><w:p><w:r><w:t>Точка росы</w:t></w:r></w:p></w:tc>"
+        "<w:tc><w:p><w:r><w:t>-20 °C</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"
+        "</w:body></w:document>"
+    )
+    doc = tmp_path / "report.docx"
+    with zipfile.ZipFile(doc, "w") as z:
+        z.writestr("word/document.xml", xml)
+        z.writestr("word/embeddings/oleObject1.pdf", inner.read_bytes())
+    md = docxtext.markdown(doc)
+    assert md.startswith("# Осушка газа") and "| Точка росы | -20 °C |" in md
+    assert [n for n, _ in docxtext.embedded_pdfs(doc)] == ["word/embeddings/oleObject1.pdf"]
+    monkeypatch.setattr(intake_work, "run", lambda cmd, **kw: (0, "memory"))  # LibreOffice past its cap
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(doc),
+        "ext": "docx",
+        "ocr": False,
+        "imgocr": False,
+        "soffice": "soffice",
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 6144,
+        "memory_retried": True,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "prepped" and res["pages"] >= 2 and "embedded PDFs read directly" in res["why"]
+    text = "".join(p.get_text() for p in pymupdf.open(res["pdf"]))
+    assert "Точка росы" in text and "осушки" in text  # the embedded PDF after the text
+    job["memory_retried"] = False  # the first time past the cap: tried again with the double cap first
+    job["work"] = str(tmp_path / "w2")
+    assert intake_work.prep(job).get("retry") == "memory"

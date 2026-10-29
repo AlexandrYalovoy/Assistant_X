@@ -314,8 +314,11 @@ class Batch:
                 retried[tid] = min(2 * (mem or self.cfg.worker_memory_mb), self.memory_ceiling())
                 say(f"  {tid}: {STAGES.get(stage, stage)} — {why}, once more with a cap of {retried[tid]} MB")
                 self.state.update(tid, memory_retry=retried[tid])
-                args = tuple(
-                    {**a, "memory_mb": retried[tid]} if isinstance(a, dict) and "memory_mb" in a else a for a in args
+                args = tuple(  # memory_retried: a tool past its cap again has another way (work.prep: a .docx)
+                    {**a, "memory_mb": retried[tid], "memory_retried": True}
+                    if isinstance(a, dict) and "memory_mb" in a
+                    else a
+                    for a in args
                 )
                 ready.push(0, (stage, tid, fn, args, retried[tid], True), is_heavy=True)  # with its big cap
 
