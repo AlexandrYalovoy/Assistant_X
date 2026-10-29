@@ -76,6 +76,8 @@ The trial intake of a big real folder in batches, continued.
 - Intake: drawing sheets (A2 and up) with a text layer lose their line art past 10 000 vector paths, and those whose
   text is drawn as curves (fewer than 300 characters in the layer) are read from their image; a set of A1/A0 drawings
   took 34 minutes, now 3.
+- Intake: words of a legacy code page shown as Latin-1 in a text layer (the stamp of the sheets of a CAD export) are
+  read back in the code page of the document language.
 
 ## 0.5.4 — 2026-10-29
 

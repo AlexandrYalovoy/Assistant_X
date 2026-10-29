@@ -38,6 +38,51 @@ LETTER_RX = re.compile(f"[{lang.chars('lower')}]")  # the letters of every activ
 KEEP_RX = {code: re.compile(f"[{cls}]") for code, cls in lang.letters("lower").items() if lang.get(code, "keep_share")}
 
 
+# a word of a text layer whose font maps a legacy code page to Latin-1 (a CAD export: "\u00cf\u00f0\u00e8..." for a
+# Russian word, the stamp of a sheet; trial batch b086: 105 documents): a run of 3 letters U+00C0-U+00FF and more is
+# no word of a Western language; it and the shorter runs of its line are read back in the code page ("encodings" of
+# the packs) that gives letters of the document languages only, and the number sign of that code page ("\u00b9" in a
+# cp1251 line) with them
+LATIN1_RUN = re.compile(r"[\u00a8\u00b8\u00c0-\u00ff]+")
+DOC_LETTERS = re.compile(f"[{lang.chars('letters')}]+")
+
+
+def _latin1_word(word):
+    """(the word read back, the code page) or (word, None)."""
+    raw = word.encode("latin-1")
+    for enc in dict.fromkeys(lang.words("encodings")):
+        try:
+            out = raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+        if DOC_LETTERS.fullmatch(out):
+            return out, enc
+    return word, None
+
+
+def mend_latin1(text):
+    """Text whose words of a legacy code page shown as Latin-1 are given back (mend_latin1: the stamp of a sheet)."""
+    if not re.search(r"[\u00c0-\u00ff]{3}", text):
+        return text
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if not any(len(m.group(0)) >= 3 for m in LATIN1_RUN.finditer(line)):
+            continue
+        used = []
+
+        def back(m):
+            out, enc = _latin1_word(m.group(0))
+            used.append(enc)
+            return out
+
+        line = LATIN1_RUN.sub(back, line)
+        enc = next((e for e in used if e), None)
+        if enc and b"\xb9".decode(enc, "replace") == "\u2116":
+            line = line.replace("\u00b9", "\u2116")
+        lines[i] = line
+    return "\n".join(lines)
+
+
 def plain(s):
     """Text without Markdown/HTML markup, so tags and Greek symbols don't count as foreign letters."""
     s = re.sub(r"<!--.*?-->|</?[a-z]+>", " ", s)
@@ -247,7 +292,7 @@ def main(argv):
                 body, source = o, "layer" if m is None else "fallback"
                 if m is not None and letters(o) > 0:
                     fallback.append(n)
-            body, k = INVISIBLE.subn("", body.translate(ocr_page.FONT_FIX))
+            body, k = INVISIBLE.subn("", mend_latin1(body.translate(ocr_page.FONT_FIX)))
             invisible += k
             body = unicodedata.normalize("NFC", body)
             if source in ("ocr", "markdown"):  # a converted page: its lines were joined by the converter

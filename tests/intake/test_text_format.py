@@ -163,3 +163,15 @@ def test_pages_info_written_and_read(tmp_path):
 def test_complex_table_flag():
     assert not assemble_md.complex_table("| a | b |\n|---|---|\n| 1 | 2 |\n\ntext\n| c |\n|---|\n| 3 |")
     assert assemble_md.complex_table("| a | b | c |\n|---|---|---|\n| merged | 2 |")
+
+
+def test_a_stamp_in_a_legacy_code_page_shown_as_latin1_is_read_back():
+    """Trial batch b086: a CAD export put the stamp of its sheets in its text layer in cp1251 read as Latin-1
+    ("Ïðèëîæåíèå 13.2.9.1.ÒÒÒ-01.02-32.Ñ2"), 105 documents. The words come back; Western words stay as they are."""
+    from assistant_x.intake.tools.assemble_md import mend_latin1
+
+    assert mend_latin1("# Ïðèëîæåíèå 13.2.9.1.ÒÒÒ-01.02-32.Ñ2") == "# Приложение 13.2.9.1.ТТТ-01.02-32.С2"
+    assert mend_latin1("Größe für été, Ñ2") == "Größe für été, Ñ2"
+    assert mend_latin1("Ãàç íà ãîðåëêó\nÑ2 é") == "Газ на горелку\nÑ2 é"  # another line keeps its letters
+    assert mend_latin1("Ñêâàæèíà ¹ 60808, ¸ìêîñòü") == "Скважина № 60808, ёмкость"
+    assert mend_latin1("x² = 5 ¹") == "x² = 5 ¹"
