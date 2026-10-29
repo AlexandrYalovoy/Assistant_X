@@ -544,3 +544,23 @@ def test_a_letter_inside_an_archive_is_taken_apart(project):
     assert counts["archives"] >= 1 and counts["letter_files"] >= 1 and not problems  # the fixture holds archives too
     assert list(cfg.inbox.rglob("Паспорт насоса.pdf"))
     assert not [p for p in cfg.inbox.rglob("Запрос.eml") if "_to_delete" not in p.parts]
+
+
+def test_a_pdf_without_pages_is_called_damaged(tmp_path):
+    """Trial batch b062: a cut download (its end zeros) opened with no page and was reported as "no text obtained"."""
+    bad = tmp_path / "cut.pdf"
+    bad.write_bytes(b"%PDF-1.4\n1 0 obj<</Type/Page>>endobj\n" + b"\x00" * 200)
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(bad),
+        "ext": "pdf",
+        "ocr": False,
+        "imgocr": False,
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 1024,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "error" and ("damaged" in res["why"] or "does not open" in res["why"])

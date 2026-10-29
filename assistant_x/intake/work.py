@@ -505,6 +505,8 @@ def prep(job: Job) -> Prep:
         if memory_like(e):
             err["retry"] = "memory"
         return err
+    if not n:  # a cut download (its end zeros), a broken tree of pages: say it, not "no text obtained" (trial b062)
+        return {"status": "error", "why": "the PDF has no page that can be read: a damaged or cut file (get it again)"}
     res: Prep = {"status": "prepped", "pages": n, "hidden": 0, "hidden_pages": []}
     if not job.get("imgocr"):  # the bookmarks of the PDF or the heading styles of a DOCX: the first source of the outline
         from assistant_x.intake.tools import outline

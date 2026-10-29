@@ -52,6 +52,8 @@ The trial intake of a big real folder in batches, continued.
 - intake redo no longer fills the disk: the copies of a document in its work (the copy of the library PDF, its
   variants, their page images) go as soon as the document is read, and a variant links to the copy instead of copying
   it again (one night had left 23.5 GB of copies).
+- A PDF with no page that can be read (a cut download whose end is zeros, a broken tree of pages) is reported as a
+  damaged or cut file to get again, not as a file without text.
 
 ## 0.5.4 — 2026-10-29
 
