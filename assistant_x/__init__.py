@@ -3,4 +3,4 @@
 """Assistant X: a local knowledge base of your own documents, served over MCP to Claude, ChatGPT/Codex, DeepSeek
 Harness, LM Studio and any MCP client."""
 
-__version__ = "0.5.4"
+__version__ = "0.5.5"
