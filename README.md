@@ -2,17 +2,122 @@ English | [Русский](README.ru.md)
 
 # Assistant X
 
-Your own knowledge base with an expert on top: Assistant X keeps your documents (PDF, DOC/DOCX, PPTX, scans) as
-searchable texts on your computer and lets your AI assistant read, cross-check and cite them page by page through
-an MCP server: Claude (Desktop and Code), Codex and the ChatGPT desktop app, DeepSeek Harness, LM Studio with any local
-model, and any other MCP client. Search by words and by meaning, page images of the originals, tables of contents of
-books, a quality warning for weak scans. The library and its search run locally; what reaches the model is only what
-it reads from the library to answer (with a local model in LM Studio nothing leaves the PC).
+**Ask your own library. Get answers with the document, the page and the exact quote.**
 
-Version 0.5.4, a prototype (what comes next: [`ROADMAP.md`](ROADMAP.md)). The default profile `general` suits a library of any
-field; `oil-gas-ru` adds the synonyms of a Russian oil-and-gas process engineer. License: GNU AGPL-3.0-or-later; the data folders also CC-BY-4.0 (see License below).
+Assistant X turns a folder of your documents (from a few files to tens of thousands of books, standards, papers,
+reports and scans) into a private library that your AI assistant understands by meaning, not just by words. Ask in
+your own words, and in seconds it finds the right passage among thousands of files, reads the page and answers with
+an exact quote. The library runs on your computer and works with Claude, Codex, the ChatGPT desktop app, DeepSeek
+Harness, LM Studio and any other MCP client. It is made for anyone who works from documents: engineers, researchers,
+students, doctors, lawyers, economists.
 
-**Author:** Alexandr Yalovoy.
+## At a glance
+
+- **Answers you can check.** Every answer cites `[code, printed page, PDF page]`; a quote is verified word for word
+  against the page, and the assistant can show you the image of the original page.
+- **Takes in a whole library.** PDF and scans (OCR with a quality score per page), Word, PowerPoint, Excel, EPUB,
+  FB2, DjVu, images, HTML, archives (ZIP, 7z, RAR) and e-mails with attachments. Duplicates and new editions are
+  found, every document gets a card and a shelf, every step is journaled.
+- **Search by words and by meaning**, with reranking, tables of contents of books and a warning when a scan is weak.
+- **One library for all your AI apps.** A single local service loads the models once (an NVIDIA, AMD or Intel video
+  card, or the processor) and serves every connected app at the same time.
+- **Private by design.** Documents, texts and the search stay on your PC; a model sees only the pages it reads to
+  answer, and with a local model in LM Studio nothing leaves the PC.
+- **Share a library.** Export it as a base package and install it in another workspace, merged with the documents
+  already there.
+- **English and Russian** documents out of the box; one card schema and one set of shelves for any field, with domain
+  profiles for special vocabularies.
+- **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
+  no administrator rights needed.
+
+Version 0.5.4 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+[License](#license)) · Author: Alexandr Yalovoy. What comes next: [`ROADMAP.md`](ROADMAP.md).
+
+## Features in detail
+
+### Answers you can check
+
+- Every answer names the document and the page: `[code, p. printed, PDF N]`, with a code such as `N00012` that stays
+  with the document for its whole life.
+- A verbatim quote is checked against the text of its page (`verify_quote`); a quote that does not match is caught.
+- The image of the original page (`page_image`): look at a table, a diagram or a formula with your own eyes.
+- The map of a book (`book_map`): its contents with page numbers, so the assistant reads the right section instead of
+  guessing.
+- A "Source quality" warning when an answer rests on a weak scan.
+
+### Search
+
+- By words: stemming for Russian and English, a dictionary of abbreviations and the synonyms of the profile.
+- By meaning: the multilingual model bge-m3, so a question in Russian finds an English text and the other way round.
+- Reranking of the best fragments (bge-reranker-v2-m3).
+- Reading pages in a row (`read_pages`), the card of a document (`document_info`), the list of documents
+  (`list_documents`).
+- A query log: what the apps asked and what was found, to measure the quality.
+
+### Intake of documents
+
+- Formats: PDF and scans; DOC, DOCX, RTF, ODT; PPT, PPTX, ODP; XLS, XLSX, ODS (every sheet as a table); EPUB, FB2,
+  MOBI; TXT, Markdown, HTML; DjVu; JPG, PNG, TIFF; archives ZIP, 7z, RAR, TAR (unpacked); e-mails EML, MSG (their
+  attachments taken out).
+- OCR (Tesseract) with a quality score per page; long scans are split and recognized in parallel.
+- Hidden text in documents is found, cut out of the search and reported.
+- A broken font encoding is detected and the pages are read again by OCR.
+- Duplicates by content and new editions by designation: "replace the old one" or "keep both".
+- The program drafts the card (title, designation, type, topic, contents); the assistant checks it.
+- The move into the library is a transaction: every step is journaled, an interrupted intake goes on with `--resume`.
+- Files that are not documents (programs, CAD, video) are put aside, never lost.
+
+### Library and cards
+
+- One set of shelves for any field: N Standards, L Literature, P Projects and reports, E Equipment documents,
+  R Regulations and law, J Journals and papers, X Other.
+- The card of every document is JSON under an open schema: type, designation, year, publisher, the links "replaces",
+  "other version", "adopts" (for standards), searchable texts in English and Russian.
+- The catalog `CATALOG.md`, the journal `journal.md` and the OCR quality report are made from the cards.
+- The texts are Markdown with page markers: you can read them without the program.
+- A document can be taken out of the library, its code kept reserved.
+
+### One service for all your apps
+
+- One command connects them: `assistant-x connect auto` finds Claude Desktop, Claude Code, Codex, DeepSeek Harness
+  and LM Studio and writes the library into each.
+- One local service per PC: the models are loaded once and serve every app at the same time.
+- An NVIDIA video card (CUDA), an AMD or Intel one (DirectML), or the processor.
+- A mode for small local models (`--compact`) and a read-only set of tools (`--tools reader`).
+- MCP over HTTP for other clients, with an access token.
+- The skill of every app is written by the program and refreshed with a new version.
+
+### Base packages: share a library
+
+- Export the library (cards, texts, base, without personal documents) as one package.
+- Install, update or remove a package in another person's workspace, merged with their own documents.
+- Every step can be resumed after a failure or rolled back.
+- A package from someone else is checked as untrusted.
+
+### Privacy and security
+
+- Documents, texts, the base and the search stay on your PC; a model gets only the pages it reads to answer.
+- With a local model in LM Studio nothing leaves the computer.
+- The library changes only through a plan and its confirmation token.
+- Documents are treated as untrusted: hidden instructions in a text are found and marked.
+
+### Installation and support
+
+- Tell your agent (Codex, Claude Code, DeepSeek Harness) "Install Assistant X for me" and it does the rest.
+- [`Setup.bat`](Setup.bat) by double-click, without administrator rights; an offline medium for a PC without
+  internet.
+- Windows 10/11 and Linux; Python 3.11.
+- `doctor` shows what is missing; `connect --check` checks every app; `debug-report` makes a report to pass on.
+- Languages and fields are data: language packs (Russian, English) and profiles (`general`, `oil-gas-ru`) are added
+  without changing the code.
+
+## How it works
+
+1. Put your documents into the `inbox` folder.
+2. Tell your assistant "AX: sort my documents": texts, OCR, cards, shelves.
+3. The library builds its search by words and by meaning.
+4. Ask in any connected app, starting the message with "AX:".
+5. Get an answer that cites the code and the page, and check the quote against the original page.
 
 ## Get the program
 
