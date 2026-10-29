@@ -61,6 +61,8 @@ The trial intake of a big real folder in batches, continued.
   of a book in a trial batch).
 - Letters and archives are taken apart until nothing new comes: an archive attached to a letter that an archive held is
   unpacked too (before, it was left as a file nobody read).
+- A workbook (.xlsx, .xlsm) LibreOffice cannot draw (it crashed on a book of 83 sheets every time) is read from its
+  cells: each sheet under its name as a table on text pages, the why naming the crash; before, the file was an error.
 
 ## 0.5.4 — 2026-10-29
 

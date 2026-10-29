@@ -403,6 +403,19 @@ def reflow_to_pdf(src, pdf, ext):
     return None
 
 
+def sheets_pdf(sheets_json, md, pdf):
+    """A PDF of the sheets of a workbook as text (each sheet under its name, its cells as a Markdown table) when
+    LibreOffice could not draw it; None, or the error dict."""
+    try:
+        found = json.loads(Path(sheets_json).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return {"status": "error", "why": f"the sheets were not read: {e!r}"[:300]}
+    if not found:
+        return {"status": "error", "why": "the workbook has no sheet with cells"}
+    Path(md).write_text("\n\n".join(f"# {s[0]}\n\n{s[1]}" for s in found) + "\n", encoding="utf-8")
+    return reflow_to_pdf(md, pdf, "md")
+
+
 def sheets_of(job, src, ext, w, log):
     """The sheets of a spreadsheet as Markdown into <work>/sheets/<tid>.json ([[name, Markdown, probe values]]);
     XLS, XLSB and ODS are made XLSX by LibreOffice first. None, or the error dict of the file."""
@@ -448,19 +461,28 @@ def prep(job: Job) -> Prep:
         _link(job["src"], src)
     pdf = w / "pdf" / f"{tid}.pdf"
     kind = EXTENSIONS.get(ext, "")
+    lo_why = None  # LibreOffice failed a workbook its cells were read from instead
     if ext == "pdf":
         pdf = src
     elif kind in ("office", "spreadsheet"):
         if not job.get("soffice"):
             return {"status": "skipped", "why": f"no LibreOffice: .{ext} not converted to PDF (assistant-x setup-intake)"}
+        lo_failed = None
         if not pdf.exists():
             err = soffice(job, src, w / "pdf", "pdf", log)
-            if err:
+            if err and kind == "spreadsheet" and ext in ("xlsx", "xlsm") and not err.get("retry"):
+                lo_failed = err  # its cells read directly, laid out below (trial b070: LibreOffice crashed on a book)
+            elif err:
                 return err
         if kind == "spreadsheet":
             err = sheets_of(job, src, ext, w, log)
             if err:
                 return err
+            if lo_failed:
+                err = sheets_pdf(w / "sheets" / f"{tid}.json", w / "pdf" / f"{tid}.md", pdf)
+                if err:
+                    return lo_failed
+                lo_why = f"{lo_failed['why']}: the cells of its sheets read directly"
     elif ext == "chm":  # a help file: its pages as one HTML, laid out like any HTML
         if not pdf.exists():
             from assistant_x.intake.tools import chm
@@ -516,6 +538,8 @@ def prep(job: Job) -> Prep:
     if not n:  # a cut download (its end zeros), a broken tree of pages: say it, not "no text obtained" (trial b062)
         return {"status": "error", "why": "the PDF has no page that can be read: a damaged or cut file (get it again)"}
     res: Prep = {"status": "prepped", "pages": n, "hidden": 0, "hidden_pages": []}
+    if lo_why:
+        res["why"] = lo_why
     if not job.get("imgocr"):  # the bookmarks of the PDF or the heading styles of a DOCX: the first source of the outline
         from assistant_x.intake.tools import outline
 

@@ -44,7 +44,9 @@ def _kill_tree(pid):
         p = psutil.Process(pid)
     except psutil.NoSuchProcess:
         return
-    for c in p.children(recursive=True) + [p]:
+    # the wrapper first: killed after its child, it could still write the child's exit code (a flaky "failed 15"
+    # under load in a full check of 2026-10-29)
+    for c in [p] + p.children(recursive=True):
         try:
             c.kill()
         except psutil.NoSuchProcess:

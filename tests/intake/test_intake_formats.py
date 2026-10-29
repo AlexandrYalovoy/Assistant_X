@@ -610,3 +610,27 @@ def test_an_archive_attached_to_a_letter_inside_an_archive_is_unpacked(project):
     assert not problems
     assert [p for p in cfg.inbox.rglob("Отчёт.pdf") if "_to_delete" not in p.parts]
     assert not [p for p in cfg.inbox.rglob("*.zip") if "_to_delete" not in p.parts]
+
+
+def test_a_workbook_libreoffice_cannot_draw_is_read_from_its_cells(tmp_path, monkeypatch):
+    """Trial batch b070: LibreOffice crashed (0xC0000409) on a workbook of 83 sheets every time and the file was an
+    error. Its cells are read directly and laid out as text pages instead."""
+    book = xlsx(tmp_path / "calc.xlsx", {"Расчёт": [["Скважина", "Дебит, т/сут"], ["101", 45.5]]})
+    monkeypatch.setattr(intake_work, "run", lambda cmd, **kw: (3221226505, None))  # LibreOffice crashes
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(book),
+        "ext": "xlsx",
+        "ocr": False,
+        "imgocr": False,
+        "soffice": "soffice",
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 1024,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "prepped" and res["pages"] >= 1 and "read directly" in res["why"]
+    text = "".join(p.get_text() for p in pymupdf.open(res["pdf"]))
+    assert "Расчёт" in text and "45.5" in text
