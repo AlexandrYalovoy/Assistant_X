@@ -227,3 +227,25 @@ def test_the_extensions_the_user_sends_away_go_to_delete(project, tmp_path):
     assert (cfg.inbox / "_to_delete" / "dwg" / "Кусты" / "Чертежи" / "лист.bak").exists()  # with the drawings
     assert (cfg.inbox / "Кусты" / "Расчёт" / "отчёт.pdf").exists()
     assert any("to_delete_ext" in e[-1] for e in events)
+
+
+def test_the_files_no_one_reads_go_to_delete_by_default(project, tmp_path):
+    """The default of to_delete_ext (core/config.INTAKE): programs, CAD drawings, logs, videos and the scripts of a site
+    go to _to_delete/<kind>/ with their SHA-256 in the journal; a table extends it, "" keeps an extension."""
+    from assistant_x.intake import config as intake_cfg
+
+    root, cfg = project
+    exts = intake_cfg.load(cfg.path)["to_delete_ext"]
+    assert exts["mp4"] == "video" and exts["dwg"] == "cad" and exts["js"] == "site" and "pdf" not in exts
+    intake_cfg.save({"to_delete_ext": {"log": "", "step": "cad"}}, cfg.path)
+    cfg = intake_cfg.load(cfg.path)
+    assert "log" not in cfg["to_delete_ext"] and cfg["to_delete_ext"]["step"] == "cad" and "mp4" in cfg["to_delete_ext"]
+    write(cfg.inbox / "Объект" / "обход.mp4", "video")
+    write(cfg.inbox / "Объект" / "модель.STEP", "3d")
+    write(cfg.inbox / "Объект" / "plot.log", "kept: the user keeps .log")
+    state, counts, events, _ = run_prepare(cfg, tmp_path)
+    assert (cfg.inbox / "_to_delete" / "video" / "Объект" / "обход.mp4").exists()
+    assert (cfg.inbox / "_to_delete" / "cad" / "Объект" / "модель.STEP").exists()
+    assert (cfg.inbox / "Объект" / "plot.log").exists()
+    moved = [e for e in events if "to_delete_ext" in e[-1]]
+    assert len(moved) == 2 and all(len(e[3]) == 64 for e in moved)  # the SHA-256 of each

@@ -311,8 +311,9 @@ def html_folders(cfg, st, events, problems, dry=False):
 
 
 def sent_away(cfg, st, events, dry=False):
-    """The files of the extensions of [intake] to_delete_ext (the user's choice: a format of a program nobody reads
-    here) to _to_delete\\<ext>\\, keeping their folders; an archive unpacked before this brings its own."""
+    """The files of the extensions of [intake] to_delete_ext (by default the files the intake cannot read and that are
+    no documents: programs, CAD drawings, logs, videos, the scripts and icons of a site) to _to_delete\\<folder>\\,
+    keeping their folders, with their SHA-256 in the journal; an archive unpacked before this brings its own."""
     exts = cfg.get("to_delete_ext") or {}
     if not exts:
         return
@@ -324,10 +325,10 @@ def sent_away(cfg, st, events, dry=False):
         if dry:
             say(f"  to delete (.{ext}, to_delete_ext of the settings): {win(rel)}")
             continue
-        size = os.path.getsize(full)
+        size, digest = os.path.getsize(full), sha256(full)
         place = move_aside(cfg, full, rel, f"_to_delete/{intake_cfg.safe_name(exts[ext])}")
         events.append(
-            [today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: .{ext} (to_delete_ext of the settings)"]
+            [today(), "inbox\\" + win(rel), size, digest, "—", place, f"to delete: .{ext} (to_delete_ext of the settings)"]
         )
 
 

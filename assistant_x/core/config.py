@@ -51,6 +51,17 @@ INTAKE = {
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800},
     "unpack": {"max_total_gb": 5, "max_depth": 3},
     "disk": {"factor": 3, "min_free_gb": 10},
+    # the files the intake cannot read and that are no documents: prepare moves them (never deletes) to
+    # inbox\_to_delete\<folder>\, loose or out of an archive; [intake] to_delete_ext extends or changes the table, an
+    # empty folder ("") keeps an extension, a list replaces the whole table (intake/prepare.sent_away)
+    "to_delete_ext": {
+        **dict.fromkeys(("exe", "dll", "msi", "lnk"), "programs"),
+        **dict.fromkeys(("dwg", "dwt", "dwl", "bak", "cdw", "spw"), "cad"),
+        "gsfx": "gsfx",
+        "log": "logs",
+        **dict.fromkeys(("mp4", "mov", "avi", "mkv", "wmv", "mpg", "flv"), "video"),
+        **dict.fromkeys(("js", "css", "gif", "ico"), "site"),
+    },
 }
 INTAKE_INTS = ("workers", "ocr_threads", "worker_memory_mb")  # numbers of [intake] that AX_<NAME> may override
 LOCAL_KEYS = ("soffice", "tesseract", "tessdata", "sevenzip", "ddjvu")  # paths of programs: this PC only

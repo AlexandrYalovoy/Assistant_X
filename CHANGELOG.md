@@ -26,6 +26,11 @@ The trial intake of a big real folder in batches, continued.
 - [intake] to_delete_ext names the extensions the user sends away (a list, or a table of extension = folder: dwg, cdw
   and bak into one folder): prepare moves such files, loose or out of an archive, to _to_delete\<folder>\ keeping their
   folders, a line of the journal each.
+- By default the intake sends away the files it cannot read and that are no documents: programs (exe, dll, msi, lnk),
+  CAD drawings (dwg, dwt, dwl, bak, cdw, spw), .gsfx, logs, videos and the scripts and icons of a site go to
+  inbox\_to_delete\<kind>\ with their folders, loose or out of an archive, each with its SHA-256 in the journal;
+  nothing is deleted. [intake.to_delete_ext] extends or changes the table, an empty folder keeps an extension, a list
+  replaces it (docs/INTAKE.md).
 
 ## 0.5.4 — 2026-10-29
 
