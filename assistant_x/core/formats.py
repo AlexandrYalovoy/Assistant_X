@@ -99,7 +99,7 @@ EXTENSIONS = {
     "pdf": "pdf",
     # docm, pptm: the documents with macros; LibreOffice converts them to PDF without running a macro
     **dict.fromkeys(("doc", "docx", "docm", "rtf", "odt", "ppt", "pptx", "pptm", "pps", "ppsx", "odp"), "office"),
-    **dict.fromkeys(("jpg", "jpeg", "png", "tif", "tiff", "bmp"), "image"),
+    **dict.fromkeys(("jpg", "jpeg", "png", "tif", "tiff", "bmp", "gif"), "image"),  # a small gif goes away (prepare)
     **dict.fromkeys(("zip", "7z", "rar", "tar", "tgz", "tar.gz", "tar.bz2", "tar.xz", "gz"), "archive"),
     # the first volume of an archive split in parts (7-Zip reads the next ones .002, .003 … beside it)
     **dict.fromkeys(("7z.001", "zip.001", "rar.001", "001"), "archive"),

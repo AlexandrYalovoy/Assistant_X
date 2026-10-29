@@ -167,7 +167,7 @@ def _picture(path, w, h):
     path.parent.mkdir(parents=True, exist_ok=True)
     pix = pymupdf.Pixmap(pymupdf.csGRAY, pymupdf.IRect(0, 0, w, h), False)
     pix.set_rect(pix.irect, (255,))
-    pix.save(str(path))
+    pix.save(str(path), output="png")  # PyMuPDF writes no GIF: PNG bytes in a .gif file open the same way
 
 
 def test_a_folder_of_page_scans_becomes_one_pdf(project, tmp_path):
@@ -219,10 +219,11 @@ def test_the_extensions_the_user_sends_away_go_to_delete(project, tmp_path):
     intake_cfg.save({"to_delete_ext": {"gsfx": "gsfx", "dwg": "dwg", "bak": "dwg"}}, cfg.path)
     cfg = intake_cfg.load(cfg.path)
     write(cfg.inbox / "Кусты" / "Чертежи" / "лист.bak", "a backup of a drawing")
+    write(cfg.inbox / "Кусты" / "Чертежи" / "лист.dwg", "the drawing")
     write(cfg.inbox / "Кусты" / "Расчёт" / "схема.gsfx", "binary")
     write(cfg.inbox / "Кусты" / "Расчёт" / "отчёт.pdf", "pdf")
     state, counts, events, _ = run_prepare(cfg, tmp_path)
-    assert counts["sent_away"] == 2
+    assert counts["sent_away"] == 3
     assert (cfg.inbox / "_to_delete" / "gsfx" / "Кусты" / "Расчёт" / "схема.gsfx").exists()
     assert (cfg.inbox / "_to_delete" / "dwg" / "Кусты" / "Чертежи" / "лист.bak").exists()  # with the drawings
     assert (cfg.inbox / "Кусты" / "Расчёт" / "отчёт.pdf").exists()
@@ -249,3 +250,20 @@ def test_the_files_no_one_reads_go_to_delete_by_default(project, tmp_path):
     assert (cfg.inbox / "Объект" / "plot.log").exists()
     moved = [e for e in events if "to_delete_ext" in e[-1]]
     assert len(moved) == 2 and all(len(e[3]) == 64 for e in moved)  # the SHA-256 of each
+
+
+def test_a_gif_scan_and_a_bak_of_a_document_stay(project, tmp_path):
+    """The default sends away an icon of a site, not an old page scan saved as a GIF; a .bak only beside the drawing it
+    backs up (a .bak of a Word file or of a database stays)."""
+    root, cfg = project
+    _picture(cfg.inbox / "Старые" / "стр1.gif", 900, 1300)
+    _picture(cfg.inbox / "Сайт" / "кнопка.gif", 40, 20)
+    write(cfg.inbox / "Чертежи" / "план.dwg", "a drawing")
+    write(cfg.inbox / "Чертежи" / "план.bak", "its backup")
+    write(cfg.inbox / "Отчёты" / "отчёт.bak", "a backup of a Word file")
+    state, counts, events, _ = run_prepare(cfg, tmp_path)
+    assert (cfg.inbox / "Старые" / "стр1.gif").exists()
+    assert (cfg.inbox / "_to_delete" / "site" / "Сайт" / "кнопка.gif").exists()
+    assert (cfg.inbox / "_to_delete" / "cad" / "Чертежи" / "план.bak").exists()
+    assert (cfg.inbox / "_to_delete" / "cad" / "Чертежи" / "план.dwg").exists()
+    assert (cfg.inbox / "Отчёты" / "отчёт.bak").exists()

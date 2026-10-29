@@ -63,7 +63,7 @@ priority "high".
 | `unpack` | `max_total_gb` (the total unpacked), `max_depth` (nested archives) | 5, 3 |
 | `auto_apply` | `true` — `intake_apply()` applies a batch whose `check-meta` finds no error at once, without the plan and its token, unless the plan needs the user (below); read **only** from `assistant_x.local.toml` | `false` |
 | `disk` | free space before a run: `factor` × the input files and at least `min_free_gb` | 3, 10 |
-| `to_delete_ext` | the files the intake cannot read and that are no documents: preparing moves them (never deletes) to `inbox\_to_delete\<folder>\` with their folders, loose or out of an archive, each with its SHA-256 in the journal; a table `[intake.to_delete_ext]` of extension = folder extends the default, `""` keeps an extension, a list replaces the whole table | `programs`: exe dll msi lnk; `cad`: dwg dwt dwl bak cdw spw; `gsfx`; `logs`: log; `video`: mp4 mov avi mkv wmv mpg flv; `site`: js css gif ico |
+| `to_delete_ext` | the files the intake cannot read and that are no documents: preparing moves them (never deletes) to `inbox\_to_delete\<folder>\` with their folders, loose or out of an archive, each with its SHA-256 in the journal; a table `[intake.to_delete_ext]` of extension = folder extends the default, `""` keeps an extension, a list replaces the whole table | `programs`: exe dll msi lnk; `cad`: dwg dwt dwl bak cdw spw; `gsfx`; `logs`: log; `video`: mp4 mov avi mkv wmv mpg flv; `site`: js css gif ico (a gif or an ico only when smaller than a page scan, a bak or a dwl only beside a drawing of the same name) |
 
 Environment variables override the file:
 `AX_CONFIG` (another settings file), `AX_INBOX`,

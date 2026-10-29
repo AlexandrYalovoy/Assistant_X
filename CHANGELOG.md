@@ -31,6 +31,9 @@ The trial intake of a big real folder in batches, continued.
   inbox\_to_delete\<kind>\ with their folders, loose or out of an archive, each with its SHA-256 in the journal;
   nothing is deleted. [intake.to_delete_ext] extends or changes the table, an empty folder keeps an extension, a list
   replaces it (docs/INTAKE.md).
+- The default sends a GIF or an ICO away only when it is smaller than a page scan (an old page or a diagram saved as a
+  GIF is read as a picture: GIF is a picture kind now), and a .bak or a .dwl only beside a drawing of the same name (a
+  .bak of a Word file or of a database stays).
 
 ## 0.5.4 — 2026-10-29
 

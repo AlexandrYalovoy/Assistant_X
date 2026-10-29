@@ -212,7 +212,7 @@ def prepare(cfg, state, dry=False):
 
 # a folder of page scans (a book scanned page by page into 001.jpg, 002.jpg …): one PDF of them, as one document,
 # instead of a document for every page (trial intake: a book of 240 pages as 240 pictures in three folders)
-PAGE_IMAGES = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+PAGE_IMAGES = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".gif")
 PAGES_MIN = 8  # page pictures a folder needs
 PAGE_SHORT = 800  # pixels of the shorter side of a page scan at least (an icon or a picture of a site is smaller)
 PAGES_SHARE = 0.8  # share of the pictures of the folder that are page scans
@@ -310,6 +310,11 @@ def html_folders(cfg, st, events, problems, dry=False):
         st["html_pages"] += len(pages)
 
 
+# an extension sent away only beside the file it belongs to (the same name): a backup and a lock file of a drawing
+COMPANIONS = dict.fromkeys(("bak", "dwl"), ("dwg", "dwt", "cdw", "spw"))
+SITE_PICTURES = ("gif", "ico")  # sent away only when smaller than a page scan (PAGE_SHORT): an icon, a button
+
+
 def sent_away(cfg, st, events, dry=False):
     """The files of the extensions of [intake] to_delete_ext (by default the files the intake cannot read and that are
     no documents: programs, CAD drawings, logs, videos, the scripts and icons of a site) to _to_delete\\<folder>\\,
@@ -317,10 +322,18 @@ def sent_away(cfg, st, events, dry=False):
     exts = cfg.get("to_delete_ext") or {}
     if not exts:
         return
-    for full, rel in list(walk(cfg.inbox)):
+    files = list(walk(cfg.inbox))
+    stems = {rel.rsplit(".", 1)[0].lower() + "." + Path(rel).suffix.lower().lstrip(".") for _, rel in files}
+    for full, rel in files:
         ext = Path(rel).suffix.lower().lstrip(".")
         if ext not in exts:
             continue
+        if ext in COMPANIONS and not any(f"{rel.rsplit('.', 1)[0].lower()}.{e}" in stems for e in COMPANIONS[ext]):
+            continue  # a .bak of a Word file or of a database is no backup of a drawing: it stays
+        if ext in SITE_PICTURES:
+            size = page_size(full)
+            if size and min(size) >= PAGE_SHORT:
+                continue  # an old page scan or a diagram saved as a GIF: a picture to read, not an icon
         st["sent_away"] += 1
         if dry:
             say(f"  to delete (.{ext}, to_delete_ext of the settings): {win(rel)}")
