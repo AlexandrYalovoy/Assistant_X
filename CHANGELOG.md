@@ -82,6 +82,8 @@ The trial intake of a big real folder in batches, continued.
   when Tesseract cannot tell its orientation; an upside-down offer of six pages went from 25-30 to 82-87 points.
 - Intake: an Office file cut before the directory of its zip archive (a half-copied .pptx) is reported as a damaged
   file to get again, not as a failure of LibreOffice.
+- Intake: a document of 300 text pages and more is converted in page ranges of 100 pages at least on every worker, as a
+  long scan is; a workbook laid out on 1 029 pages took 33 minutes of one worker, now 7.
 
 ## 0.5.4 — 2026-10-29
 

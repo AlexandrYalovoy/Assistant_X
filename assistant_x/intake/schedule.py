@@ -26,6 +26,9 @@ HEAVY_SHARE = 0.7  # the share of the free memory (past the reserve) the caps of
 SHARD_MIN = 30  # pages read by OCR (scanned, or text pages with a picture) from which a document is cut into ranges
 SHARD_PAGES = 20  # pages read by OCR of a range at least (a range is a task: fewer would cost more than they save)
 SHARD_WORKERS = 3  # page ranges of one document a worker at most
+# a long document of text pages is cut too (trial batch b103: a workbook laid out on 1 029 pages of tables, 1.7 s a
+# page in the layout analysis, held one worker half an hour while fifteen waited): ranges of TEXT_SHARD_PAGES at least
+TEXT_SHARD_MIN, TEXT_SHARD_PAGES = 300, 100
 SHARD_MODES = ("auto", "off")
 
 
@@ -53,6 +56,13 @@ def shard_count(scans, workers, pages_read=None):
         return 1
     k = max(1, min(SHARD_WORKERS * workers, scans // SHARD_PAGES))
     return min(k, pages_read) if pages_read else k
+
+
+def text_shard_count(pages, workers):
+    """Into how many page ranges a long document whose pages OCR does not read is cut (1: not cut)."""
+    if workers < 2 or (pages or 0) < TEXT_SHARD_MIN:
+        return 1
+    return max(1, min(SHARD_WORKERS * workers, pages // TEXT_SHARD_PAGES))
 
 
 def shard_ranges(pages, scan_pages, k):

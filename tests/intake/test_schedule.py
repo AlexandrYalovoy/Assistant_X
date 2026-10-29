@@ -322,3 +322,16 @@ def test_a_drawing_sheet_with_text_loses_its_line_art_sooner(monkeypatch):
     assert intake_work.vector_pages(doc, texts) == [1]
     monkeypatch.setattr(intake_work, "SHEET_TEXT", 50)
     assert intake_work.vector_pages(doc, texts) == []
+
+
+def test_a_long_document_of_text_pages_is_cut_into_ranges():
+    """Trial batch b103: a workbook laid out on 1 029 pages of tables held one worker half an hour (1.7 s a page)
+    while fifteen waited. A document of TEXT_SHARD_MIN text pages and more is cut into ranges of TEXT_SHARD_PAGES at
+    least, up to SHARD_WORKERS a worker."""
+    assert schedule.text_shard_count(299, 16) == 1 and schedule.text_shard_count(1029, 1) == 1
+    assert schedule.text_shard_count(1029, 16) == 10
+    assert schedule.text_shard_count(20000, 4) == 12
+    ranges = schedule.shard_ranges(1029, list(range(1, 1030)), 10)
+    assert ranges[0][0] == 1 and ranges[-1][1] == 1029 and len(ranges) == 10
+    assert all(b - a + 1 >= 100 for a, b in ranges)
+    assert all(ranges[i][1] + 1 == ranges[i + 1][0] for i in range(9))

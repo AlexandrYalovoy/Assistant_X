@@ -337,11 +337,17 @@ class Batch:
                 )
                 weight = len(read) + (schedule.SHEET_WEIGHT - 1) * len(sheets)  # a sheet costs several scanned pages
                 k = schedule.shard_count(weight, workers, len(read)) if sharding and fn is intake_work.convert else 1
+                by_text = k <= 1 and sharding and fn is intake_work.convert
+                if by_text:  # a long document of text pages: cut by its pages (trial batch b103)
+                    k = schedule.text_shard_count(pages, workers)
                 if k > 1:
-                    ranges = schedule.shard_ranges(pages, read, k)
+                    ranges = schedule.shard_ranges(pages, list(range(1, pages + 1)) if by_text else read, k)
                     shards[tid] = [len(ranges), (fn, job)]
                     self.state.update(tid, shards=len(ranges))
-                    say(f"  {tid}: OCR of {len(read)} pages ({scans} scanned) in {len(ranges)} page ranges")
+                    if by_text:
+                        say(f"  {tid}: the conversion of {pages} pages in {len(ranges)} page ranges")
+                    else:
+                        say(f"  {tid}: OCR of {len(read)} pages ({scans} scanned) in {len(ranges)} page ranges")
                     for a, b in ranges:
                         n = sum(a <= p <= b for p in read)
                         s = sum(a <= p <= b for p in sheets)
