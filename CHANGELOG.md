@@ -54,6 +54,8 @@ The trial intake of a big real folder in batches, continued.
   it again (one night had left 23.5 GB of copies).
 - A PDF with no page that can be read (a cut download whose end is zeros, a broken tree of pages) is reported as a
   damaged or cut file to get again, not as a file without text.
+- The page images read instead of a broken text layer are drawn at 300 dpi but at most 12 000 pixels on their longer
+  side: a sheet of 2.4 m asked 210 MB at once and the worker failed a project volume of 174 pages.
 
 ## 0.5.4 — 2026-10-29
 

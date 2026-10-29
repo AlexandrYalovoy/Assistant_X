@@ -530,7 +530,10 @@ def prep(job: Job) -> Prep:
                 f.unlink()
         sd, im = pymupdf.open(pdf), pymupdf.open()
         for pg in sd:
-            pix = pg.get_pixmap(dpi=300, colorspace=pymupdf.csGRAY)
+            # 300 dpi, at most FLAT_PIXELS on the longer side: a sheet of 2.4 m at 300 dpi asked 210 MB at once and the
+            # worker failed the file (trial batch b061, the second reading of a project volume)
+            zoom = min(300 / 72, FLAT_PIXELS / max(pg.rect.width, pg.rect.height))
+            pix = pg.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
             npg = im.new_page(width=pg.rect.width, height=pg.rect.height)
             npg.insert_image(npg.rect, pixmap=pix)
         pdf = w / "pdf" / f"{tid}.img.pdf"
