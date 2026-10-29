@@ -322,13 +322,17 @@ class Batch:
                 """A conversion after prep: in page ranges (a long scan) or whole, into the ready tasks by its cost."""
                 row = self.state.get(tid)
                 pages, scans = row.get("pages") or 0, len(job.get("scan_pages") or []) if job.get("ocr") else 0
-                c = schedule.cost(pages, scans, row.get("image_pages") if job.get("ocr") else 0)
+                sheets = (job.get("sheet_pages") or []) if job.get("ocr") else []
+                c = schedule.cost(pages, scans, row.get("image_pages") if job.get("ocr") else 0, len(sheets))
                 self.state.update(tid, cost=c)
                 # the pages OCR reads: the scanned ones and the text pages with a picture (a scan with a visible layer)
                 read = (
-                    sorted(set(job.get("scan_pages") or []) | set(job.get("picture_pages") or [])) if job.get("ocr") else []
+                    sorted(set(job.get("scan_pages") or []) | set(job.get("picture_pages") or []) | set(sheets))
+                    if job.get("ocr")
+                    else []
                 )
-                k = schedule.shard_count(len(read), workers) if sharding and fn is intake_work.convert else 1
+                weight = len(read) + (schedule.SHEET_WEIGHT - 1) * len(sheets)  # a sheet costs several scanned pages
+                k = schedule.shard_count(weight, workers, len(read)) if sharding and fn is intake_work.convert else 1
                 if k > 1:
                     ranges = schedule.shard_ranges(pages, read, k)
                     shards[tid] = [len(ranges), (fn, job)]
@@ -336,9 +340,10 @@ class Batch:
                     say(f"  {tid}: OCR of {len(read)} pages ({scans} scanned) in {len(ranges)} page ranges")
                     for a, b in ranges:
                         n = sum(a <= p <= b for p in read)
+                        s = sum(a <= p <= b for p in sheets)
                         part = {**job, "pages": [a, b], "memory_mb": self.cfg.worker_memory_mb}
                         item = ("convert_shard", tid, intake_work.convert_shard, (part,), self.cfg.worker_memory_mb, False)
-                        ready.push(schedule.cost(b - a + 1, n), item)
+                        ready.push(schedule.cost(b - a + 1, n - s, 0, s), item)
                     return
                 hv = schedule.heavy(c, pages, THICK) or tid in retried
                 ready.push(c, (fn.__name__, tid, fn, (job,), retried.get(tid), hv), is_heavy=hv)
@@ -583,6 +588,7 @@ class Batch:
                 ocr_pages=res.get("ocr_pages"),
                 scan_pages=res.get("scan_pages"),
                 picture_pages=res.get("picture_pages"),
+                sheet_pages=res.get("sheet_pages"),
                 phrases=res.get("phrases", 0),
             )
         # convert

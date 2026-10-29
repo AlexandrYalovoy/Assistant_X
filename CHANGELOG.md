@@ -17,6 +17,9 @@ The trial intake of a big real folder in batches, continued.
   scanned page by page) becomes one PDF named after the folder, its pages in the natural order of the names, the
   pictures to _to_delete; before, every page was a document of its own (a book of 240 pages in a trial inbox). Icons
   and the pictures of a site stay as they are.
+- Sets of drawing sheets drawn in curves (A2 and up, no picture, no text layer) are planned by what they cost: about 25
+  s a sheet, and a set of them goes in page ranges on several workers. Before, such a set of 16-18 sheets went to one
+  worker as a cheap text file while the others idled (450-500 s, CPU 19 %).
 
 ## 0.5.4 — 2026-10-29
 

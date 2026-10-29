@@ -19,6 +19,8 @@ import heapq, itertools, math
 # seconds per page measured on the first real batch (audit 6): a text page, a scanned page read by OCR
 TEXT_SECONDS, SCAN_SECONDS = 0.5, 3.3
 PICTURE_SECONDS = 2.0  # more for a text page with a picture: its OCR reading (pipeline test round 1: 2.1-3.6 s)
+SHEET_SECONDS = 25.0  # a drawing sheet of A2 and up without a text layer (trial batches b014-b029: 25-30 s a sheet)
+SHEET_WEIGHT = 8  # a sheet counts as this many scanned pages when a document is cut into page ranges
 HEAVY_SECONDS = 900  # an estimate from which a task is heavy (15 min of one worker)
 HEAVY_SHARE = 0.7  # the share of the free memory (past the reserve) the caps of heavy tasks may take together
 SHARD_MIN = 30  # pages read by OCR (scanned, or text pages with a picture) from which a document is cut into ranges
@@ -27,12 +29,14 @@ SHARD_WORKERS = 3  # page ranges of one document a worker at most
 SHARD_MODES = ("auto", "off")
 
 
-def cost(pages, scans=0, image_pages=0):
-    """Estimated seconds of the conversion of a document of `pages` pages, `scans` of them scanned and `image_pages`
-    of the others with a picture."""
+def cost(pages, scans=0, image_pages=0, sheets=0):
+    """Estimated seconds of the conversion of a document of `pages` pages, `scans` of them scanned, `image_pages` of
+    the others with a picture and `sheets` drawing sheets without a text layer."""
     scans = min(scans or 0, pages or 0)
-    pictures = min(image_pages or 0, (pages or 0) - scans)
-    return round(((pages or 0) - scans) * TEXT_SECONDS + scans * SCAN_SECONDS + pictures * PICTURE_SECONDS, 1)
+    sheets = min(sheets or 0, (pages or 0) - scans)
+    pictures = min(image_pages or 0, (pages or 0) - scans - sheets)
+    text = (pages or 0) - scans - sheets
+    return round(text * TEXT_SECONDS + scans * SCAN_SECONDS + pictures * PICTURE_SECONDS + sheets * SHEET_SECONDS, 1)
 
 
 def heavy(cost_s, pages, thick):
@@ -40,13 +44,15 @@ def heavy(cost_s, pages, thick):
     return cost_s >= HEAVY_SECONDS or (pages or 0) > thick
 
 
-def shard_count(scans, workers):
-    """Into how many page ranges the OCR of a document of `scans` scanned pages is cut (1: not cut): up to SHARD_WORKERS
-    ranges a worker, so the last ranges of a long scan, started behind the cheaper files, are short (round 3 of the
-    pipeline test: twelve ranges of 46 pages of a 558-page book ran 200 s each at the end of the batch)."""
+def shard_count(scans, workers, pages_read=None):
+    """Into how many page ranges the OCR of a document of `scans` scanned pages (a drawing sheet counted SHEET_WEIGHT
+    times) is cut (1: not cut): up to SHARD_WORKERS ranges a worker, so the last ranges of a long scan, started behind
+    the cheaper files, are short (round 3 of the pipeline test: twelve ranges of 46 pages of a 558-page book ran 200 s
+    each at the end of the batch); never more ranges than the pages read (pages_read)."""
     if workers < 2 or scans < SHARD_MIN:
         return 1
-    return max(1, min(SHARD_WORKERS * workers, scans // SHARD_PAGES))
+    k = max(1, min(SHARD_WORKERS * workers, scans // SHARD_PAGES))
+    return min(k, pages_read) if pages_read else k
 
 
 def shard_ranges(pages, scan_pages, k):

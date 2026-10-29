@@ -553,7 +553,9 @@ def prep(job: Job) -> Prep:
     scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area)]
     # the other pages with a picture: OCR reads the picture once (ocr_page.beside_layer), the order of the work counts it
     pictures = [i + 1 for i, p in enumerate(doc) if i + 1 not in set(scans) and p.get_images()]
+    sheets = sheet_pages(doc, texts, scans)
     res.update(ocr_pages=len(scans), scan_pages=scans, image_pages=len(pictures), picture_pages=pictures)
+    res.update(sheet_pages=sheets)
     fp = dupcheck.fingerprint("\n".join(texts[:30]))
     res.update(pdf=str(pdf), fp=sorted(fp), phrases=len(fp), prep_seconds=round(time.time() - t0, 1))
     # plain text of the text layer: the fallback of assemble_md for pages the layout analysis loses
@@ -562,6 +564,20 @@ def prep(job: Job) -> Prep:
         for i, t in enumerate(texts):
             f.write(f"\n=== page {i + 1} ===\n{escape_marker(t.strip())}\n")
     return res
+
+
+def sheet_pages(doc, texts, scans=()):
+    """The drawing sheets (A2 and up) whose text is drawn as curves (pages from 1): no picture, no text layer, but OCR
+    reads each for half a minute (trial batches b026-b029: a set of 16-18 sheets went to one worker as a cheap task,
+    450-500 s). schedule.cost counts them and a set of them is cut into page ranges."""
+    from assistant_x.intake.tools import ocr_score
+
+    skip = set(scans)
+    return [
+        i + 1
+        for i, (p, text) in enumerate(zip(doc, texts))
+        if i + 1 not in skip and ocr_score.is_sheet(p.rect.width * p.rect.height) and len(text.strip()) < TEXT_PAGE
+    ]
 
 
 def _convert_jobs(job, pages=None):
@@ -576,7 +592,8 @@ def _convert_jobs(job, pages=None):
         "force_ocr": False,
         "use_ocr": bool(job.get("ocr")),
         "ocr_pages": job.get("scan_pages") or [],
-        "picture_pages": job.get("picture_pages") or [],  # their chunks are short, as OCR reads them
+        # their chunks are short, as OCR reads them (a drawing sheet too)
+        "picture_pages": sorted(set(job.get("picture_pages") or []) | set(job.get("sheet_pages") or [])),
         "label_pdf": str(original if original.exists() else job["pdf"]),
     }
     if pages:

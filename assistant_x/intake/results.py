@@ -46,6 +46,7 @@ class Prep(TypedDict, total=False):
     ocr_pages: int
     scan_pages: list
     image_pages: int  # the other pages with a picture: one OCR reading each (schedule.cost)
+    sheet_pages: list  # the drawing sheets without a text layer: OCR reads them (schedule.SHEET_SECONDS)
     prep_seconds: float
 
 

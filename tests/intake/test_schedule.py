@@ -208,3 +208,23 @@ def test_ranges_give_the_chunks_of_the_whole(tmp_path):
         return {p.name: p.read_text(encoding="utf-8") for p in (cache / "T0001").glob("*.json")}
 
     assert chunks("whole", [None]) == chunks("ranges", [[1, 50], [51, 60]])
+
+
+def test_a_set_of_drawing_sheets_costs_and_is_cut():
+    """Trial batches b026-b029: a set of 16-18 A1/A0 sheets drawn in curves (no picture, no text layer) was planned as
+    a cheap text file on one worker (450-500 s). A sheet costs SHEET_SECONDS and a set of them goes in page ranges."""
+    import pymupdf
+
+    assert schedule.cost(16, 0, 0, 16) == 16 * schedule.SHEET_SECONDS
+    assert schedule.cost(10, 0, 0, 0) == 5.0  # text pages as before
+    weight = 16 + (schedule.SHEET_WEIGHT - 1) * 16
+    assert schedule.shard_count(weight, 6, 16) == 6  # every worker takes a part of the set
+    assert schedule.shard_count(1000, 30, 5) == 5  # never more ranges than pages read
+    doc = pymupdf.open()
+    for _ in range(3):
+        doc.new_page(width=3370, height=2384).draw_line((10, 10), (500, 500))
+    doc.new_page()  # an A4 page of text
+    doc.new_page(width=3370, height=2384).insert_text((50, 50), "a sheet with a text layer " * 10)
+    texts = [p.get_text() for p in doc]
+    assert intake_work.sheet_pages(doc, texts) == [1, 2, 3]
+    assert intake_work.sheet_pages(doc, texts, scans=[2]) == [1, 3]  # a scanned page is read as a scan
