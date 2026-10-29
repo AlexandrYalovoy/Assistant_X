@@ -447,6 +447,17 @@ def prep(job: Job) -> Prep:
             err = sheets_of(job, src, ext, w, log)
             if err:
                 return err
+    elif ext == "chm":  # a help file: its pages as one HTML, laid out like any HTML
+        if not pdf.exists():
+            from assistant_x.intake.tools import chm
+
+            page = w / "chm" / f"{tid}.html"
+            err = chm.to_html(src, page, job.get("sevenzip"), w / "chm" / tid, job["timeouts"]["unpack"])
+            if err:
+                return err
+            err = reflow_to_pdf(page, pdf, "html")
+            if err:
+                return err
     elif kind in ("ebook", "text"):
         if not pdf.exists():
             err = reflow_to_pdf(src, pdf, ext)

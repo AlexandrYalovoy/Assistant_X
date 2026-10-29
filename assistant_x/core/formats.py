@@ -105,7 +105,7 @@ EXTENSIONS = {
     **dict.fromkeys(("7z.001", "zip.001", "rar.001", "001"), "archive"),
     **dict.fromkeys(("msg", "eml", "oft"), "letter"),
     **dict.fromkeys(("xls", "xlsx", "xlsm", "xlsb", "ods"), "spreadsheet"),
-    **dict.fromkeys(("epub", "fb2", "mobi", "xps", "oxps"), "ebook"),
+    **dict.fromkeys(("epub", "fb2", "mobi", "xps", "oxps", "chm"), "ebook"),  # chm: its pages by 7-Zip (tools/chm.py)
     **dict.fromkeys(("txt", "md", "markdown", "html", "htm", "xhtml"), "text"),
     **dict.fromkeys(("djvu", "djv"), "djvu"),
 }

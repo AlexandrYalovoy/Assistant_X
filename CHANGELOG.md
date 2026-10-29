@@ -10,6 +10,9 @@ The trial intake of a big real folder in batches, continued.
 
 - A PowerPoint deck with macros (.pptm) is read like any deck (LibreOffice converts it to PDF without running a macro);
   before, it was left as a file the intake does not process.
+- A compiled HTML help file (.chm, a book or a handbook) is one document now: 7-Zip takes its pages out, the contents
+  of the file gives their order and titles, scripts, styles and pictures are left out, and the pages are laid out on A4
+  like any HTML. Before, the 11 help files of a trial inbox were files the intake did not process.
 
 ## 0.5.4 — 2026-10-29
 

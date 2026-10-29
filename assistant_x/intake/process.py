@@ -112,6 +112,7 @@ class Batch:
             "work": str(self.work),
             "soffice": cfg.soffice,
             "ddjvu": cfg.get("ddjvu"),
+            "sevenzip": cfg.sevenzip,  # a .chm help file is taken apart by it (tools/chm.py)
             "ocr": intake_cfg.can_ocr(cfg),
             "timeouts": cfg.timeouts,
             "memory_mb": cfg.worker_memory_mb,
