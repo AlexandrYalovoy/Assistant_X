@@ -13,6 +13,10 @@ The trial intake of a big real folder in batches, continued.
 - A compiled HTML help file (.chm, a book or a handbook) is one document now: 7-Zip takes its pages out, the contents
   of the file gives their order and titles, scripts, styles and pictures are left out, and the pages are laid out on A4
   like any HTML. Before, the 11 help files of a trial inbox were files the intake did not process.
+- A folder of page scans (8 pictures and more, most of them with the shorter side of 800 pixels and more: a book
+  scanned page by page) becomes one PDF named after the folder, its pages in the natural order of the names, the
+  pictures to _to_delete; before, every page was a document of its own (a book of 240 pages in a trial inbox). Icons
+  and the pictures of a site stay as they are.
 
 ## 0.5.4 — 2026-10-29
 

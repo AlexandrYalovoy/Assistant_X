@@ -179,6 +179,7 @@ def prepare(cfg, state, dry=False):
             break
     if not dry:
         state.set_meta("archives_refused", sorted(refused))
+    page_folders(cfg, st, events, problems, dry)
     for full, rel in list(walk(cfg.inbox)):
         word = personal(cfg, rel)
         if word:  # before anything opens it
@@ -205,6 +206,66 @@ def prepare(cfg, state, dry=False):
     if events:
         journal.append_events(cfg.index / "intake_events.tsv", events)
     return st, events, problems
+
+
+# a folder of page scans (a book scanned page by page into 001.jpg, 002.jpg …): one PDF of them, as one document,
+# instead of a document for every page (trial intake: a book of 240 pages as 240 pictures in three folders)
+PAGE_IMAGES = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+PAGES_MIN = 8  # page pictures a folder needs
+PAGE_SHORT = 800  # pixels of the shorter side of a page scan at least (an icon or a picture of a site is smaller)
+PAGES_SHARE = 0.8  # share of the pictures of the folder that are page scans
+
+
+def page_size(path):
+    """(width, height) in pixels of a picture, or None when it does not open."""
+    import pymupdf
+
+    try:
+        pix = pymupdf.Pixmap(path)
+        return pix.width, pix.height
+    except Exception:  # noqa: BLE001 — a broken picture is no page
+        return None
+
+
+def page_folders(cfg, st, events, problems, dry=False):
+    """Every folder of inbox with PAGES_MIN page scans and more (PAGES_SHARE of its pictures, the shorter side at least
+    PAGE_SHORT pixels) becomes one PDF beside them, named after the folder, the pictures in the natural order of their
+    names (a JPEG goes in as it is); the pictures go to _to_delete. Other files of the folder stay."""
+    import pymupdf
+
+    folders = collections.defaultdict(list)
+    for full, rel in walk(cfg.inbox):
+        if "/" in rel and Path(rel).suffix.lower() in PAGE_IMAGES and not personal(cfg, rel):
+            folders[rel.rsplit("/", 1)[0]].append((full, rel))
+    for folder, pics in sorted(folders.items()):
+        if len(pics) < PAGES_MIN:
+            continue
+        sizes = [page_size(full) for full, _ in pics]
+        pages = [(f, r) for (f, r), s in zip(pics, sizes) if s and min(s) >= PAGE_SHORT]
+        if len(pages) < PAGES_MIN or len(pages) < PAGES_SHARE * len(pics):
+            continue
+        name = intake_cfg.safe_name(folder.rsplit("/", 1)[-1]) or "pages"
+        pdf = free_target(cfg.inbox / folder / f"{name}.pdf")
+        if dry:
+            say(f"  {len(pages)} page scans into one PDF: {win(folder)}")
+            continue
+        try:
+            doc = pymupdf.open()
+            for full, _ in pages:
+                img = pymupdf.open(full)
+                rect = img[0].rect
+                doc.new_page(width=rect.width, height=rect.height).insert_image(rect, filename=full)
+            doc.save(intake_cfg.lp(pdf), garbage=3, deflate=True)
+        except Exception as e:  # noqa: BLE001 — the pictures stay documents of their own
+            problems.append(f"page scans of {win(folder)} not joined into one PDF: {e!r}"[:300])
+            continue
+        where = "inbox\\" + win(str(Path(pdf).relative_to(cfg.inbox)))
+        for full, rel in pages:
+            size = os.path.getsize(full)
+            place = move_aside(cfg, full, rel, "_to_delete")
+            events.append([today(), "inbox\\" + win(rel), size, "—", "—", place, f"to delete: a page joined into {where}"])
+        st["page_folders"] += 1
+        st["page_scans"] += len(pages)
 
 
 def letters(cfg, st, events, problems, dry=False):

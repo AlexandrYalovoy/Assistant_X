@@ -159,3 +159,34 @@ def test_brief_todo_by_folder_and_pack(project, tmp_path, capsys):
     main = t["Сосуды/С-1/паспорт.pdf"]
     assert {m["tid"] for m in meta} == {t["Сосуды/С-1/чертёж.pdf"], t["Сосуды/С-1/акт.pdf"]}
     assert all(m["part"] == main for m in meta)
+
+
+def _picture(path, w, h):
+    import pymupdf
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pix = pymupdf.Pixmap(pymupdf.csGRAY, pymupdf.IRect(0, 0, w, h), False)
+    pix.set_rect(pix.irect, (255,))
+    pix.save(str(path))
+
+
+def test_a_folder_of_page_scans_becomes_one_pdf(project, tmp_path):
+    """Trial intake: a book scanned page by page (240 JPG in three folders) would be 240 documents. A folder of 8 page
+    scans and more becomes one PDF in the order of the names; the small pictures of a site stay as they are."""
+    import pymupdf
+
+    root, cfg = project
+    book = cfg.inbox / "Книги" / "Электротехника 1985"
+    for i in (1, 2, 10, 3, 4, 5, 6, 7, 8, 9):
+        _picture(book / f"page{i}.png", 850, 1200)
+    write(book / "readme.txt", "оглавление")
+    for i in range(12):
+        _picture(cfg.inbox / "Сайт" / "img" / f"icon{i}.png", 32, 32)
+    state, counts, events, problems = run_prepare(cfg, tmp_path)
+    assert not problems and counts["page_folders"] == 1 and counts["page_scans"] == 10
+    pdf = book / "Электротехника 1985.pdf"
+    assert pymupdf.open(pdf).page_count == 10
+    assert not list(book.glob("*.png")) and (book / "readme.txt").exists()
+    assert (cfg.inbox / "_to_delete" / "Книги" / "Электротехника 1985" / "page10.png").exists()
+    assert len(list((cfg.inbox / "Сайт" / "img").glob("*.png"))) == 12  # icons: no page scans
+    assert sum("joined into" in e[-1] for e in events) == 10
