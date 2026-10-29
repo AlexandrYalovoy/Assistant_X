@@ -564,3 +564,24 @@ def test_a_pdf_without_pages_is_called_damaged(tmp_path):
     }
     res = intake_work.prep(job)
     assert res["status"] == "error" and ("damaged" in res["why"] or "does not open" in res["why"])
+
+
+def test_libreoffice_writes_into_a_folder_of_its_attempt(tmp_path, monkeypatch):
+    """Trial batch b063: LibreOffice stopped at its memory cap held its half-written PDF and the next attempt failed to
+    store it. Each attempt writes into its own folder; the PDF is moved into place, the folder goes."""
+    calls = []
+
+    def fake_run(cmd, **kw):
+        out = Path(cmd[cmd.index("--outdir") + 1])
+        calls.append(out)
+        (out / "a.pdf").write_bytes(b"%PDF-1.4")
+        return 0, None
+
+    from pathlib import Path
+
+    monkeypatch.setattr(intake_work, "run", fake_run)
+    job = {"soffice": "soffice", "timeouts": {"soffice": 60}, "memory_mb": 1024, "env": {}}
+    out = tmp_path / "pdf"
+    out.mkdir()
+    assert intake_work.soffice(job, tmp_path / "a.doc", out, "pdf", tmp_path / "log.txt") is None
+    assert (out / "a.pdf").exists() and calls[0] != out and not [p for p in out.iterdir() if p.is_dir()]

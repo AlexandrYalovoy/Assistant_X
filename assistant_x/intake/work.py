@@ -317,7 +317,11 @@ def broken_encoding(doc, by_area=True):
 
 
 def soffice(job, src, outdir, fmt, log):
-    """LibreOffice converts src into outdir/<stem>.<fmt>; None, or the error dict of the file."""
+    """LibreOffice converts src into outdir/<stem>.<fmt>; None, or the error dict of the file. It writes into a folder
+    of this attempt first: a LibreOffice stopped at its memory cap may still hold its half-written file, and the next
+    attempt then failed to store it (trial batch b063: "SfxBaseModel::impl_store failed 0x11b")."""
+    attempt = Path(outdir) / f".lo_{os.getpid()}_{time.time_ns()}"
+    attempt.mkdir(parents=True, exist_ok=True)
     rc, why = run(
         [
             job["soffice"],
@@ -327,7 +331,7 @@ def soffice(job, src, outdir, fmt, log):
             "--convert-to",
             fmt,
             "--outdir",
-            outdir,
+            attempt,
             src,
         ],
         timeout=job["timeouts"]["soffice"],
@@ -335,6 +339,10 @@ def soffice(job, src, outdir, fmt, log):
         log=log,
         env=soffice_env(job["env"]),
     )
+    made = attempt / f"{Path(src).stem}.{fmt}"
+    if not why and made.exists():
+        os.replace(made, Path(outdir) / made.name)
+    shutil.rmtree(attempt, ignore_errors=True)  # a file still held stays: the work folder goes whole later
     if why:
         return _fail(why, "LibreOffice")
     if not (Path(outdir) / f"{Path(src).stem}.{fmt}").exists():

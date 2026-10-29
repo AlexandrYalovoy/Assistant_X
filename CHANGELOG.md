@@ -56,6 +56,9 @@ The trial intake of a big real folder in batches, continued.
   damaged or cut file to get again, not as a file without text.
 - The page images read instead of a broken text layer are drawn at 300 dpi but at most 12 000 pixels on their longer
   side: a sheet of 2.4 m asked 210 MB at once and the worker failed a project volume of 174 pages.
+- LibreOffice writes each conversion into a folder of its attempt and the file is moved into place: a LibreOffice
+  stopped at its memory cap may still hold its half-written PDF, and the second attempt failed to store it (a chapter
+  of a book in a trial batch).
 
 ## 0.5.4 — 2026-10-29
 
