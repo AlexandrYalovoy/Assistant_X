@@ -71,6 +71,11 @@ def shard_ranges(pages, scan_pages, k):
     return out
 
 
+def tail(preps_left, ready, workers):
+    """The tail of a batch: every file prepared and no more tasks ready than workers: the longest go first."""
+    return not preps_left and 0 < ready <= workers
+
+
 def heavy_budget_mb(avail_gb, reserve_gb):
     """The memory heavy tasks may take together: HEAVY_SHARE of the free memory past the reserve."""
     return max(0.0, (avail_gb - reserve_gb) * 1024 * HEAVY_SHARE)
@@ -101,9 +106,12 @@ class Ready:
     def light(self):
         return any(not h for _, _, h, _ in self.heap)
 
-    def take(self, may_heavy):
-        """The cheapest task, or the cheapest light one when a heavy one may not start; None when there is none."""
-        for i, (c, s, h, item) in enumerate(sorted(self.heap)):
+    def take(self, may_heavy, longest=False):
+        """The cheapest task, or the cheapest light one when a heavy one may not start; None when there is none.
+        longest: the costliest first (the tail of a batch, tail(): a long range started last would hold the batch
+        alone at its end, P4)."""
+        tasks = sorted(self.heap, key=lambda x: (-x[0], x[1])) if longest else sorted(self.heap)
+        for i, (c, s, h, item) in enumerate(tasks):
             if not h or may_heavy(item):
                 self.heap.remove((c, s, h, item))
                 heapq.heapify(self.heap)

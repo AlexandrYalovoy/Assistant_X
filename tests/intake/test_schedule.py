@@ -163,7 +163,7 @@ def test_one_worker_no_ranges(fake):
 
 
 def test_cheapest_conversion_first(fake):
-    seen, rows = fake(ocr_shards="off")
+    seen, rows = fake(workers=1, ocr_shards="off")  # one worker: no tail before the last task (P4)
     order = [t for fn, t, _ in seen if fn == "convert"]
     by_tid = {r["tid"]: r for r in rows.values()}
     costs = [by_tid[t]["cost"] for t in order]
@@ -267,3 +267,15 @@ def test_a_page_of_many_vector_paths_is_read_from_its_image(tmp_path):
     flat = pymupdf.open(tmp_path / "flat.pdf")
     assert flat[0].get_images() and not flat[0].get_drawings() and "a page of text" in flat[1].get_text()
     assert flat[0].rect == doc[0].rect  # the page keeps its size: the title block of a sheet stays where it was
+
+
+def test_the_tail_of_a_batch_starts_the_longest_first():
+    """P4: at the end of a batch (every file prepared, no more tasks than workers) the longest task goes first, so a
+    long range started last does not hold the batch alone; before that, the cheapest first as ever."""
+    r = schedule.Ready()
+    for cost, name in ((30, "a"), (500, "b"), (120, "c")):
+        r.push(cost, name)
+    assert not schedule.tail(3, 3, 4) and schedule.tail(0, 3, 4) and not schedule.tail(0, 9, 4)
+    assert r.take(lambda it: True, longest=True) == "b"
+    assert r.take(lambda it: True) == "a"
+    assert r.take(lambda it: False, longest=True) == "c"

@@ -46,6 +46,9 @@ The trial intake of a big real folder in batches, continued.
   On 80 control questions of real documents the page came first 57 times instead of 45 (MRR 0.705 -> 0.801; on a
   processor 44 -> 54), on the questions of 87 cards the MRR of the document 0.484 -> 0.512; the 10 questions the
   library cannot answer still say Low closeness.
+- The tail of a batch starts the longest tasks first: once every file is prepared and no more conversions wait than
+  there are workers, the costliest page range goes first, so a long range started last no longer holds the batch alone
+  at its end; before that, the cheapest first as ever.
 
 ## 0.5.4 — 2026-10-29
 

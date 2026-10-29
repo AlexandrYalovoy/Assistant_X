@@ -404,9 +404,10 @@ class Batch:
                             self.state.update(tid, status="running")
                             send("prep", tid, intake_work.prep, self.job(self.state.get(tid)), is_heavy=tid in big)
                             continue
-                    item = ready.take(lambda it: False)  # then a light conversion, cheapest first
+                    longest = schedule.tail(len(queue), len(ready), workers)  # the tail: the longest first (P4)
+                    item = ready.take(lambda it: False, longest)  # then a light conversion, cheapest first
                     if item is None:
-                        item = ready.take(may_heavy)
+                        item = ready.take(may_heavy, longest)
                     if item is None:
                         break
                     stage, tid, fn, args, mem, hv = item
