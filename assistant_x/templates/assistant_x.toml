@@ -22,7 +22,7 @@ profile = "general"
 # embed_model = "bge-m3"           # a folder of the models (see models above), or a HuggingFace name (BAAI/bge-m3)
 # rerank_model = "bge-reranker-v2-m3"
 # rerank = "auto"                  # true | false | "auto": every question on a video card, never on the processor
-# rerank_weight = 1.0              # the reranker's share in the final order beside the hybrid score
+# rerank_weight = 100.0            # the reranker's share in the final order beside the hybrid score (1: refines it)
 # max_seq_length = 1024            # tokens the embedding model reads of a fragment and of a question
 # cpu_int8 = false                 # true: on a processor bge-m3 in int8 when onnx_models --int8 made it (faster;
                                    # its vectors are about 2 % different from those of the full model)

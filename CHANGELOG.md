@@ -42,6 +42,10 @@ The trial intake of a big real folder in batches, continued.
   minutes in a trial batch; the page now 12 s). A watchdog limits a conversion to 180 s a page ([intake.timeouts]
   page): a range or a file it stops is prepared once more with all its pages without a text layer read as images, so
   one page cannot stall a batch.
+- Search: the reranker orders the candidates and the hybrid score breaks its ties ([search] rerank_weight 100, was 1).
+  On 80 control questions of real documents the page came first 57 times instead of 45 (MRR 0.705 -> 0.801; on a
+  processor 44 -> 54), on the questions of 87 cards the MRR of the document 0.484 -> 0.512; the 10 questions the
+  library cannot answer still say Low closeness.
 
 ## 0.5.4 — 2026-10-29
 

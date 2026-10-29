@@ -104,10 +104,12 @@ Check the search by hand: `assistant-x search "glycol carry-over from the absorb
 
 If the installer does not fit: Python 3.11+, `pip install -e ".[dense,intake]"` in the code folder (no video card
 needed; the usual PyTorch is installed), `assistant-x init` and `assistant-x skill`. Reranking (`"rerank"` in `assistant_x.toml` `[search]`) is `"auto"` by default: every question on a video card
-(CUDA or DirectML), when the model `bge-reranker-v2-m3` lies in `models`. Its score refines the hybrid order instead of
-replacing it (`final = fused / max(fused) + rerank_weight · sigmoid(logit)`, `rerank_weight = 1.0`): replacing it
-made simple questions worse (MRR 0.69 → 0.59 on the questions of the predecessor; 0.687 → 0.824 on the stand of
-[`tests/search/quality.py`](../tests/search/quality.py) once fused). Without a video card it takes seconds per question and does not switch on;
+(CUDA or DirectML), when the model `bge-reranker-v2-m3` lies in `models`. It orders the candidates and the hybrid score
+breaks its ties (`final = fused / max(fused) + rerank_weight · sigmoid(logit)`, `rerank_weight = 100`): on 80 control
+questions of real documents the page came first 57 times instead of 45 with the weight 1 of 0.5.4 (MRR 0.705 → 0.801;
+on a processor 44 → 54), on the questions of 87 cards the MRR of the document 0.484 → 0.512. A weight of 1 makes the
+reranker refine the hybrid order instead (the stand of [`tests/search/quality.py`](../tests/search/quality.py) checks
+the plumbing with fake models, not this choice). Without a video card it takes seconds per question and does not switch on;
 `true` / `false` — always / never.
 
 **Claude Desktop:** add to `%APPDATA%\Claude\claude_desktop_config.json`:

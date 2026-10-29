@@ -22,7 +22,7 @@ SEARCH = {
     "rerank_model": "bge-reranker-v2-m3",
     "rerank": "auto",  # "auto": every question (search/retrieval.want_rerank)
     "rerank_cpu_top": 8,  # on a processor the reranker reads this many candidates (0: none unless rerank = true)
-    "rerank_weight": 1.0,  # the reranker's share in the final score, beside the normalized hybrid one
+    "rerank_weight": 100.0,  # the reranker orders, the normalized hybrid score breaks its ties (Q4, 2026-10-29)
     "max_seq_length": 1024,  # tokens the embedding model reads of a fragment and of a question
     # on a processor bge-m3 in int8 ONNX when models/onnx/bge-m3/model.int8.onnx is there: faster, but its vectors are
     # about 2 % different (cosine 0.98 to those of the full model), so off unless asked

@@ -53,7 +53,11 @@ TOC_BOOST = 0.25  # a fragment in a chapter whose title shares words of the ques
 TOC_MIN_SHARED, TOC_MIN_SHARE = 2, 0.4  # toc_match: two stems of the question, or 40 % of them
 POOL = 50  # the candidates before the merging of pages and documents (and the reranking): max(POOL, 4 k)
 MAX_PER_DOC = 3  # pages of one document in an answer, unless the other documents leave places free (M-080)
-RERANK_WEIGHT = 1.0  # final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight
+# final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight. Q4 (2026-10-29, 80
+# control questions of real documents with bge-reranker-v2-m3): the page first 45 -> 57 at 100 (1, 2, 4, 8, 20 between),
+# MRR 0.705 -> 0.801; on a processor (the first 8 reranked) 44 -> 54; the questions of 87 cards, MRR of the document
+# 0.484 -> 0.512. The reranker orders; the hybrid score keeps the order of what it did not read and breaks ties.
+RERANK_WEIGHT = 100.0
 RERANK_CHARS = 2000  # what the reranker reads of a fragment at most (it truncates at its max_length anyway)
 RERANK_CPU_TOP = 8  # candidates the reranker reads on a processor (Q3: the whole pool takes seconds there)
 EXACT_ROWS = 100_000  # a filter letting fewer fragments through: exact search over them, even with a FAISS index
@@ -499,9 +503,9 @@ class Library:
         return self._reranker
 
     def rerank(self, query, order, rows, fused, stats=None):
-        """order by final = fused / max(fused) + rerank_weight * sigmoid(logit): the reranker refines the hybrid
-        order instead of replacing it (a fragment both lists found high keeps its lead over one the reranker alone
-        likes). The reranker reads what the vector was made of (common.model_text)."""
+        """order by final = fused / max(fused) + rerank_weight * sigmoid(logit): by default (RERANK_WEIGHT) the
+        reranker orders and the hybrid score breaks its ties; a small weight makes it refine the hybrid order instead.
+        The reranker reads what the vector was made of (common.model_text)."""
         import numpy as np
 
         model = self.reranker()
