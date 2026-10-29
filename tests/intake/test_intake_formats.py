@@ -585,3 +585,28 @@ def test_libreoffice_writes_into_a_folder_of_its_attempt(tmp_path, monkeypatch):
     out.mkdir()
     assert intake_work.soffice(job, tmp_path / "a.doc", out, "pdf", tmp_path / "log.txt") is None
     assert (out / "a.pdf").exists() and calls[0] != out and not [p for p in out.iterdir() if p.is_dir()]
+
+
+def test_an_archive_attached_to_a_letter_inside_an_archive_is_unpacked(project):
+    """Trial batch b060: a zip held letters, a letter held a .7z: it was left as a file nobody read. Letters and
+    archives are taken apart until nothing new comes."""
+    import io
+
+    root, cfg = project
+    pdf = root / "p.pdf"
+    text_pdf(pdf, [BODY])
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        z.write(pdf, "Отчёт.pdf")
+    msg = EmailMessage()
+    msg["Subject"] = "Материалы"
+    msg.set_content("Во вложении архив.")
+    msg.add_attachment(inner.getvalue(), maintype="application", subtype="zip", filename="Материалы.zip")
+    with zipfile.ZipFile(cfg.inbox / "Почта.zip", "w") as z:
+        z.writestr("Письма/Материалы.eml", bytes(msg))
+    work = cfg.work / "2026-10-29"
+    work.mkdir(parents=True)
+    counts, events, problems = prepare.prepare(cfg, State(work / "state.sqlite"))
+    assert not problems
+    assert [p for p in cfg.inbox.rglob("Отчёт.pdf") if "_to_delete" not in p.parts]
+    assert not [p for p in cfg.inbox.rglob("*.zip") if "_to_delete" not in p.parts]

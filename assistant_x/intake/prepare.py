@@ -88,9 +88,17 @@ def prepare(cfg, state, dry=False):
     letters(cfg, st, events, problems, dry)
     refused = set(state.get_meta("archives_refused", []))
     lim = cfg.unpack
+    letters_after = 0  # the archives unpacked when the letters were last taken apart
     while True:
         archives = [(p, rel) for p, rel in walk(cfg.inbox) if unpack.is_archive(rel) and rel not in refused]
         if not archives:
+            # the letters an archive held, and the archives their attachments hold, until nothing new comes (trial
+            # batches b060: three .msg of a zip left as files nobody read, then a .7z attached to one of them)
+            if not dry and st["archives"] > letters_after:
+                letters_after, before = st["archives"], st["letters"]
+                letters(cfg, st, events, problems, dry)
+                if st["letters"] > before:
+                    continue
             break
         for full, rel in archives:
             size = os.path.getsize(full)
@@ -179,8 +187,6 @@ def prepare(cfg, state, dry=False):
             break
     if not dry:
         state.set_meta("archives_refused", sorted(refused))
-        if st["archives"]:  # the letters an archive held (trial batch b060: three .msg left as files nobody read)
-            letters(cfg, st, events, problems, dry)
     page_folders(cfg, st, events, problems, dry)
     html_folders(cfg, st, events, problems, dry)
     sent_away(cfg, st, events, dry)

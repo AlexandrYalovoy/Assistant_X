@@ -59,6 +59,8 @@ The trial intake of a big real folder in batches, continued.
 - LibreOffice writes each conversion into a folder of its attempt and the file is moved into place: a LibreOffice
   stopped at its memory cap may still hold its half-written PDF, and the second attempt failed to store it (a chapter
   of a book in a trial batch).
+- Letters and archives are taken apart until nothing new comes: an archive attached to a letter that an archive held is
+  unpacked too (before, it was left as a file nobody read).
 
 ## 0.5.4 — 2026-10-29
 
