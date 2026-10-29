@@ -284,6 +284,18 @@ def scanned(page, text, by_area=True):
     return (cover >= SCAN_COVER and chars / max(area, 1) < SCAN_DENSITY) or (chars < TEXT_PAGE and cover > 0)
 
 
+def cut_zip(path):
+    """True for a file that starts as a zip archive (an Office Open XML document) without the directory at its end: a
+    cut copy (trial batch b102: a .pptx of 126 MB, LibreOffice "source file could not be loaded"). A misnamed .doc
+    or an encrypted document (an OLE file) is no zip and goes to LibreOffice as before."""
+    import zipfile
+
+    with open(path, "rb") as f:
+        if f.read(2) != b"PK":
+            return False
+    return not zipfile.is_zipfile(path)
+
+
 def broken_encoding(doc, by_area=True):
     """Why the text layer looks like a font read with a wrong code table, or "": on the first BROKEN_PAGES text pages
     the letters of no document language (the letters of the active language packs), the lost symbols, or the words
@@ -470,6 +482,12 @@ def prep(job: Job) -> Prep:
         if not job.get("soffice"):
             return {"status": "skipped", "why": f"no LibreOffice: .{ext} not converted to PDF (assistant-x setup-intake)"}
         lo_failed = None
+        if cut_zip(src):
+            return {
+                "status": "error",
+                "why": f"the .{ext} is a cut zip archive (no directory at its end): a damaged "
+                "or half-copied file (get it again)",
+            }
         if not pdf.exists():
             err = soffice(job, src, w / "pdf", "pdf", log)
             if err and kind == "spreadsheet" and ext in ("xlsx", "xlsm") and not err.get("retry"):

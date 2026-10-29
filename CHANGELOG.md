@@ -80,6 +80,8 @@ The trial intake of a big real folder in batches, continued.
   read back in the code page of the document language.
 - OCR: a scanned page that stays weak after the retries is also read turned (the turn Tesseract guessed, else 180°)
   when Tesseract cannot tell its orientation; an upside-down offer of six pages went from 25-30 to 82-87 points.
+- Intake: an Office file cut before the directory of its zip archive (a half-copied .pptx) is reported as a damaged
+  file to get again, not as a failure of LibreOffice.
 
 ## 0.5.4 — 2026-10-29
 

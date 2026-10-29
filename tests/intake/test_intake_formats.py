@@ -701,3 +701,33 @@ def test_a_word_document_libreoffice_cannot_draw_is_read_from_its_parts(tmp_path
     job["memory_retried"] = False  # the first time past the cap: tried again with the double cap first
     job["work"] = str(tmp_path / "w2")
     assert intake_work.prep(job).get("retry") == "memory"
+
+
+def test_a_cut_office_file_is_called_damaged(tmp_path):
+    """Trial batch b102: a .pptx of 126 MB cut before its zip directory; LibreOffice only said the file could not be
+    loaded. prep names it a damaged or half-copied file before LibreOffice is started."""
+    deck = tmp_path / "deck.pptx"
+    with zipfile.ZipFile(deck, "w") as z:
+        z.writestr("ppt/slides/slide1.xml", "<p:sld/>" * 2000)
+    whole = deck.read_bytes()
+    assert not intake_work.cut_zip(deck)
+    deck.write_bytes(whole[: len(whole) // 2])
+    assert intake_work.cut_zip(deck)
+    old = tmp_path / "old.docx"
+    old.write_bytes(b"\xd0\xcf\x11\xe0" + b"\0" * 600)  # a .doc named .docx: LibreOffice reads it
+    assert not intake_work.cut_zip(old)
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(deck),
+        "ext": "pptx",
+        "ocr": False,
+        "imgocr": False,
+        "soffice": "soffice",
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 0,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "error" and "cut zip archive" in res["why"]
