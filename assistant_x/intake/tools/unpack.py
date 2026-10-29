@@ -61,10 +61,15 @@ def volumes(archive):
     return out
 
 
+FORBIDDEN = re.compile(r'[:"<>|?*\x00-\x1f]')  # the signs Windows refuses in a file name
+
+
 def safe_name(name):
-    """Relative path parts of a member (in the NFC form), or Refused for an absolute path, .., a colon (an NTFS
-    stream), a device name of Windows or a part ending in a dot or a space: the rules of a base package
-    (txn.bad_path), a backslash taken for a folder separator and "." parts dropped."""
+    """Relative path parts of a member (in the NFC form), or Refused for an absolute path, .., or a device name of
+    Windows: the rules of a base package (txn.bad_path), a backslash taken for a folder separator and "." parts
+    dropped. The signs Windows refuses in a name (a colon, quotes, < > | ? *) become "_" and a part loses its ending
+    dots and spaces: a letter saved under its subject ('RE: FW: ... "Name" <mail>') is no attack (trial batch b074:
+    a whole archive was refused for one such name)."""
     from assistant_x.core.txn import bad_path
 
     n = unicodedata.normalize("NFC", name.replace("\\", "/"))
@@ -73,6 +78,7 @@ def safe_name(name):
     parts = [p for p in PurePosixPath(n).parts if p not in ("", ".")]
     if ".." in parts:
         raise Refused(f"a path with .. in the archive: {name}", "unsafe")
+    parts = [FORBIDDEN.sub("_", p).rstrip(". ") or "_" for p in parts]
     why = bad_path("/".join(parts), nfc=False) if parts else ""
     if why:
         raise Refused(f"a name Windows does not take in the archive ({why}): {name}", "unsafe")

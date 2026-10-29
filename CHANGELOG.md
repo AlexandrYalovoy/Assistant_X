@@ -64,6 +64,9 @@ The trial intake of a big real folder in batches, continued.
 - A workbook (.xlsx, .xlsm) LibreOffice cannot draw (it crashed on a book of 83 sheets every time) is read from its
   cells: each sheet under its name as a table on text pages, the why naming the crash; before, the file was an error.
 - An empty file (0 bytes) is skipped as nothing to read instead of failing as an error of the batch.
+- An archive whose names hold signs Windows refuses (a letter saved under its subject: 'RE: FW: ... "Name" <mail>') is
+  unpacked with those signs as underscores; before, the whole archive was refused. A path that climbs out, an absolute
+  path and a device name of Windows stay refused.
 
 ## 0.5.4 — 2026-10-29
 

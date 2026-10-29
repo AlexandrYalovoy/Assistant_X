@@ -98,15 +98,31 @@ def test_a_refusal_says_its_kind():
     assert unpack.Refused("anything").kind == "damaged"
 
 
-@pytest.mark.parametrize("name", ["a.pdf:hidden", "CON.txt", "folder/nul", "doc.pdf.", "folder /x.pdf", "com1.pdf"])
-def test_names_windows_does_not_take_are_refused(tmp_path, name):
-    """The intake takes the names of an archive by the rules of a base package (txn.bad_path): no NTFS stream, no
-    device name, no part ending in a dot or a space; nothing is unpacked."""
+@pytest.mark.parametrize("name", ["CON.txt", "folder/nul", "com1.pdf"])
+def test_device_names_of_windows_are_refused(tmp_path, name):
+    """A device name of Windows in an archive (txn.bad_path): nothing is unpacked."""
     from assistant_x.intake.tools import unpack
 
     with pytest.raises(unpack.Refused) as e:
         unpack.safe_name(name)
     assert e.value.kind == "unsafe"
+
+
+def test_signs_windows_refuses_in_a_name_become_underscores(tmp_path):
+    """Trial batch b074: an archive was refused whole for a letter saved under its subject ('RE: FW: ... "Name"
+    <mail>'). The signs Windows refuses become "_" (a colon makes no NTFS stream), a part loses its ending dots and
+    spaces; a path that climbs out or is absolute stays refused."""
+    from assistant_x.intake.tools import unpack
+
+    assert unpack.safe_name('Письма/RE: FW: АВО - "Ivanov, I" <i@x.com> 2024.eml') == [
+        "Письма",
+        "RE_ FW_ АВО - _Ivanov, I_ _i@x.com_ 2024.eml",
+    ]
+    assert unpack.safe_name("a.pdf:hidden") == ["a.pdf_hidden"]
+    assert unpack.safe_name("doc.pdf.") == ["doc.pdf"] and unpack.safe_name("folder /x.pdf") == ["folder", "x.pdf"]
+    a = make_zip(tmp_path / "mail.zip", {'RE: FW: "x".eml': b"letter", "ok.txt": b"ok"})
+    rep = unpack.unpack(a)
+    assert rep["error"] is None and files_under(rep["dest"]) == ["RE_ FW_ _x_.eml", "ok.txt"]
     assert unpack.safe_name(r"Папка\.\sub/doc.pdf") == ["Папка", "sub", "doc.pdf"]
     assert unpack.safe_name("e\u0301.pdf") == ["\u00e9.pdf"]  # a macOS name: made NFC, not refused
 
