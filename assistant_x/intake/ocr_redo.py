@@ -111,6 +111,18 @@ def second_reading(md, conv, old_score=None, old_known=0, old_broken=False):
     return old_broken or broken(md) or (layer and (worse or lost))
 
 
+def drop_copies(w, code):
+    """The PDFs of a document in the work of a redo (its copy, its variants, their page images) removed once it is read:
+    its texts and measures stay (md, ocr, variant_*.json; --reuse reads them). One night copied every book of the
+    library into the work: 23.5 GB (R1)."""
+    for folder in ("src", "pdf"):
+        for p in Path(w, folder).glob(f"{code}*.pdf"):
+            try:
+                p.unlink()
+            except OSError:
+                pass  # a file a reader still holds: the work folder can be removed whole later
+
+
 def best_variant(texts, old_known):
     """The name of the variant taken of texts {name: Markdown}: one that keeps the known words first, then by score;
     the pipeline on a tie."""
@@ -198,8 +210,11 @@ class Redo:
         w, tid = Path(d["w"]), d["code"] + VARIANTS[name]
         if name != "pipeline":
             img_src = w / "src" / f"{tid}.pdf"  # prep of a variant takes the file under its own name
-            if not img_src.exists():
-                shutil.copy2(w / "src" / f"{d['code']}.pdf", img_src)
+            if not img_src.exists():  # a link to the copy of the work (no third copy of a book)
+                try:
+                    os.link(w / "src" / f"{d['code']}.pdf", img_src)
+                except OSError:
+                    shutil.copy2(w / "src" / f"{d['code']}.pdf", img_src)
         rec, md = w / f"variant_{tid}.json", w / "md" / f"{tid}.md"
         if rec.exists() and md.exists():  # read by an earlier run (--reuse)
             conv = json.loads(rec.read_text(encoding="utf-8"))
@@ -292,7 +307,9 @@ class Redo:
             out["variants_failed"] = d["variants_failed"]
         if d.get("why") or not d["texts"]:
             out["why"] = d.get("why") or "recognition failed"
+            drop_copies(w, code)
             return self.finish(d, out)
+        drop_copies(w, code)
         name = best_variant(d["texts"], d["old_known"])
         md, conv, tid = d["texts"][name], d["convs"][name], code + VARIANTS[name]
         detail = w / "ocr" / f"{tid}.json"

@@ -303,3 +303,22 @@ def test_workers_building_the_vocabulary_at_once_do_not_fail(tmp_path, monkeypat
     ocr_score.build_vocab(str(d), out, df_min=1)
     assert len(calls) == 2 and str(os.getpid()) in calls[0] and os.path.exists(out)
     assert not [p for p in os.listdir(tmp_path) if p.endswith(".tmp")]
+
+
+def test_the_redo_drops_the_copies_of_a_read_document(tmp_path):
+    """R1: one night of intake redo copied every book of the library into its work (23.5 GB). Once a document is read,
+    the PDFs of its work go; its texts and measures stay."""
+    from assistant_x.intake import ocr_redo
+
+    for folder, name in (
+        ("src", "N-00001.pdf"),
+        ("src", "N-00001.img.pdf"),
+        ("pdf", "N-00001.img.pdf"),
+        ("src", "N-00002.pdf"),
+        ("md", "N-00001.md"),
+    ):
+        (tmp_path / folder).mkdir(exist_ok=True)
+        (tmp_path / folder / name).write_text("x", encoding="utf-8")
+    ocr_redo.drop_copies(tmp_path, "N-00001")
+    assert not list((tmp_path / "src").glob("N-00001*")) and not list((tmp_path / "pdf").glob("*"))
+    assert (tmp_path / "src" / "N-00002.pdf").exists() and (tmp_path / "md" / "N-00001.md").exists()

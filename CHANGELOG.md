@@ -49,6 +49,9 @@ The trial intake of a big real folder in batches, continued.
 - The tail of a batch starts the longest tasks first: once every file is prepared and no more conversions wait than
   there are workers, the costliest page range goes first, so a long range started last no longer holds the batch alone
   at its end; before that, the cheapest first as ever.
+- intake redo no longer fills the disk: the copies of a document in its work (the copy of the library PDF, its
+  variants, their page images) go as soon as the document is read, and a variant links to the copy instead of copying
+  it again (one night had left 23.5 GB of copies).
 
 ## 0.5.4 — 2026-10-29
 
