@@ -4,6 +4,13 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.5 — unreleased
+
+The trial intake of a big real folder in batches, continued.
+
+- A PowerPoint deck with macros (.pptm) is read like any deck (LibreOffice converts it to PDF without running a macro);
+  before, it was left as a file the intake does not process.
+
 ## 0.5.4 — 2026-10-29
 
 The documents for people in Russian too; the fixes found by the trial intake of a big real folder in batches of 50 files.

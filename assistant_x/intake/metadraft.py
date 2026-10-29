@@ -494,7 +494,7 @@ def title_of(pages, desig=None):
 
 
 # the genre a file format gives by itself (a slide deck, a spreadsheet: the card schema calls a table of data a dataset)
-TYPE_BY_EXT = {"ppt": "presentation", "pptx": "presentation", "odp": "presentation", "pps": "presentation"}
+TYPE_BY_EXT = dict.fromkeys(("ppt", "pptx", "pptm", "odp", "pps", "ppsx"), "presentation")
 TYPE_BY_EXT.update(dict.fromkeys(("xls", "xlsx", "xlsm", "ods", "csv"), "dataset"))
 
 

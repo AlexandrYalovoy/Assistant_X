@@ -97,7 +97,8 @@ def write_pages_info(path, pages, outline=None):
 FILE_KINDS = ("pdf", "office", "image", "archive", "letter", "spreadsheet", "ebook", "text", "djvu", "skip")
 EXTENSIONS = {
     "pdf": "pdf",
-    **dict.fromkeys(("doc", "docx", "docm", "rtf", "odt", "ppt", "pptx", "pps", "ppsx", "odp"), "office"),
+    # docm, pptm: the documents with macros; LibreOffice converts them to PDF without running a macro
+    **dict.fromkeys(("doc", "docx", "docm", "rtf", "odt", "ppt", "pptx", "pptm", "pps", "ppsx", "odp"), "office"),
     **dict.fromkeys(("jpg", "jpeg", "png", "tif", "tiff", "bmp"), "image"),
     **dict.fromkeys(("zip", "7z", "rar", "tar", "tgz", "tar.gz", "tar.bz2", "tar.xz", "gz"), "archive"),
     # the first volume of an archive split in parts (7-Zip reads the next ones .002, .003 … beside it)

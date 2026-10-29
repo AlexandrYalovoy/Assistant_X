@@ -371,3 +371,11 @@ def test_a_file_name_spoiled_by_an_old_code_page_is_mended():
     assert metadraft.mended_name(spoiled) == "Изображение PNG 4"
     assert metadraft.name_title(spoiled + ".png") == "Изображение PNG 4"
     assert metadraft.mended_name("Отчёт 2020") == "Отчёт 2020" and metadraft.mended_name("Report") == "Report"
+
+
+def test_a_slide_deck_with_macros_is_read_as_a_presentation():
+    """Trial batch b021: a .pptm was left as a file the intake does not process."""
+    from assistant_x.core.formats import file_kind
+
+    assert file_kind("Обзор.pptm") == "office"
+    assert metadraft.draft(page(1, "Схема куста скважин"), "Обзор.pptm")["doc_type"] == "presentation"
