@@ -595,7 +595,7 @@ def prep(job: Job) -> Prep:
     # a word broken at the end of a line with a hyphen is joined by PyMuPDF (the hyphen of a soft break is dropped)
     texts = [p.get_text(flags=pymupdf.TEXTFLAGS_TEXT | pymupdf.TEXT_DEHYPHENATE) for p in doc]
     heavy = vector_pages(doc, texts, 0 if job.get("flatten_all") else VECTOR_MAX) if job.get("ocr") else []
-    strip = line_art_pages(doc, texts)
+    strip = line_art_pages(doc, texts, VECTOR_MAX if job.get("flatten_all") else VECTOR_TEXT_MAX)  # lower after the watchdog
     if heavy or strip:  # the layout analysis would take minutes a page: a copy with page images, or without line art
         flat = w / "pdf" / f"{tid}.flat.pdf"
         flatten(doc, heavy, flat, strip)
@@ -641,14 +641,14 @@ def vector_pages(doc, texts, limit=VECTOR_MAX):
     return out
 
 
-def line_art_pages(doc, texts):
+def line_art_pages(doc, texts, limit=None):
     """The pages (from 1) with a text layer drawn of more than VECTOR_TEXT_MAX vector paths: their line art goes."""
     out = []
     for i, (p, text) in enumerate(zip(doc, texts)):
         if len(text.strip()) < TEXT_PAGE:
             continue
         count = p.get_cdrawings if hasattr(p, "get_cdrawings") else p.get_drawings
-        if len(count()) > VECTOR_TEXT_MAX:
+        if len(count()) > (VECTOR_TEXT_MAX if limit is None else limit):
             out.append(i + 1)
     return out
 
