@@ -37,6 +37,11 @@ The trial intake of a big real folder in batches, continued.
 - The letters an archive holds are taken apart after the archive is unpacked (before, they were left as files nobody
   read), and a second reading of the page images that fails (a sheet of 2 x 3 m read at 29 dpi) keeps the text of the
   first reading instead of failing the file.
+- A page without a text layer drawn of more than 20 000 vector paths (a sheet whose text is curves, a scheme of 2 x 6
+  m) is read from its image: its layout analysis took more than 10 minutes (a project volume of 174 pages ran 40
+  minutes in a trial batch; the page now 12 s). A watchdog limits a conversion to 180 s a page ([intake.timeouts]
+  page): a range or a file it stops is prepared once more with all its pages without a text layer read as images, so
+  one page cannot stall a batch.
 
 ## 0.5.4 — 2026-10-29
 

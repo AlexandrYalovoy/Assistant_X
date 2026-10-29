@@ -48,7 +48,9 @@ INTAKE = {
     "ocr_shards": "auto",
     "ocr_threads": 2,
     "worker_memory_mb": 3072,
-    "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800},
+    # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
+    # without a text layer are then read from their images)
+    "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},
     "unpack": {"max_total_gb": 5, "max_depth": 3},
     "disk": {"factor": 3, "min_free_gb": 10},
     # the files the intake cannot read and that are no documents: prepare moves them (never deletes) to

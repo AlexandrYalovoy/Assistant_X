@@ -231,6 +231,7 @@ class Batch:
             "src": str(self.cfg.inbox / row["rel"]),
             "ext": row["rel"].rsplit(".", 1)[-1].lower() if "." in row["rel"] else "",
             "imgocr": row.get("imgocr"),
+            "flatten_all": row.get("flatten_all"),
             **kw,
         }
 
@@ -346,6 +347,7 @@ class Batch:
                         ready.push(schedule.cost(b - a + 1, n - s, 0, s), item)
                     return
                 hv = schedule.heavy(c, pages, THICK) or tid in retried
+                job = {**job, "page_count": pages}  # the watchdog of the task (work.task_timeout)
                 ready.push(c, (fn.__name__, tid, fn, (job,), retried.get(tid), hv), is_heavy=hv)
 
             def shard_back(tid, res):
@@ -358,9 +360,28 @@ class Batch:
                 left[0] -= 1
                 if left[0] <= 0:
                     fn, job = shards.pop(tid)[1]
+                    if stopped(tid):
+                        return
                     pages = self.state.get(tid).get("pages") or 0
+                    job = {**job, "page_count": pages}
                     hv = pages > THICK or tid in retried  # the OCR is done: the assembly of a thick text still needs memory
                     ready.push(schedule.cost(pages, 0), (fn.__name__, tid, fn, (job,), retried.get(tid), hv), is_heavy=hv)
+
+            def stopped(tid):
+                """After the watchdog stopped a range or the conversion of a file: its pages without a text layer are
+                read from their images, once (prep with flatten_all, M-116). True when the file went back to prep."""
+                row = self.state.get(tid)
+                if not row.get("watchdog") or row.get("flatten_all"):
+                    return False
+                self.state.update(
+                    tid,
+                    flatten_all=True,
+                    nodup=True,
+                    why="a page took too long: the pages without a text layer read from their images",
+                )
+                say(f"  {tid}: a page took too long; its pages without a text layer go as images")
+                queue.append(tid)
+                return True
 
             def light_left():
                 return bool(queue) or ready.light()
@@ -415,6 +436,10 @@ class Batch:
                             queue.append(tid)
                         continue
                     except intake_pool.Lost as e:  # only the worker of this file was killed or died; it is replaced
+                        if e.why == "timeout" and stage in ("convert", "convert_shard"):
+                            self.state.update(tid, watchdog=True)
+                            if stage == "convert" and stopped(tid):
+                                continue
                         if stage == "convert_shard":  # the conversion of the file reads the range once more
                             shard_back(tid, {"status": "error", "why": lost_why(stage, e)})
                             continue
@@ -624,7 +649,11 @@ class Batch:
         if row.get("layer_text"):
             self.keep_better(tid, self.state.get(tid))
             row = self.state.get(tid)
-        self.state.update(tid, status="done", why=row.get("why") if row.get("imgocr") or row.get("second") else None)
+        self.state.update(
+            tid,
+            status="done",
+            why=row.get("why") if row.get("imgocr") or row.get("second") or row.get("flatten_all") else None,
+        )
         self.draft(tid)
         return None
 

@@ -168,8 +168,14 @@ def task_timeout(fn, args):
     t = {**INTAKE["timeouts"], **(args[0].get("timeouts", {}) if args and isinstance(args[0], dict) else {})}
     if fn.__name__ == "prep":
         return t["soffice"] + t["hidden"] + 600
+    job = args[0] if args and isinstance(args[0], dict) else {}
+    page = t.get("page") or 0
     if fn.__name__ == "convert":
-        return 2 * t["convert"] + 1800
+        n = job.get("page_count") or 0
+        return min(2 * t["convert"] + 1800, page * n + 900) if page and n else 2 * t["convert"] + 1800
+    if fn.__name__ == "convert_shard" and page and job.get("pages"):
+        a, b = job["pages"]
+        return min(3600, page * (b - a + 1) + 600)  # a pathological page cannot hold a worker for an hour
     return 3600
 
 
@@ -549,8 +555,15 @@ def prep(job: Job) -> Prep:
     doc = pymupdf.open(pdf)
     # a word broken at the end of a line with a hyphen is joined by PyMuPDF (the hyphen of a soft break is dropped)
     texts = [p.get_text(flags=pymupdf.TEXTFLAGS_TEXT | pymupdf.TEXT_DEHYPHENATE) for p in doc]
+    heavy = vector_pages(doc, texts, 0 if job.get("flatten_all") else VECTOR_MAX) if job.get("ocr") else []
+    if heavy:  # the layout analysis would take minutes a page: the page images go instead (scans of the copy)
+        flat = w / "pdf" / f"{tid}.flat.pdf"
+        flatten(doc, heavy, flat)
+        doc.close()
+        pdf, doc = flat, pymupdf.open(flat)
+        res.update(flattened=heavy)
     # the scanned pages: convert reads them by OCR even when a stamp or a header gives them some text layer
-    scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area)]
+    scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area or bool(heavy))]
     # the other pages with a picture: OCR reads the picture once (ocr_page.beside_layer), the order of the work counts it
     pictures = [i + 1 for i, p in enumerate(doc) if i + 1 not in set(scans) and p.get_images()]
     sheets = sheet_pages(doc, texts, scans)
@@ -564,6 +577,40 @@ def prep(job: Job) -> Prep:
         for i, t in enumerate(texts):
             f.write(f"\n=== page {i + 1} ===\n{escape_marker(t.strip())}\n")
     return res
+
+
+VECTOR_MAX = 20000  # vector paths of a page without a text layer past which it is read from its image
+FLAT_PIXELS = 12000  # the longer side of the image of such a page at most (300 dpi on A1, about 130 dpi on 2.4 m)
+
+
+def vector_pages(doc, texts, limit=VECTOR_MAX):
+    """The pages (from 1) without a text layer drawn of more than VECTOR_MAX vector paths: a drawing sheet whose text is
+    curves, a scheme of 2 x 6 m. The layout analysis of pymupdf4llm took more than 10 minutes on one of 88 000 paths
+    (trial batch b061: a project volume of 174 pages, 40 minutes); its image renders in half a second. limit 0: every
+    page without a text layer and a picture (after the watchdog stopped a conversion)."""
+    out = []
+    for i, (p, text) in enumerate(zip(doc, texts)):
+        if len(text.strip()) >= TEXT_PAGE or p.get_images():
+            continue
+        count = p.get_cdrawings if hasattr(p, "get_cdrawings") else p.get_drawings
+        if len(count()) > limit:
+            out.append(i + 1)
+    return out
+
+
+def flatten(doc, pages, out):
+    """A copy of doc with the given pages (from 1) as gray images, the other pages as they are."""
+    import pymupdf
+
+    new = pymupdf.open()
+    for i, page in enumerate(doc):
+        if i + 1 not in pages:
+            new.insert_pdf(doc, from_page=i, to_page=i)
+            continue
+        zoom = min(300 / 72, FLAT_PIXELS / max(page.rect.width, page.rect.height))
+        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+        new.new_page(width=page.rect.width, height=page.rect.height).insert_image(page.rect, pixmap=pix)
+    new.save(out, garbage=3, deflate=True)
 
 
 def sheet_pages(doc, texts, scans=()):

@@ -69,8 +69,8 @@ def test_ready_cheapest_first_and_light_when_heavy_may_not():
 class RecordPool:
     """Runs a task at once and notes it: (function name, tid, pages of a range)."""
 
-    def __init__(self, seen, fail_shards=0):
-        self.seen, self.fail = seen, fail_shards
+    def __init__(self, seen, fail_shards=0, stop_shards=0):
+        self.seen, self.fail, self.stop = seen, fail_shards, stop_shards
 
     def submit(self, fn, *a, **kw):
         job = a[0] if a and isinstance(a[0], dict) else None
@@ -81,6 +81,11 @@ class RecordPool:
             if fn.__name__ == "convert_shard" and self.fail:
                 self.fail -= 1
                 raise RuntimeError("a range broke")
+            if fn.__name__ == "convert_shard" and self.stop:  # the watchdog killed the worker of a range
+                self.stop -= 1
+                from assistant_x.intake import pool as intake_pool
+
+                raise intake_pool.Lost("timeout", "600 s")
             f.set_result(fn(*a))
         except Exception as e:  # noqa: BLE001
             f.set_exception(e)
@@ -114,7 +119,7 @@ def fake(project, monkeypatch):
         fn.__name__ = name
         monkeypatch.setattr(intake_work, name, fn)
 
-    def run(workers=4, fail_shards=0, **settings):
+    def run(workers=4, fail_shards=0, stop_shards=0, **settings):
         if settings:
             intake_cfg.save(settings, cfg.path)
         c = intake_cfg.load(cfg.path)
@@ -124,7 +129,7 @@ def fake(project, monkeypatch):
         intake.register(c, state)
         seen = []
         b = intake.Batch(c, work, state, workers)
-        b.pool = lambda: RecordPool(seen, fail_shards)
+        b.pool = lambda: RecordPool(seen, fail_shards, stop_shards)
         b.run()
         return seen, {r["rel"]: r for r in state.all()}
 
@@ -228,3 +233,37 @@ def test_a_set_of_drawing_sheets_costs_and_is_cut():
     texts = [p.get_text() for p in doc]
     assert intake_work.sheet_pages(doc, texts) == [1, 2, 3]
     assert intake_work.sheet_pages(doc, texts, scans=[2]) == [1, 3]  # a scanned page is read as a scan
+
+
+def test_the_watchdog_reads_a_stalled_file_from_its_page_images(fake):
+    """Trial batch b061: one page of 88 000 vector paths held a range of a project volume for 40 minutes. A range the
+    watchdog stops sends its file back to prep once, with its pages without a text layer read as images."""
+    seen, rows = fake(stop_shards=1)
+    row = rows["text.pdf"]
+    preps = [s for s in seen if s[0] == "prep" and s[1] == row["tid"]]
+    assert len(preps) == 2 and row["flatten_all"] and row["watchdog"]  # prepared once more, once only
+    assert row["status"] == "done" and "took too long" in row["why"]
+
+
+def test_the_watchdog_limit_follows_the_pages():
+    t = {"timeouts": {"page": 180, "convert": 14400}}
+    assert intake_work.task_timeout(intake_work.convert_shard, ({**t, "pages": [1, 7]},)) == 7 * 180 + 600
+    assert intake_work.task_timeout(intake_work.convert_shard, ({**t, "pages": [1, 100]},)) == 3600
+    assert intake_work.task_timeout(intake_work.convert, ({**t, "page_count": 10},)) == 10 * 180 + 900
+    assert intake_work.task_timeout(intake_work.convert, ({**t},)) == 2 * 14400 + 1800  # pages not known yet
+
+
+def test_a_page_of_many_vector_paths_is_read_from_its_image(tmp_path):
+    import pymupdf
+
+    doc = pymupdf.open()
+    heavy = doc.new_page(width=3370, height=2384)
+    for i in range(60):
+        heavy.draw_line((10 + 5 * i, 10), (20 + 5 * i, 900))
+    doc.new_page().insert_text((50, 50), "a page of text " * 20)
+    texts = [p.get_text() for p in doc]
+    assert intake_work.vector_pages(doc, texts, limit=50) == [1] and intake_work.vector_pages(doc, texts, limit=100) == []
+    intake_work.flatten(doc, [1], tmp_path / "flat.pdf")
+    flat = pymupdf.open(tmp_path / "flat.pdf")
+    assert flat[0].get_images() and not flat[0].get_drawings() and "a page of text" in flat[1].get_text()
+    assert flat[0].rect == doc[0].rect  # the page keeps its size: the title block of a sheet stays where it was
