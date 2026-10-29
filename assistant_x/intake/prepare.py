@@ -179,6 +179,8 @@ def prepare(cfg, state, dry=False):
             break
     if not dry:
         state.set_meta("archives_refused", sorted(refused))
+        if st["archives"]:  # the letters an archive held (trial batch b060: three .msg left as files nobody read)
+            letters(cfg, st, events, problems, dry)
     page_folders(cfg, st, events, problems, dry)
     html_folders(cfg, st, events, problems, dry)
     sent_away(cfg, st, events, dry)

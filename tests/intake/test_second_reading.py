@@ -30,7 +30,10 @@ def batch(tmp_path, row, md, source="markdown"):
     write_pages_info(
         tmp_path / "md" / "T0001.pages.json", {1: {"source": source, "ocr_score": 50.0, "label": None, "flags": []}}
     )
-    return SimpleNamespace(work=tmp_path, state=FakeState({"T0001": row}), base={"ocr": True})
+    b = SimpleNamespace(work=tmp_path, state=FakeState({"T0001": row}), base={"ocr": True}, drafted=[])
+    b.restore_layer = lambda *a: process.Batch.restore_layer(b, *a)
+    b.draft = b.drafted.append
+    return b
 
 
 def test_a_poor_layer_is_read_again_and_the_better_text_stays(tmp_path, monkeypatch):
@@ -84,3 +87,18 @@ def test_no_second_reading_for_a_good_text_a_scan_or_another_format(tmp_path, mo
     assert not process.Batch.second_reading(b, "T0001", {"rel": "a.docx"}, {"pages": 2, "ocr_pages": 0})  # no PDF
     b.base["ocr"] = False
     assert not process.Batch.second_reading(b, "T0001", {"rel": "a.pdf"}, {"pages": 2, "ocr_pages": 0})  # no Tesseract
+
+
+def test_a_failed_second_reading_keeps_the_first_text(tmp_path, monkeypatch):
+    """Trial batch b060: a sheet of 2 x 3 m read again from its page images at 29 dpi failed ("bad image data") and the
+    file became an error although its first reading had a text. The text of the first reading stays: the file is done."""
+    monkeypatch.setattr(ocr_score, "load_vocab", lambda path=None: (frozenset(), frozenset()))
+    layer = "=== page 1 ===\n\n" + " ".join(documents.sentences(763, 3)) + " " + GARBLED + "\n"
+    row = {"rel": "scheme.pdf", "pages": 3}
+    b = batch(tmp_path, row, layer)
+    assert process.Batch.second_reading(b, "T0001", row, {"pages": 3, "ocr_pages": 0, "ocr_score": 61.0})
+    (tmp_path / "md" / "T0001.md").unlink()  # the failed reading left nothing
+    assert process.Batch.handle(b, "convert", "T0001", {"status": "error", "why": "bad image data"}) is None
+    st = b.state.get("T0001")
+    assert st["status"] == "done" and st["imgocr"] is False and "bad image data" in st["why"]
+    assert (tmp_path / "md" / "T0001.md").read_text(encoding="utf-8") == layer and b.drafted == ["T0001"]

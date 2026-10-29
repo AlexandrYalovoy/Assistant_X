@@ -527,3 +527,20 @@ def test_djvu_through_the_whole_intake_with_ocr(tmp_path):
     assert row["status"] == "done" and row["ocr_pages"] == 1 and row["ocr_conf"] > 50, row
     assert "давление насыщения" in (work / "md" / f"{row['tid']}.md").read_text(encoding="utf-8").lower()
     assert (work / "pdf" / f"{row['tid']}.pdf").exists()  # the PDF that goes beside the original
+
+
+def test_a_letter_inside_an_archive_is_taken_apart(project):
+    """Trial batch b060: three .msg of a zip were left as files nobody read: the letters were taken apart before the
+    archives were unpacked. After unpacking, the letters the archives held are taken apart too."""
+    root, cfg = project
+    pdf = root / "p.pdf"
+    text_pdf(pdf, [BODY])
+    letter = eml(root / "Запрос.eml", pdf.read_bytes())
+    with zipfile.ZipFile(cfg.inbox / "Материалы.zip", "w") as z:
+        z.write(letter, "Материалы/Запрос.eml")
+    work = cfg.work / "2026-10-29"
+    work.mkdir(parents=True)
+    counts, events, problems = prepare.prepare(cfg, State(work / "state.sqlite"))
+    assert counts["archives"] >= 1 and counts["letter_files"] >= 1 and not problems  # the fixture holds archives too
+    assert list(cfg.inbox.rglob("Паспорт насоса.pdf"))
+    assert not [p for p in cfg.inbox.rglob("Запрос.eml") if "_to_delete" not in p.parts]

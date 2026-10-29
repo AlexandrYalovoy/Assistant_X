@@ -34,6 +34,9 @@ The trial intake of a big real folder in batches, continued.
 - The default sends a GIF or an ICO away only when it is smaller than a page scan (an old page or a diagram saved as a
   GIF is read as a picture: GIF is a picture kind now), and a .bak or a .dwl only beside a drawing of the same name (a
   .bak of a Word file or of a database stays).
+- The letters an archive holds are taken apart after the archive is unpacked (before, they were left as files nobody
+  read), and a second reading of the page images that fails (a sheet of 2 x 3 m read at 29 dpi) keeps the text of the
+  first reading instead of failing the file.
 
 ## 0.5.4 — 2026-10-29
 

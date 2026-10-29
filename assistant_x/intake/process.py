@@ -571,6 +571,12 @@ class Batch:
         row = self.state.get(tid)
         fp = res.pop("fp", None)
         if res.get("status") in ("error", "skipped"):
+            if row.get("layer_text") and Path(row["layer_text"]).exists():
+                # the second reading of the page images failed (a sheet of 2 x 3 m read at 29 dpi: "bad image data",
+                # trial batch b060): the text of the first reading stays, the file is done with it
+                self.restore_layer(tid, row, f"the page images not read again ({res.get('why') or res['status']})")
+                self.draft(tid)
+                return None
             self.state.update(tid, **res)
             return None
         if stage == "prep":
@@ -679,12 +685,19 @@ class Batch:
         upd = {"layer_text": None, "second": f"page images {new_s:.0f} against the layer {old_s:.0f}"}
         if images or not old:
             upd["why"] = f"a poor text layer: the page images read instead ({upd['second']})"
+            self.state.update(tid, **upd)
         else:
-            os.replace(layer, md)
-            side = layer.with_name(f"{tid}.layer{PAGES_SUFFIX}")
-            if side.exists():
-                os.replace(side, md.with_suffix(PAGES_SUFFIX))
-            upd.update(row.get("layer_res") or {}, imgocr=False, why=f"the text layer kept ({upd['second']})")
+            self.restore_layer(tid, row, upd["second"])
+
+    def restore_layer(self, tid, row, second):
+        """The text of the first reading (its layer, kept aside by second_reading) back as the text of the file, done."""
+        md, layer = self.work / "md" / f"{tid}.md", Path(row["layer_text"])
+        os.replace(layer, md)
+        side = layer.with_name(f"{tid}.layer{PAGES_SUFFIX}")
+        if side.exists():
+            os.replace(side, md.with_suffix(PAGES_SUFFIX))
+        upd = {"layer_text": None, "second": second, "status": "done"}
+        upd.update(row.get("layer_res") or {}, imgocr=False, why=f"the text layer kept ({second})")
         self.state.update(tid, **upd)
 
     def draft(self, tid):
