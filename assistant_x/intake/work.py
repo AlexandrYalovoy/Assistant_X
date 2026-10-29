@@ -595,12 +595,13 @@ def prep(job: Job) -> Prep:
     # a word broken at the end of a line with a hyphen is joined by PyMuPDF (the hyphen of a soft break is dropped)
     texts = [p.get_text(flags=pymupdf.TEXTFLAGS_TEXT | pymupdf.TEXT_DEHYPHENATE) for p in doc]
     heavy = vector_pages(doc, texts, 0 if job.get("flatten_all") else VECTOR_MAX) if job.get("ocr") else []
-    if heavy:  # the layout analysis would take minutes a page: the page images go instead (scans of the copy)
+    strip = line_art_pages(doc, texts)
+    if heavy or strip:  # the layout analysis would take minutes a page: a copy with page images, or without line art
         flat = w / "pdf" / f"{tid}.flat.pdf"
-        flatten(doc, heavy, flat)
+        flatten(doc, heavy, flat, strip)
         doc.close()
         pdf, doc = flat, pymupdf.open(flat)
-        res.update(flattened=heavy)
+        res.update(flattened=heavy, line_art_dropped=strip)
     # the scanned pages: convert reads them by OCR even when a stamp or a header gives them some text layer
     scans = [i + 1 for i, (p, t) in enumerate(zip(doc, texts)) if scanned(p, t, by_area or bool(heavy))]
     # the other pages with a picture: OCR reads the picture once (ocr_page.beside_layer), the order of the work counts it
@@ -619,6 +620,9 @@ def prep(job: Job) -> Prep:
 
 
 VECTOR_MAX = 20000  # vector paths of a page without a text layer past which it is read from its image
+# vector paths of a page with a text layer past which its line art is dropped (its text and pictures kept): a plan of
+# 485 000 paths held the layout analysis for more than half an hour (trial batch b075); a page of tables has thousands
+VECTOR_TEXT_MAX = 100_000
 FLAT_PIXELS = 12000  # the longer side of the image of such a page at most (300 dpi on A1, about 130 dpi on 2.4 m)
 
 
@@ -637,14 +641,35 @@ def vector_pages(doc, texts, limit=VECTOR_MAX):
     return out
 
 
-def flatten(doc, pages, out):
-    """A copy of doc with the given pages (from 1) as gray images, the other pages as they are."""
+def line_art_pages(doc, texts):
+    """The pages (from 1) with a text layer drawn of more than VECTOR_TEXT_MAX vector paths: their line art goes."""
+    out = []
+    for i, (p, text) in enumerate(zip(doc, texts)):
+        if len(text.strip()) < TEXT_PAGE:
+            continue
+        count = p.get_cdrawings if hasattr(p, "get_cdrawings") else p.get_drawings
+        if len(count()) > VECTOR_TEXT_MAX:
+            out.append(i + 1)
+    return out
+
+
+def flatten(doc, pages, out, strip=()):
+    """A copy of doc with the given pages (from 1) as gray images, the pages of strip without their line art (their text
+    and pictures kept: a redaction of the whole page that removes graphics only), the other pages as they are."""
     import pymupdf
 
     new = pymupdf.open()
     for i, page in enumerate(doc):
         if i + 1 not in pages:
             new.insert_pdf(doc, from_page=i, to_page=i)
+            if i + 1 in strip:
+                q = new[-1]
+                q.add_redact_annot(q.rect)
+                q.apply_redactions(
+                    images=pymupdf.PDF_REDACT_IMAGE_NONE,
+                    graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
+                    text=pymupdf.PDF_REDACT_TEXT_NONE,
+                )
             continue
         zoom = min(300 / 72, FLAT_PIXELS / max(page.rect.width, page.rect.height))
         pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)

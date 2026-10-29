@@ -279,3 +279,23 @@ def test_the_tail_of_a_batch_starts_the_longest_first():
     assert r.take(lambda it: True, longest=True) == "b"
     assert r.take(lambda it: True) == "a"
     assert r.take(lambda it: False, longest=True) == "c"
+
+
+def test_a_page_of_text_and_too_many_lines_loses_its_line_art(tmp_path, monkeypatch):
+    """Trial batch b075: a plan of 485 000 vector paths with a text layer held the layout analysis for more than half
+    an hour. Past VECTOR_TEXT_MAX its line art goes in the copy; its text stays (a page of tables is far below)."""
+    import pymupdf
+
+    monkeypatch.setattr(intake_work, "VECTOR_TEXT_MAX", 50)
+    doc = pymupdf.open()
+    plan = doc.new_page(width=2386, height=1686)
+    for i in range(80):
+        plan.draw_line((10 + 5 * i, 10), (20 + 5 * i, 900))
+    plan.insert_text((100, 1000), "Plan of the equipment of the gas treatment unit " * 3)
+    doc.new_page().insert_text((50, 50), "a page of text " * 20)
+    texts = [p.get_text() for p in doc]
+    assert intake_work.line_art_pages(doc, texts) == [1]
+    intake_work.flatten(doc, [], tmp_path / "copy.pdf", strip=[1])
+    copy = pymupdf.open(tmp_path / "copy.pdf")
+    assert not copy[0].get_drawings() and "gas treatment unit" in copy[0].get_text()
+    assert "a page of text" in copy[1].get_text()

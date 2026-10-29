@@ -67,6 +67,9 @@ The trial intake of a big real folder in batches, continued.
 - An archive whose names hold signs Windows refuses (a letter saved under its subject: 'RE: FW: ... "Name" <mail>') is
   unpacked with those signs as underscores; before, the whole archive was refused. A path that climbs out, an absolute
   path and a device name of Windows stay refused.
+- A page with a text layer drawn of more than 100 000 vector paths (a plan of 485 000 held the layout analysis for more
+  than half an hour) loses its line art in the copy the intake reads, its text and pictures kept: the page converts in
+  a second.
 
 ## 0.5.4 — 2026-10-29
 
