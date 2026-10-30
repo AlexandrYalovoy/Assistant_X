@@ -699,12 +699,19 @@ def line_art_pages(doc, texts, limit=None):
     return out
 
 
+# pages of the copy flatten keeps in memory at most: an image page stays raw (8.7 MB an A4 page at 300 dpi) until its
+# document is saved; 2 428 pages at once grew a worker to 13 GB (trial batch b129). Parts are saved compressed and
+# joined, their streams copied as they are
+FLAT_PART = 25
+
+
 def flatten(doc, pages, out, strip=()):
     """A copy of doc with the given pages (from 1) as gray images, the pages of strip without their line art (their text
-    and pictures kept: a redaction of the whole page that removes graphics only), the other pages as they are."""
+    and pictures kept: a redaction of the whole page that removes graphics only), the other pages as they are. Built
+    FLAT_PART pages at a time."""
     import pymupdf
 
-    new = pymupdf.open()
+    parts, new = [], pymupdf.open()
     for i, page in enumerate(doc):
         if i + 1 not in pages:
             new.insert_pdf(doc, from_page=i, to_page=i)
@@ -716,11 +723,28 @@ def flatten(doc, pages, out, strip=()):
                     graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
                     text=pymupdf.PDF_REDACT_TEXT_NONE,
                 )
-            continue
-        zoom = min(300 / 72, FLAT_PIXELS / max(page.rect.width, page.rect.height))
-        pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
-        new.new_page(width=page.rect.width, height=page.rect.height).insert_image(page.rect, pixmap=pix)
+        else:
+            zoom = min(300 / 72, FLAT_PIXELS / max(page.rect.width, page.rect.height))
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
+            new.new_page(width=page.rect.width, height=page.rect.height).insert_image(page.rect, pixmap=pix)
+            pix = None
+        if new.page_count >= FLAT_PART and i + 1 < doc.page_count:
+            parts.append(f"{out}.part{len(parts)}.pdf")
+            new.save(parts[-1], garbage=3, deflate=True)
+            new.close()
+            new = pymupdf.open()
+    if parts:
+        whole = pymupdf.open()
+        for p in parts:
+            with pymupdf.open(p) as d:
+                whole.insert_pdf(d)
+        whole.insert_pdf(new)
+        new.close()
+        new = whole
     new.save(out, garbage=3, deflate=True)
+    new.close()
+    for p in parts:
+        Path(p).unlink(missing_ok=True)
 
 
 def sheet_pages(doc, texts, scans=()):

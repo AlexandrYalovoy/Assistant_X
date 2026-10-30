@@ -335,3 +335,20 @@ def test_a_long_document_of_text_pages_is_cut_into_ranges():
     assert ranges[0][0] == 1 and ranges[-1][1] == 1029 and len(ranges) == 10
     assert all(b - a + 1 >= 100 for a, b in ranges)
     assert all(ranges[i][1] + 1 == ranges[i + 1][0] for i in range(9))
+
+
+def test_a_long_flattened_copy_is_built_in_parts(tmp_path, monkeypatch):
+    """Trial batch b129: the page images of 2 428 pages were kept raw in memory until the save (8.7 MB an A4 page),
+    a worker grew to 13 GB. The copy is built FLAT_PART pages at a time, saved compressed and joined: the same pages."""
+    import pymupdf
+
+    monkeypatch.setattr(intake_work, "FLAT_PART", 3)
+    doc = pymupdf.open()
+    for i in range(8):
+        doc.new_page().insert_text((72, 72), f"page {i + 1} of a long document")
+    out = tmp_path / "flat.pdf"
+    intake_work.flatten(doc, [2, 5, 8], out)
+    copy = pymupdf.open(out)
+    assert copy.page_count == 8 and "page 1 of" in copy[0].get_text() and "page 7 of" in copy[6].get_text()
+    assert not copy[1].get_text().strip() and copy[1].get_images() and copy[7].get_images()
+    assert not list(tmp_path.glob("*.part*"))  # the parts are gone

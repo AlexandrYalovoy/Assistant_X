@@ -23,6 +23,14 @@ def hog(mb):
     return len(block)
 
 
+def hold(mb, seconds):
+    block = bytearray(mb * 1024 * 1024)
+    for i in range(0, len(block), 4096):  # touched: resident memory
+        block[i] = 1
+    time.sleep(seconds)
+    return len(block)
+
+
 def boom():
     raise ValueError("broke inside the task")
 

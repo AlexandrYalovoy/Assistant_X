@@ -416,3 +416,24 @@ def test_stage_mode_setting(project, monkeypatch):
     monkeypatch.setenv("AX_STAGE_MODE", "something")
     with pytest.raises(SystemExit):
         intake_cfg.load(cfg.path)
+
+
+@pytest.mark.skipif(not intake_pool.psutil, reason="psutil suspends the tree and measures it")
+def test_memory_emergency_lets_the_biggest_worker_go_on(pool):
+    """Trial batch b129: memory below 1 GB, every worker suspended, the one holding 13 GB too: its memory never came
+    back and the batch waited for hours. On a memory emergency the busy worker with the most memory goes on."""
+    ex = pool(workers=2, timeout=60, only=pool_tasks.hold)
+    ex.submit(pool_tasks.pid).result(timeout=120)
+    small = ex.submit(pool_tasks.hold, 10, 4)
+    big = ex.submit(pool_tasks.hold, 300, 4)
+    deadline = time.time() + 60
+    while time.time() < deadline and sum(ex.busy) < 2:
+        time.sleep(0.2)
+    time.sleep(1.5)  # both hold their memory now
+    keep = ex.biggest()
+    assert keep is not None and ex.workers[keep] is not None
+    ex.set_active(0, hard=True, keep=keep)
+    assert big.result(timeout=60) == 300 * 1024 * 1024  # the big one ended while the other was suspended
+    assert not small.done()
+    ex.set_active(2)
+    assert small.result(timeout=60) == 10 * 1024 * 1024

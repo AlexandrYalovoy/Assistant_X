@@ -4,6 +4,15 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.6 — unreleased
+
+The trial intake of a big real folder in batches, continued.
+
+- Intake: a long document whose pages go as images (after the watchdog) no longer fills the memory: the copy is built
+  25 pages at a time (a .doc of 2 428 pages grew a worker to 13 GB); on a memory emergency the worker that holds the
+  most memory is not suspended, so it ends its task and gives the memory back (before, every worker was suspended and
+  the batch waited for hours).
+
 ## 0.5.5 — 2026-10-29
 
 The trial intake of a big real folder in batches, continued: spreadsheets held in inbox by default, drawing sheets

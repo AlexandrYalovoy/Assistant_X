@@ -266,7 +266,7 @@ class Persistent:
         self.timeout = timeout or (lambda fn, args: 0)
         self.q = queue.Queue()
         self.closed = False
-        self.active, self.hard = workers, False
+        self.active, self.hard, self.keep = workers, False, None
         self.cond = threading.Condition()
         self.workers = [None] * workers
         self.busy = [False] * workers
@@ -283,9 +283,10 @@ class Persistent:
         self.q.put((f, fn, args, self.timeout(fn, args), memory_mb))
         return f
 
-    def set_active(self, n, hard=False):
+    def set_active(self, n, hard=False, keep=None):
+        """keep: a slot whose busy worker goes on whatever n is (a memory emergency: the one that holds the memory)."""
         with self.cond:
-            self.active, self.hard = max(0, min(n, len(self.workers))), hard
+            self.active, self.hard, self.keep = max(0, min(n, len(self.workers))), hard, keep
             self.cond.notify_all()
         self._apply()
 
@@ -293,10 +294,28 @@ class Persistent:
         for k, w in enumerate(self.workers):
             if w is None:
                 continue
-            if k < self.active:
+            if k < self.active or (k == self.keep and self.busy[k]):
                 w.resume()
             elif self.busy[k]:
                 w.pause("hard" if self.hard else "soft")
+
+    def biggest(self):
+        """The slot of the busy worker whose tree holds the most memory, or None. A suspended worker keeps its memory:
+        on a memory emergency it is the one let go on, to end its task and give the memory back (trial batch b129: all
+        suspended, the one of 13 GB too, and the batch waited for the memory for hours)."""
+        best, size = None, 0
+        for k, w in enumerate(self.workers):
+            if w is None or not self.busy[k]:
+                continue
+            rss = 0
+            for q in w._tree():
+                try:
+                    rss += q.memory_info().rss
+                except Exception:  # noqa: BLE001 — a process that ended meanwhile
+                    pass
+            if rss > size:
+                best, size = k, rss
+        return best
 
     def set_cpus(self, cpu_mask):
         """CPUs of every worker tree (0: all); the regulator moves them to the E-cores while the user works."""
@@ -405,7 +424,8 @@ class Persistent:
                     continue
                 n, state, why = reg.step(s, now)
                 hard = s["avail_gb"] < 1.5 or reg.hot or bool(reg.since)
-                self.set_active(n, hard)
+                keep = self.biggest() if s["avail_gb"] < 1.5 and psutil else None  # it frees the memory when it ends
+                self.set_active(n, hard, keep)
                 load.add(s, n, len(self.workers), period)
                 if now - last_beat >= beat:
                     last_beat = now
@@ -421,7 +441,8 @@ class Persistent:
                     t = s.get("temp")
                     _write(
                         log,
-                        f"{state}\tactive {n}/{len(self.workers)}{' pause-stop' if hard and n < len(self.workers) else ''}\t"
+                        f"{state}\tactive {n}/{len(self.workers)}{' pause-stop' if hard and n < len(self.workers) else ''}"
+                        f"{f' (slot {keep} goes on: it holds the most memory)' if keep is not None else ''}\t"
                         f"CPU {s['cpu']:.0f} % (ours {s['ours']:.0f}), disk {s['disk']:.0f} % "
                         f"{s.get('disk_ms') or 0:.0f} ms, memory {s['avail_gb']:.1f} GB, "
                         f"input {s['idle_s']:.0f} s ago, t {t if t is not None else '—'}"
