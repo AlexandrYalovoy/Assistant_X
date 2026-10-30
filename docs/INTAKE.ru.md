@@ -66,6 +66,8 @@ osd; 193 МБ), LibreOffice (без справки, со словарями ru �
 | `disk` | свободное место перед запуском: `factor` × объём входных файлов и не меньше `min_free_gb` | 3, 10 |
 | `to_delete_ext` | файлы, которые разбор не читает и которые не являются документами: подготовка переносит их (никогда не удаляет) в `inbox\_to_delete\<папка>\` с их папками, отдельные или из архива, каждый с SHA-256 в журнале; таблица `[intake.to_delete_ext]` «расширение = папка» дополняет значение по умолчанию, `""` оставляет расширение, список заменяет всю таблицу | `programs`: exe dll msi lnk; `cad`: dwg dwt dwl bak cdw spw; `gsfx`; `logs`: log; `video`: mp4 mov avi mkv wmv mpg flv; `site`: js css gif ico (gif и ico — только если меньше скана страницы, bak и dwl — только рядом с чертежом того же имени) |
 
+Повреждённый файл (обрезанный PDF или файл Office, архив, который не читается, файл Office, который LibreOffice может прочитать только как сырые байты: его ошибка кончается на «(get it again)») после партии переносится в `inbox\_to_delete\damaged\` с сохранением папок и SHA-256 в журнале; в `ledger.csv` у него исход `damaged`, в `summary.md` — список.
+
 Переменные окружения имеют приоритет над файлом:
 `AX_CONFIG` (другой файл настроек), `AX_INBOX`,
 `AX_LIBRARY`, `AX_INDEX`, `AX_WORK`, `AX_REPORTS`, `AX_SOFFICE`, `AX_TESSERACT`, `AX_TESSDATA`, `AX_SEVENZIP`,

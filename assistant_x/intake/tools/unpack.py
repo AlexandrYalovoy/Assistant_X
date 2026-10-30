@@ -180,7 +180,9 @@ def _7z_list(sevenzip, archive):
     )
     if p.returncode != 0:
         msg = (p.stdout + p.stderr).strip().splitlines()
-        raise Refused("the archive cannot be read: " + (msg[-1] if msg else f"code {p.returncode}"))
+        raise Refused(
+            "the archive cannot be read: " + (msg[-1] if msg else f"code {p.returncode}") + ": a damaged file (get it again)"
+        )
     items, cur = [], {}
     for line in p.stdout.splitlines() + [""]:
         if not line.strip():

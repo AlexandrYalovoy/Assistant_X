@@ -353,6 +353,28 @@ def sent_away(cfg, st, events, dry=False):
         )
 
 
+def set_aside_damaged(cfg, state):
+    """After a batch: every file whose error says it is damaged (a cut PDF or Office file, an archive that cannot be
+    read, an office file LibreOffice read as raw bytes: "... (get it again)") moves from inbox to
+    _to_delete\\damaged, keeping its folders, with its SHA-256 in the journal; its row says so ("damaged" in the
+    ledger). The author, 2026-10-30: damaged files are set aside by themselves. Returns the events."""
+    from assistant_x.intake.ledger import DAMAGED, MOVED_DAMAGED
+
+    events = []
+    for r in state.all("error"):
+        why = r.get("why") or ""
+        full = cfg.inbox / r["rel"]
+        if not why.rstrip().endswith(DAMAGED) or not full.is_file():
+            continue
+        size, digest = os.path.getsize(full), sha256(str(full))
+        place = move_aside(cfg, str(full), r["rel"], "_to_delete/damaged")
+        events.append([today(), "inbox\\" + win(r["rel"]), size, digest, "—", place, f"to delete: damaged — {why}"])
+        state.update(r["tid"], status="skipped", why=f"{MOVED_DAMAGED} {why}")
+    if events:
+        journal.append_events(cfg.index / "intake_events.tsv", events)
+    return events
+
+
 def letters(cfg, st, events, problems, dry=False):
     """Every letter of inbox (.eml .msg .oft): its attachments go into a folder of its name beside it (they are documents
     of the batch, an archive among them is unpacked next), the letter itself to _to_delete. A letter attached to a

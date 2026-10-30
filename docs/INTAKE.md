@@ -66,6 +66,8 @@ priority "high".
 | `disk` | free space before a run: `factor` × the input files and at least `min_free_gb` | 3, 10 |
 | `to_delete_ext` | the files the intake cannot read and that are no documents: preparing moves them (never deletes) to `inbox\_to_delete\<folder>\` with their folders, loose or out of an archive, each with its SHA-256 in the journal; a table `[intake.to_delete_ext]` of extension = folder extends the default, `""` keeps an extension, a list replaces the whole table | `programs`: exe dll msi lnk; `cad`: dwg dwt dwl bak cdw spw; `gsfx`; `logs`: log; `video`: mp4 mov avi mkv wmv mpg flv; `site`: js css gif ico (a gif or an ico only when smaller than a page scan, a bak or a dwl only beside a drawing of the same name) |
 
+A damaged file (a cut PDF or Office file, an archive that cannot be read, an office file LibreOffice can only read as raw bytes: its error ends with "(get it again)") is moved after the batch to `inbox\_to_delete\damaged\`, keeping its folders, with its SHA-256 in the journal; the ledger says `damaged`, `summary.md` lists them.
+
 Environment variables override the file:
 `AX_CONFIG` (another settings file), `AX_INBOX`,
 `AX_LIBRARY`, `AX_INDEX`, `AX_WORK`, `AX_REPORTS`, `AX_SOFFICE`, `AX_TESSERACT`, `AX_TESSDATA`, `AX_SEVENZIP`,

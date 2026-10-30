@@ -9,6 +9,7 @@ outcome, so that the totals add up to what the folder held:
     unsupported  a kind of file the intake does not process (a program, a drawing, a video): left in inbox
     skipped      left for another reason (no LibreOffice, a temporary Office file …)
     held         a spreadsheet left in inbox, untouched ([intake] spreadsheets = "skip", the default): it can be taken
+    damaged      a damaged or cut file (get it again): moved to inbox\_to_delete\damaged after the batch
     moved        taken aside before the work: a letter (its attachments are files of the batch), an unpacked archive
                  (its files are files of the batch), personal papers, a macOS service file
     queued       not processed yet (the batch was stopped)
@@ -19,13 +20,15 @@ import csv
 
 UNSUPPORTED = "the pipeline does not process"  # the why of work.prep for an extension it does not know
 HELD = "held:"  # the why of work.prep for a file held in inbox by a setting
+DAMAGED = "(get it again)"  # the end of the why of a damaged file (work.prep, unpack)
+MOVED_DAMAGED = "damaged, moved to _to_delete\\damaged:"  # its why once moved (pipeline.set_aside_damaged)
 HELD_SHEET = (
     'held: a spreadsheet, left in inbox (not taken by default; to take it: [intake] spreadsheets = "include", or '
     "intake run --spreadsheets include)"
 )
 COLUMNS = ("tid", "file", "size", "outcome", "why", "pages", "ocr_pages", "score", "garbled_pages", "seconds")
 SECONDS = ("prep_seconds", "convert_seconds", "ocr_seconds")  # the stages of a file (state data)
-OUTCOMES = ("done", "duplicate", "error", "unsupported", "skipped", "held", "moved", "queued")
+OUTCOMES = ("done", "duplicate", "error", "damaged", "unsupported", "skipped", "held", "moved", "queued")
 
 
 def outcome(row):
@@ -36,6 +39,8 @@ def outcome(row):
         return "duplicate"
     if s == "skipped":
         why = row.get("why") or ""
+        if why.startswith(MOVED_DAMAGED):
+            return "damaged"
         return "unsupported" if why.startswith(UNSUPPORTED) else "held" if why.startswith(HELD) else "skipped"
     if s == "error":
         return "error"

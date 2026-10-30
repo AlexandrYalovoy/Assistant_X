@@ -62,8 +62,11 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
     sha = sum("SHA-256" in (r.get("why") or "") for r in dups)
     from assistant_x.intake.ledger import HELD
 
+    from assistant_x.intake.ledger import MOVED_DAMAGED
+
     held = [r for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(HELD)]
-    skipped = [r for r in rows if r["status"] == "skipped" and r not in held]
+    damaged = [r for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(MOVED_DAMAGED)]
+    skipped = [r for r in rows if r["status"] == "skipped" and r not in held and r not in damaged]
     no_lo = sum("LibreOffice" in (r.get("why") or "") for r in skipped)
     errors = [r for r in rows if r["status"] == "error"]
     hidden = [r for r in rows if r.get("hidden")]
@@ -73,7 +76,7 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"- Work folder: {work}",
         f"- Files in the batch: {len(rows)}; done (text obtained) {c['done']}, duplicates {c['dup']} "
         f"(by SHA-256 {sha}, by content {len(dups) - sha}), skipped {len(skipped)} (no LibreOffice {no_lo}), "
-        f"held in inbox {len(held)}, "
+        f"held in inbox {len(held)}, damaged (moved to _to_delete\\damaged) {len(damaged)}, "
         f"errors {c['error']}, still queued {c['queued'] + c['running']}"
         + (f", moved into the library {c['applied']}" if c["applied"] else ""),
         f"- Preparing the folder: archives unpacked {prep_counts.get('archives', 0)} (files from them {prep_counts.get('archive_files', 0)}), "
@@ -92,6 +95,9 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         L += ["", f"## Held in inbox ({len(held)}): spreadsheets, not taken by default", ""]
         L += [f"- {win(r['rel'])}" for r in held[:200]]
         L += ["", 'To take them: [intake] spreadsheets = "include" in the settings, or intake run --spreadsheets include.']
+    if damaged:  # moved aside by set_aside_damaged: the user gets them again if they need them
+        L += ["", f"## Damaged, moved to inbox\\_to_delete\\damaged ({len(damaged)}): get them again if needed", ""]
+        L += [f"- {win(r['rel'])} — {(r.get('why') or '').removeprefix(MOVED_DAMAGED).strip()}" for r in damaged[:200]]
     for title, items in (("Errors", errors), ("Skipped", skipped), ("Duplicates", dups)):
         if items:
             L += ["", f"## {title} ({len(items)})", ""]

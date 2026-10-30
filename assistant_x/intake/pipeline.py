@@ -68,6 +68,12 @@ def cmd_run(cfg, a):
     workers = cfg.workers if a.workers is None else a.workers
     state.set_meta("started", time.time())  # the estimate of the time left counts from here (intake status)
     Batch(cfg, work, state, workers).run()
+    from assistant_x.intake.prepare import set_aside_damaged
+
+    damaged = set_aside_damaged(cfg, state)  # the author, 2026-10-30: damaged files go aside by themselves
+    if damaged:
+        say(f"Damaged files moved to inbox\\_to_delete\\damaged: {len(damaged)}")
+        events = events + damaged
     from assistant_x.intake import metadraft
     from assistant_x.intake import quality_report
 

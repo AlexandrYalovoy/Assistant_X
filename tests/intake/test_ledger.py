@@ -24,6 +24,7 @@ def test_every_file_has_one_outcome(tmp_path):
         "done": 1,
         "duplicate": 1,
         "error": 1,
+        "damaged": 0,
         "unsupported": 1,
         "skipped": 1,
         "held": 1,
@@ -84,4 +85,34 @@ def test_spreadsheets_are_held_in_inbox_by_default(tmp_path, monkeypatch):
     assert data["held"] == ["data/regime.xlsx"] and not data["errors"]
     words = intake_tools.batch_words(data)
     assert "Held in inbox, not taken by default: 1 spreadsheets" in words and "data/regime.xlsx" in words
+    state.close()
+
+
+def test_damaged_files_are_set_aside_after_the_batch(tmp_path, monkeypatch):
+    """The author, 2026-10-30: «повреждённые файлы откладывать автоматически». After a batch every file whose error
+    says it is damaged ("... (get it again)") moves to inbox\\_to_delete\\damaged with its folders, a journal line
+    with its SHA-256, "damaged" in the ledger and a list in the summary; another error stays in inbox."""
+    import types
+
+    from assistant_x.intake import prepare, review
+
+    inbox, index = tmp_path / "inbox", tmp_path / "index"
+    (inbox / "a").mkdir(parents=True)
+    index.mkdir()
+    (inbox / "a" / "cut.pdf").write_bytes(b"%PDF-1.7" + b"\0" * 100)
+    (inbox / "a" / "other.doc").write_bytes(b"x" * 10)
+    cfg = types.SimpleNamespace(inbox=inbox, index=index, soffice="soffice")
+    state = State(tmp_path / "state.sqlite")
+    t = [state.add(rel, 10) for rel in ("a/cut.pdf", "a/other.doc")]
+    state.update(t[0], status="error", why="the PDF has no page that can be read: a damaged or cut file (get it again)")
+    state.update(t[1], status="error", why="LibreOffice did not convert it to pdf (code 1)")
+    events = prepare.set_aside_damaged(cfg, state)
+    assert len(events) == 1 and (inbox / "_to_delete" / "damaged" / "a" / "cut.pdf").exists()
+    assert not (inbox / "a" / "cut.pdf").exists() and (inbox / "a" / "other.doc").exists()
+    assert "to delete: damaged" in (index / "intake_events.tsv").read_text(encoding="utf-8")
+    counts, _ = ledger.write(tmp_path, state)
+    assert counts["damaged"] == 1 and counts["error"] == 1
+    monkeypatch.setattr(review.intake_cfg, "can_ocr", lambda c: True)
+    text = review.summary(cfg, tmp_path, state, {}, [], 60)
+    assert "## Damaged, moved to inbox\\_to_delete\\damaged (1)" in text and "a\\cut.pdf" in text
     state.close()

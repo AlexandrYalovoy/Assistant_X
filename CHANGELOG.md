@@ -14,6 +14,9 @@ The trial intake of a big real folder in batches, continued.
   the batch waited for hours).
 - Intake: an office file LibreOffice cannot open and reads as raw bytes (a .doc with a broken inner directory came out
   as 2 428 pages of signs) is reported as a damaged file to get again, not converted for hours.
+- Intake: a damaged file (a cut PDF or Office file, an archive that cannot be read, an office file LibreOffice can only
+  read as raw bytes) is moved after the batch to inbox\_to_delete\damaged with its folders and its SHA-256 in the
+  journal; the ledger says damaged and the summary lists them.
 
 ## 0.5.5 — 2026-10-29
 
