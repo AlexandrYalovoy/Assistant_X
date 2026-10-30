@@ -444,6 +444,13 @@ def batch_words(data):
             'spreadsheets = "include", or intake run --spreadsheets include):'
         )
         lines += [f"  {rel}" for rel in held[:30]] + ([f"  … and {len(held) - 30} more"] if len(held) > 30 else [])
+    aside = data.get("set_aside") or {}
+    if aside:  # tell the user what is set aside and that it is taken on request
+        from assistant_x.intake.review import SET_ASIDE_HOW, set_aside_words
+
+        lines.append(f"Set aside, taken on request (tell the user): {set_aside_words(aside)}. {SET_ASIDE_HOW}")
+        names = list(aside)
+        lines += [f"  {rel}" for rel in names[:30]] + ([f"  … and {len(names) - 30} more"] if len(names) > 30 else [])
     return "\n".join(lines)
 
 

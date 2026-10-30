@@ -8,7 +8,10 @@ outcome, so that the totals add up to what the folder held:
     error        it failed; why says where
     unsupported  a kind of file the intake does not process (a program, a drawing, a video): left in inbox
     skipped      left for another reason (no LibreOffice, a temporary Office file …)
-    held         a spreadsheet left in inbox, untouched ([intake] spreadsheets = "skip", the default): it can be taken
+    held         a spreadsheet left in inbox, untouched ([intake] spreadsheets = "skip"): it can be taken
+    set aside    a picture, a web page or a spreadsheet not taken by default ([intake] pictures, web_pages,
+                 spreadsheets = "reject"): moved to inbox\\_rejected\\<pictures | web pages | spreadsheets> after the
+                 batch, taken on request
     damaged      a damaged or cut file (get it again): moved to inbox\_to_delete\damaged after the batch
     moved        taken aside before the work: a letter (its attachments are files of the batch), an unpacked archive
                  (its files are files of the batch), personal papers, a macOS service file
@@ -26,9 +29,45 @@ HELD_SHEET = (
     'held: a spreadsheet, left in inbox (not taken by default; to take it: [intake] spreadsheets = "include", or '
     "intake run --spreadsheets include)"
 )
+SET_ASIDE = "set aside:"  # the why of work.prep for a file of a kind taken on request only
+# the setting of each kind taken on request: the kinds of core/formats (or the extensions) and its folder in _rejected
+TAKEN_ON_REQUEST = {
+    "pictures": ("picture", "pictures"),
+    "web_pages": ("web page", "web pages"),
+    "spreadsheets": ("spreadsheet", "spreadsheets"),
+}
+WEB_PAGE_EXT = ("htm", "html", "xhtml")
+
+
+def request_group(ext):
+    """The setting that decides a file of this extension (pictures, web_pages, spreadsheets), or None."""
+    from assistant_x.core.formats import EXTENSIONS
+
+    if ext in WEB_PAGE_EXT:
+        return "web_pages"
+    return {"image": "pictures", "spreadsheet": "spreadsheets"}.get(EXTENSIONS.get(ext, ""))
+
+
+def set_aside_why(group):
+    """The why of a file set aside: what it is, where it goes and how to take it."""
+    name, folder = TAKEN_ON_REQUEST[group]
+    opt = group.replace("_", "-")
+    return (
+        f"{SET_ASIDE} a {name}, to inbox\\_rejected\\{folder} after the batch (taken on request: [intake] {group} = "
+        f'"include", or move it back to inbox and intake run --{opt} include)'
+    )
+
+
+def set_aside_group(why):
+    """The setting a why of a set aside file names (pictures, web_pages, spreadsheets), or None."""
+    if not (why or "").startswith(SET_ASIDE):
+        return None
+    return next((g for g, (name, _) in TAKEN_ON_REQUEST.items() if why.startswith(f"{SET_ASIDE} a {name},")), None)
+
+
 COLUMNS = ("tid", "file", "size", "outcome", "why", "pages", "ocr_pages", "score", "garbled_pages", "seconds")
 SECONDS = ("prep_seconds", "convert_seconds", "ocr_seconds")  # the stages of a file (state data)
-OUTCOMES = ("done", "duplicate", "error", "damaged", "unsupported", "skipped", "held", "moved", "queued")
+OUTCOMES = ("done", "duplicate", "error", "damaged", "unsupported", "skipped", "held", "set aside", "moved", "queued")
 
 
 def outcome(row):
@@ -41,6 +80,8 @@ def outcome(row):
         why = row.get("why") or ""
         if why.startswith(MOVED_DAMAGED):
             return "damaged"
+        if why.startswith(SET_ASIDE):
+            return "set aside"
         return "unsupported" if why.startswith(UNSUPPORTED) else "held" if why.startswith(HELD) else "skipped"
     if s == "error":
         return "error"

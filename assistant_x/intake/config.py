@@ -25,7 +25,8 @@ from assistant_x.core.txn import lp  # noqa: F401 — intake_cfg.lp for the inta
 
 FOLDERS = ("inbox", "library", "index", "work", "reports")
 PROGRAMS = settings.LOCAL_KEYS
-SPREADSHEETS = ("skip", "include")  # [intake] spreadsheets: held in inbox, or read
+SPREADSHEETS = ("reject", "skip", "include")  # [intake] spreadsheets: set aside, held in inbox, or read
+TAKE_ON_REQUEST = ("reject", "include")  # [intake] pictures, web_pages: set aside (_rejected), or read
 STAGE_MODES = ("inproc", "subprocess")
 # service folders of inbox: never scanned, never removed
 SERVICE = ("_duplicates", "_to_delete", "_rejected")
@@ -100,6 +101,10 @@ def load(path=None):
     cfg["spreadsheets"] = str(raw.get("spreadsheets") or default["spreadsheets"])
     if cfg["spreadsheets"] not in SPREADSHEETS:
         sys.exit(f"{path}: spreadsheets {cfg['spreadsheets']!r}, one of these is needed: {', '.join(SPREADSHEETS)}")
+    for key in ("pictures", "web_pages"):
+        cfg[key] = str(raw.get(key) or default[key])
+        if cfg[key] not in TAKE_ON_REQUEST:
+            sys.exit(f"{path}: {key} {cfg[key]!r}, one of these is needed: {', '.join(TAKE_ON_REQUEST)}")
     from assistant_x.intake import schedule
 
     cfg["ocr_shards"] = str(raw.get("ocr_shards") or default["ocr_shards"])

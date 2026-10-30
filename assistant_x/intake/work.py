@@ -496,6 +496,11 @@ def prep(job: Job) -> Prep:
     if not job.get("imgocr") and os.path.getsize(src) == 0:  # no error of the intake (trial b072: an empty .txt)
         return {"status": "skipped", "why": "an empty file (0 bytes): nothing to read"}
     kind = EXTENSIONS.get(ext, "")
+    from assistant_x.intake import ledger
+
+    group = ledger.request_group(ext)
+    if group and job.get(group, "include") == "reject":  # a picture, a web page, a workbook: taken on request only
+        return {"status": "skipped", "why": ledger.set_aside_why(group)}
     if kind == "spreadsheet" and job.get("spreadsheets") == "skip":
         from assistant_x.intake.ledger import HELD_SHEET
 

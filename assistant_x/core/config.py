@@ -48,10 +48,15 @@ INTAKE = {
     "ocr_shards": "auto",
     "ocr_threads": 2,
     "worker_memory_mb": 3072,
-    # spreadsheets (core/formats kind "spreadsheet": xls, xlsx, xlsm, xlsb, ods): "skip" holds them in inbox, untouched,
-    # listed in the summary and the ledger ("held"); "include" reads them (the author, 2026-10-29: a workbook is mostly
-    # a dataset, not a document to cite; a monthly regime of 2 000 wells came out as 1 029 pages)
-    "spreadsheets": "skip",
+    # spreadsheets (core/formats kind "spreadsheet": xls, xlsx, xlsm, xlsb, ods), pictures (kind "image": jpg png tif …,
+    # a loose picture or photo) and web pages (htm html xhtml): "reject" sets them aside, moved to
+    # inbox\_rejected\<spreadsheets | pictures | web pages> after the batch and listed in the summary and the status
+    # as taken on request; "skip" (spreadsheets only) holds them in inbox untouched ("held"); "include" reads them.
+    # The author, 2026-10-29/30: a workbook is mostly a dataset (a monthly regime of 2 000 wells came out as 1 029
+    # pages); loose pictures, photos and saved web pages are no documents to cite; they are taken on request.
+    "spreadsheets": "reject",
+    "pictures": "reject",
+    "web_pages": "reject",
     # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
     # without a text layer are then read from their images)
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},

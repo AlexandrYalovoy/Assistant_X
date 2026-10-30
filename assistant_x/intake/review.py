@@ -64,9 +64,12 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
 
     from assistant_x.intake.ledger import MOVED_DAMAGED
 
+    from assistant_x.intake.ledger import set_aside_group
+
     held = [r for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(HELD)]
     damaged = [r for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(MOVED_DAMAGED)]
-    skipped = [r for r in rows if r["status"] == "skipped" and r not in held and r not in damaged]
+    aside = [r for r in rows if r["status"] == "skipped" and set_aside_group(r.get("why"))]
+    skipped = [r for r in rows if r["status"] == "skipped" and r not in held and r not in damaged and r not in aside]
     no_lo = sum("LibreOffice" in (r.get("why") or "") for r in skipped)
     errors = [r for r in rows if r["status"] == "error"]
     hidden = [r for r in rows if r.get("hidden")]
@@ -76,7 +79,8 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"- Work folder: {work}",
         f"- Files in the batch: {len(rows)}; done (text obtained) {c['done']}, duplicates {c['dup']} "
         f"(by SHA-256 {sha}, by content {len(dups) - sha}), skipped {len(skipped)} (no LibreOffice {no_lo}), "
-        f"held in inbox {len(held)}, damaged (moved to _to_delete\\damaged) {len(damaged)}, "
+        f"held in inbox {len(held)}, set aside (taken on request) {len(aside)}, "
+        f"damaged (moved to _to_delete\\damaged) {len(damaged)}, "
         f"errors {c['error']}, still queued {c['queued'] + c['running']}"
         + (f", moved into the library {c['applied']}" if c["applied"] else ""),
         f"- Preparing the folder: archives unpacked {prep_counts.get('archives', 0)} (files from them {prep_counts.get('archive_files', 0)}), "
@@ -95,6 +99,10 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         L += ["", f"## Held in inbox ({len(held)}): spreadsheets, not taken by default", ""]
         L += [f"- {win(r['rel'])}" for r in held[:200]]
         L += ["", 'To take them: [intake] spreadsheets = "include" in the settings, or intake run --spreadsheets include.']
+    if aside:  # pictures, web pages, workbooks: set aside, the user is told they are taken on request
+        L += ["", f"## Set aside, taken on request ({len(aside)}): {set_aside_words(aside)}", ""]
+        L += [f"- {win(r['rel'])}" for r in aside[:200]] + ([f"- … and {len(aside) - 200} more"] if len(aside) > 200 else [])
+        L += ["", SET_ASIDE_HOW]
     if damaged:  # moved aside by set_aside_damaged: the user gets them again if they need them
         L += ["", f"## Damaged, moved to inbox\\_to_delete\\damaged ({len(damaged)}): get them again if needed", ""]
         L += [f"- {win(r['rel'])} — {(r.get('why') or '').removeprefix(MOVED_DAMAGED).strip()}" for r in damaged[:200]]
@@ -144,11 +152,16 @@ def status_data(work, state, started=None, now=None):
     queued = [r["tid"] for r in rows if r["status"] == "queued"]
     from assistant_x.intake.ledger import HELD
 
+    from assistant_x.intake.ledger import set_aside_group
+
     held = [r["rel"] for r in rows if r["status"] == "skipped" and (r.get("why") or "").startswith(HELD)]
+    aside = {
+        r["rel"]: set_aside_group(r.get("why")) for r in rows if r["status"] == "skipped" and set_aside_group(r.get("why"))
+    }
     errors = [
         {"tid": r["tid"], "rel": r["rel"], "status": r["status"], "why": r.get("why")}
         for r in rows
-        if r["status"] in ("error", "skipped") and r["rel"] not in held
+        if r["status"] in ("error", "skipped") and r["rel"] not in held and r["rel"] not in aside
     ]
     eta = time_left(rows, running, started, now)
     return {
@@ -160,10 +173,30 @@ def status_data(work, state, started=None, now=None):
         "queued": queued,
         "errors": errors,
         "held": held,
+        "set_aside": aside,
         "eta_seconds": eta,
         "started": started,
         "ocr_seconds": round(sum(r.get("ocr_seconds") or 0 for r in done)),
     }
+
+
+SET_ASIDE_HOW = (
+    "They are moved to inbox\\_rejected (pictures, web pages, spreadsheets) when the batch is applied. To take them: "
+    "ask the assistant, or move them back to inbox and run intake run --pictures include (--web-pages include, "
+    '--spreadsheets include); for every batch: [intake] pictures = "include" (web_pages, spreadsheets) in the settings.'
+)
+
+
+def set_aside_words(rows):
+    """'pictures 12, web pages 3' of the set aside rows (rows of the state, or the rel -> group map of status_data)."""
+    from assistant_x.intake.ledger import TAKEN_ON_REQUEST, set_aside_group
+
+    groups = (
+        collections.Counter(set_aside_group(r.get("why")) for r in rows)
+        if isinstance(rows, list)
+        else collections.Counter(rows.values())
+    )
+    return ", ".join(f"{TAKEN_ON_REQUEST[g][1]} {n}" for g, n in groups.items())
 
 
 ETA_DONE = 5  # files done before the time left is told

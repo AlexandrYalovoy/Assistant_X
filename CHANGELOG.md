@@ -18,6 +18,11 @@ The trial intake of a big real folder in batches, continued.
   ...-EM.03.01-GCh01 and ...-GCh02) are no duplicate by themselves even when most of their phrases match: the second
   stays a suspect for the assistant to decide; a copy under the same designation or with no designation in its name is
   still a duplicate.
+- Intake: loose pictures and photos, web pages (htm, html) and spreadsheets are set aside by default ([intake]
+  pictures, web_pages, spreadsheets = "reject"): they are not read, they go to inbox\_rejected\pictures, \web pages,
+  \spreadsheets when the batch is applied, "set aside" in the ledger, and the summary and the status list them as taken
+  on request with how to take them (--pictures include, --web-pages include, --spreadsheets include). A folder of page
+  scans is still joined into one PDF and read.
 
 ## 0.5.6 — 2026-10-30
 

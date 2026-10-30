@@ -35,8 +35,9 @@ from assistant_x.intake.tools import unpack  # noqa: F401 — re-exported for th
 
 def cmd_run(cfg, a):
     work = work_dir(cfg, a.work, new=not getattr(a, "resume", False))  # --resume: the latest batch, its done files stay
-    if getattr(a, "spreadsheets", None):
-        cfg["spreadsheets"] = a.spreadsheets
+    for key in ("spreadsheets", "pictures", "web_pages"):  # this batch only
+        if getattr(a, key, None):
+            cfg[key] = getattr(a, key)
     if not cfg.inbox.is_dir():
         sys.exit(f"No folder {cfg.inbox}")
     t0 = time.time()
@@ -209,9 +210,17 @@ def main(argv=None):
             p.add_argument("--resume", action="store_true", help="continue the latest batch: done files are skipped")
             p.add_argument(
                 "--spreadsheets",
-                choices=("skip", "include"),
-                help="this batch only: hold the spreadsheets in inbox (skip) or read them (include); [intake] spreadsheets",
+                choices=("reject", "skip", "include"),
+                help="this batch only: set the spreadsheets aside to _rejected (reject), hold them in inbox (skip) or "
+                "read them (include); [intake] spreadsheets",
             )
+            for opt, what in (("pictures", "loose pictures and photos"), ("web-pages", "web pages (htm, html)")):
+                p.add_argument(
+                    f"--{opt}",
+                    choices=("reject", "include"),
+                    help=f"this batch only: set the {what} aside to _rejected (reject) or read them (include); "
+                    f"[intake] {opt.replace('-', '_')}",
+                )
         if name == "apply":
             p.add_argument("--resume", action="store_true", help="continue an interrupted apply (its journal)")
         if name == "build":

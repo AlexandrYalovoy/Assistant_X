@@ -15,7 +15,7 @@ import json, os, re
 from pathlib import Path
 
 from assistant_x.core import card as C
-from assistant_x.intake import meta_schema
+from assistant_x.intake import ledger, meta_schema
 from assistant_x.core.formats import (
     EVENT_DONE,
     EVENT_DUP,
@@ -425,6 +425,23 @@ def build(cfg, work, date=None, personal=False):
                 ]
             )
             meta[t] = {"drop": f"a program file .{ext}"}  # not "left" below
+            continue
+        group = ledger.set_aside_group(r.get("why")) if not m and r["status"] == "skipped" else None
+        if group:  # a picture, a web page, a workbook of a kind taken on request only: its own folder of _rejected
+            folder = ledger.TAKEN_ON_REQUEST[group][1]
+            moves.append({"tid": t, "src": src, "dst": f"inbox\\_rejected\\{folder}\\" + win(r["rel"])})
+            events.append(
+                [
+                    date,
+                    src,
+                    r.get("size") or "—",
+                    r.get("sha") or "—",
+                    "—",
+                    f"inbox\\_rejected\\{folder}\\",
+                    f"{EVENT_REJECTED}: a {ledger.TAKEN_ON_REQUEST[group][0]}, taken on request",
+                ]
+            )
+            meta[t] = {"drop": f"a {ledger.TAKEN_ON_REQUEST[group][0]}, taken on request"}  # not "left" below
             continue
         if m.get("drop"):
             moves.append({"tid": t, "src": src, "dst": "inbox\\_rejected\\" + win(r["rel"])})
