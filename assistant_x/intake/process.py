@@ -3,7 +3,7 @@
 """Processing a batch (intake run, step 2): the files of inbox registered, the exact and the content duplicates,
 the pool of workers (PDF, hidden text, Markdown, OCR), the state of every file."""
 
-import collections, os, shutil, time
+import collections, json, os, re, shutil, time
 from array import array
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, ThreadPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
@@ -17,6 +17,17 @@ from assistant_x.intake import schedule, versions
 from assistant_x.intake.batch import AUTO, DUP, PAGES_APART, PARTIAL, SAME, say, win
 from assistant_x.intake.prepare import KIT, THICK, known_hashes, sha256, walk
 from assistant_x.intake.results import Convert, Job, Prep
+
+# a designation in a file name: three or more parts joined by dots or hyphens (PRJ-TPR.2022-EM.03.01-GCh02,
+# TTT-01.02.05-02): two files of one series share most of their phrases yet are other documents
+NAME_CODE_RX = re.compile(r"[^\W_]+(?:[.\-][^\W_]+){2,}")
+
+
+def name_code(name):
+    """The longest designation-like part of a file name (with two digits at least), or "" when it has none."""
+    stem = os.path.splitext(os.path.basename(name.replace("\\", "/")))[0]
+    codes = [c for c in NAME_CODE_RX.findall(stem) if sum(ch.isdigit() for ch in c) >= 2]
+    return max(codes, key=len) if codes else ""
 
 
 def fp_path(work, tid):
@@ -213,11 +224,26 @@ class Batch:
             self.lib_editions[key] = out
         return out
 
+    def source_name(self, key):
+        """The original file name of a file of the batch (tid) or of a library document (code), or ""."""
+        if key in self.lib:
+            try:
+                card = json.loads((self.cfg.index / "cards" / f"{key}.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                return ""
+            return (card.get("file") or {}).get("source_name") or ""
+        return (self.state.get(key) or {}).get("rel") or ""
+
     def editions_apart(self, tid, other, share):
-        """Why two texts sharing most of their phrases may be two editions (a reason), or "" when they are one."""
+        """Why two texts sharing most of their phrases may be two editions or two documents of one series (a
+        reason), or "" when they are one: the variants of one design document (another volume, another well count)
+        are all kept, only real copies are duplicates."""
         (p1, d1), (p2, d2) = self.edition(tid), self.edition(other)
         if d1 and d2 and versions.key(d1) == versions.key(d2) and versions.norm(d1) != versions.norm(d2):
             return f"the designations differ ({d1} here, {d2} there)"
+        n1, n2 = name_code(self.source_name(tid)), name_code(self.source_name(other))
+        if n1 and n2 and n1.casefold() != n2.casefold():
+            return f"the file names name other documents ({n1} here, {n2} there)"
         if p1 and p2 and abs(p1 - p2) > PAGES_APART * max(p1, p2):
             return f"{p1} pages here, {p2} there"
         if share < SAME:

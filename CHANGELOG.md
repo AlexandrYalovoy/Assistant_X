@@ -14,6 +14,10 @@ The trial intake of a big real folder in batches, continued.
 - The intake run by itself (python -m assistant_x.intake.pipeline, apply_job, search.reindex) with its output in a file
   of a legacy code page no longer stops on a character such as an arrow: an apply stopped so on the line of the
   recognition vocabulary.
+- Intake: two files of one design series (another volume or variant in the designation of the file name, such as
+  ...-EM.03.01-GCh01 and ...-GCh02) are no duplicate by themselves even when most of their phrases match: the second
+  stays a suspect for the assistant to decide; a copy under the same designation or with no designation in its name is
+  still a duplicate.
 
 ## 0.5.6 — 2026-10-30
 

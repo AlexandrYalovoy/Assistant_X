@@ -79,6 +79,39 @@ def test_partial_overlap_or_other_length_stays_suspect(batch, share, pages, why)
     assert upd.get("status") != "dup" and why in upd["suspect_why"]
 
 
+def series_file(b, name, lib_name):
+    """A batch file named `name` (its tid), the library document N-00005 named `lib_name` (its card)."""
+    b.state.add(f"1. Pads/{name}", 1000)
+    (b.cfg.index / "cards").mkdir(exist_ok=True)
+    card = {"code": "N-00005", "file": {"source_name": lib_name}}
+    (b.cfg.index / "cards" / "N-00005.json").write_text(json.dumps(card, ensure_ascii=False), encoding="utf-8")
+    return b.state.all()[-1]["tid"]
+
+
+def test_another_drawing_of_a_series_stays_suspect(batch):
+    b, _ = batch
+    tid = series_file(b, "ГПН-ТПР.КПНС.С-П.2022-ТПР-ЭМ.03.01-ГЧ02.pdf", "ГПН-ТПР.КПНС.С-П.2022-ТПР-ЭМ.03.01-ГЧ01.pdf")
+    cand = candidate(b, tid, 0.96, "НЕФТЬ Общие технические условия", 20)
+    upd = b.dup_verdict(tid, b.state.get(tid), cand)
+    assert upd.get("status") != "dup" and upd["suspect"] == "N-00005"
+    assert "ЭМ.03.01-ГЧ02" in upd["suspect_why"] and "ЭМ.03.01-ГЧ01" in upd["suspect_why"]
+
+
+@pytest.mark.parametrize(
+    "name, lib_name",
+    [
+        ("ТТТ-01.02.05-02 Измерительная установка (версия 1.0).pdf", "ТТТ-01.02.05-02 Измерительная установка.docx"),
+        ("Отчет (1).pdf", "Отчет.pdf"),
+    ],
+)
+def test_a_copy_under_the_same_or_no_designation_is_a_duplicate(batch, name, lib_name):
+    b, _ = batch
+    tid = series_file(b, name, lib_name)
+    cand = candidate(b, tid, 0.95, "ГОСТ Р 51858-2002\n\nНЕФТЬ Общие технические условия", 21)
+    upd = b.dup_verdict(tid, b.state.get(tid), cand)
+    assert upd["status"] == "dup" and upd["dup_of"] == "N-00005"
+
+
 def test_suspect_becomes_a_question_of_the_draft(batch):
     b, tid = batch
     (b.work / "md").mkdir()
