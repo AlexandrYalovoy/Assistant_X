@@ -4,9 +4,10 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.5.6 — unreleased
+## 0.5.6 — 2026-10-30
 
-The trial intake of a big real folder in batches, continued.
+The trial intake, continued: no memory deadlock on long documents, damaged files set aside by themselves, and a
+Word file LibreOffice cannot draw read from its .docx.
 
 - Intake: a long document whose pages go as images (after the watchdog) no longer fills the memory: the copy is built
   25 pages at a time (a .doc of 2 428 pages grew a worker to 13 GB); on a memory emergency the worker that holds the

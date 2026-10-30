@@ -30,7 +30,7 @@ students, doctors, lawyers, economists.
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
-Version 0.5.5 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+Version 0.5.6 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
 [License](#license)) · Author: Alexandr Yalovoy. What comes next: [`ROADMAP.md`](ROADMAP.md).
 
 ## Features in detail

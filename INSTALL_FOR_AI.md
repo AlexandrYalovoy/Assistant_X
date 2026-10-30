@@ -7,7 +7,7 @@ English | [Русский](INSTALL_FOR_AI.ru.md)
 You are an agent (Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked you to
 install or connect **Assistant X**: a local library of the user's documents (PDF, DOC/DOCX, PPTX, scans) with search by
 words and by meaning, served to AI apps over MCP. Follow these steps in order. Run every command only after the user
-agreed to it; say in one line what each one does. These instructions are of version 0.5.5; always install the
+agreed to it; say in one line what each one does. These instructions are of version 0.5.6; always install the
 **latest release**: https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## 1. Tell the user what will happen, and ask
