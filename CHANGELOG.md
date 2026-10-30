@@ -4,6 +4,14 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.7 — unreleased
+
+The trial intake of a big real folder in batches, continued.
+
+- Intake: a card may be written in the document language first ("en_later": true in meta.jsonl): it is checked without
+  its English part, its file name is its title transliterated, and the card carries an issue that lists it for the
+  English part later.
+
 ## 0.5.6 — 2026-10-30
 
 The trial intake, continued: no memory deadlock on long documents, damaged files set aside by themselves, and a
@@ -20,14 +28,6 @@ Word file LibreOffice cannot draw read from its .docx.
   journal; the ledger says damaged and the summary lists them.
 - Intake: a .doc, .rtf or .odt LibreOffice cannot draw even with the doubled memory (a textbook of embedded equations)
   is saved as .docx by LibreOffice and read from it: its text kept, the equations drawn as objects lost.
-
-## 0.5.6 — unreleased
-
-The trial intake of a big real folder in batches, continued.
-
-- Intake: a card may be written in the document language first ("en_later": true in meta.jsonl): it is checked without
-  its English part, its file name is its title transliterated, and the card carries an issue that lists it for the
-  English part later.
 
 ## 0.5.5 — 2026-10-29
 
