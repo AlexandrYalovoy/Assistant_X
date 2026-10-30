@@ -261,3 +261,22 @@ def test_two_text_layers_gost_title():
     }
     assert d["en"] == "Electric-Drills-General-Technical-Requirements" and d["designation"]["ru"] == "ГОСТ 15880-83"
     assert metadraft.en_title("Долота шарошечные. Конструкция") == ""  # an unknown word: no guess
+
+
+def test_a_card_in_the_document_language_only_with_en_later():
+    """The author, 2026-10-30: cards in Russian first, the English part later. A line with en_later needs no "en" and
+    no English texts; the card carries the issue core/card.ENGLISH_LATER and is valid without English; the file name
+    is the Russian title transliterated."""
+    from assistant_x.core import card as C
+    from assistant_x.intake import build
+
+    ru = {k: v for k, v in GOOD["T0005"].items() if k != "en"}
+    for key in ("title", "summary", "keywords", "topics"):
+        if isinstance(ru.get(key), dict):
+            ru[key] = {"ru": ru[key]["ru"]} if "ru" in ru[key] else ru[key]
+    assert errors({"T0005": ru}, {"T0005"})  # without en_later the English part is required
+    assert errors({"T0005": {**ru, "en_later": True}}, {"T0005"}) == []
+    card = meta_schema.card_of({**ru, "en_later": True})
+    card["file"]["issues"] = [{"what": C.ENGLISH_LATER, "need": "", "priority": "low", "noted": "2026-10-30"}]
+    assert C.english_later(card) and C.validate(card, ["en", "ru"]) == []
+    assert build.clean(build.latin_title({"title": {"ru": "Сепараторы нефти и газа"}}), 55) == "Separatory-nefti-i-gaza"

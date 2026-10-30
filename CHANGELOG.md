@@ -21,6 +21,14 @@ Word file LibreOffice cannot draw read from its .docx.
 - Intake: a .doc, .rtf or .odt LibreOffice cannot draw even with the doubled memory (a textbook of embedded equations)
   is saved as .docx by LibreOffice and read from it: its text kept, the equations drawn as objects lost.
 
+## 0.5.6 — unreleased
+
+The trial intake of a big real folder in batches, continued.
+
+- Intake: a card may be written in the document language first ("en_later": true in meta.jsonl): it is checked without
+  its English part, its file name is its title transliterated, and the card carries an issue that lists it for the
+  English part later.
+
 ## 0.5.5 — 2026-10-29
 
 The trial intake of a big real folder in batches, continued: spreadsheets held in inbox by default, drawing sheets

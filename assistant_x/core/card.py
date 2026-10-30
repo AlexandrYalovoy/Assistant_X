@@ -314,18 +314,33 @@ def text_maps(card):
     return out
 
 
-def validate(card, languages=("en",), sections=None, topics=None):
+# the issue a card carries while its English part (the English title, keywords, contents) is not written: the author,
+# 2026-10-30, cards in the document language first, the English part later; the card is checked without English
+ENGLISH_LATER = "the English part of the card is not written yet"
+
+
+def english_later(card):
+    """True when the card carries the ENGLISH_LATER issue."""
+    file = card.get("file") if isinstance(card, dict) else None
+    return any(isinstance(i, dict) and i.get("what") == ENGLISH_LATER for i in (file or {}).get("issues") or [])
+
+
+def validate(card, languages=("en",), sections=None, topics=None, english=None):
     """Errors of a card (an empty list: it is fine): the schema, the languages every map needs (languages: the
     card languages of the workspace, config.card_languages), the code and the section agreeing, the codes of the parts,
     the section among the letters of the shelves (sections: config.sections), the topics among the controlled list of
-    the profile (topics, when it has one)."""
+    the profile (topics, when it has one). english=False (None: the card says, english_later): no English text is
+    required yet."""
+    if english is None:
+        english = not english_later(card)
     errors = [
         f"{_where(e.absolute_path)}: {e.message}"
         for e in sorted(_validator().iter_errors(card), key=lambda e: list(map(str, e.absolute_path)))
+        if english or not (e.validator == "required" and e.message == "'en' is a required property")
     ]
     if not isinstance(card, dict):
         return errors
-    need = list(dict.fromkeys(["en", *(languages or ())]))
+    need = [x for x in dict.fromkeys(["en", *(languages or ())]) if english or x != "en"]
     for where, m in text_maps(card):
         missing = [x for x in need if not m.get(x)]
         if missing:

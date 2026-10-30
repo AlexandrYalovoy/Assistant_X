@@ -37,6 +37,15 @@ def clean(x, n=60):
     return re.sub(r"-{2,}", "-", x)[:n].strip("-")
 
 
+def latin_title(m):
+    """The title of a card without its English part (en_later) in Latin letters for the file name: its first title
+    transliterated (metadraft.translit, the "translit" table of the language packs)."""
+    from assistant_x.intake.metadraft import translit
+
+    title = next((v for v in (m.get("title") or {}).values() if v), "") or str(m.get("designation") or "")
+    return translit(str(title))
+
+
 def ext_of(rel):
     return rel.rsplit(".", 1)[-1].lower()
 
@@ -265,7 +274,7 @@ def build(cfg, work, date=None, personal=False):
         m, code, r = meta[t], codes[t], by[t]
         folder = shelves[m["sec"]]["folder"]
         yr = str(m["year"]) if m.get("year") and m.get("doc_type") != "standard" else ""  # a standard: in its designation
-        au, en = clean(m.get("au", ""), 40), clean(m["en"], 55)
+        au, en = clean(m.get("au", ""), 40), clean(m.get("en") or latin_title(m), 55)
         stem = "_".join(x for x in (code, au, en, yr) if x)
         pl = sorted(parts.get(t, []), key=lambda p: part_order(meta[p], by[p]["rel"], p))
         if pl:
@@ -325,6 +334,15 @@ def build(cfg, work, date=None, personal=False):
             {"what": i["what"], "need": i.get("need") or "", "priority": i["priority"], "noted": date}
             for i in m.get("issues") or []
         ]
+        if m.get("en_later"):  # the card in the document language only: the English part to write later
+            issues.append(
+                {
+                    "what": C.ENGLISH_LATER,
+                    "need": "write the English title, keywords and contents",
+                    "priority": "low",
+                    "noted": date,
+                }
+            )
         if not m.get("quality_ok"):  # the problems the quality report found (a poor scan, empty pages)
             for entry, rr in files:
                 for what, need, prio in quality.get(rr["tid"], {}).get("problems", []):

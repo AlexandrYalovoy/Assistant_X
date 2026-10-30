@@ -11,7 +11,9 @@ A line is one of:
              units, serial, page_offset, note;
              "replaces": "N-00001" | "other_version": "N-00001" (a new version: versions.py),
              "issues": [{"what", "need", "priority"}] (what is wrong with the source),
-             "quality_ok": true (the problems the quality report found are not issues)}
+             "quality_ok": true (the problems the quality report found are not issues),
+             "en_later": true (the card in the document language only: no "en", no English texts yet; the file name
+             is made of the title transliterated, the card gets the issue core/card.ENGLISH_LATER)}
   part      {"tid": "T0002", "part": "T0001", "what": "Scan", "order": 2}  — file of a multi-file document; "order"
             (optional) places it among the parts, else they go by file name ("Chapter 2" before "Chapter 10")
   duplicate {"tid": "T0003", "dupof": "T0001" | "L-00012", "why": "…"}
@@ -50,6 +52,7 @@ CONTROL = {
     "draft",
     "code_hint",
     "ocr_score",
+    "en_later",
 }
 KNOWN = CONTROL | set(DOC_FIELDS)
 TID = re.compile(r"^T\d{4,}$")
@@ -125,7 +128,8 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
                     f"section sec={sec!r}, "
                     + (f"one of {' '.join(sections)} is needed" if sections else "the letter of a shelf is needed")
                 )
-            if not str(m.get("en") or "").strip() or not re.search(r"[A-Za-z]", str(m.get("en"))):
+            later = bool(m.get("en_later"))
+            if not later and (not str(m.get("en") or "").strip() or not re.search(r"[A-Za-z]", str(m.get("en")))):
                 e(
                     'the field "en" is missing or not English: the short English title the file name is made from '
                     '(e.g. "Oil separation handbook"); title.en does not replace it'
@@ -133,7 +137,7 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
             yr = m.get("year")
             if isinstance(yr, int) and not 1900 <= yr <= year + 1:
                 e(f"year {yr} outside 1900..{year + 1}")
-            for x in C.validate(card_of(m), languages, topics=topics):
+            for x in C.validate(card_of(m), languages, topics=topics, english=not later):
                 if not x.startswith(("code ", "section ")):  # the section is checked above
                     e(x)
             if m.get("replaces") and m.get("other_version"):
