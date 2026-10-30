@@ -284,6 +284,26 @@ def scanned(page, text, by_area=True):
     return (cover >= SCAN_COVER and chars / max(area, 1) < SCAN_DENSITY) or (chars < TEXT_PAGE and cover > 0)
 
 
+RAW_SHARE = 0.2  # share of the characters of the first pages that are no text ("#", U+FFFD, control) past which
+RAW_PAGES = 3  # a PDF LibreOffice made is the bytes of a file it could not open, read as plain text
+RAW_CHARS = re.compile(r"[#\ufffd\x00-\x08\x0b\x0c\x0e-\x1f\u02d9\u02c7]")
+
+
+def raw_bytes_text(pdf):
+    """True when the first pages of a PDF LibreOffice made of an office file are its bytes read as plain text: a Word
+    file with a broken inner directory came out as 2 428 pages of «\u0110\u010e#\u0155\u02c7\u00b1#\u00e1###...» (trial
+    batch b129), hours of conversion of nothing. A PDF that does not open is left to the conversion."""
+    import pymupdf
+
+    try:
+        with pymupdf.open(pdf) as doc:
+            text = "".join(doc[i].get_text() for i in range(min(RAW_PAGES, doc.page_count)))
+    except Exception:  # noqa: BLE001
+        return False
+    chars = [c for c in text if not c.isspace()]
+    return len(chars) >= 200 and sum(bool(RAW_CHARS.match(c)) for c in chars) / len(chars) > RAW_SHARE
+
+
 def cut_zip(path):
     """True for a file that starts as a zip archive (an Office Open XML document) without the directory at its end: a
     cut copy (trial batch b102: a .pptx of 126 MB, LibreOffice "source file could not be loaded"). A misnamed .doc
@@ -505,6 +525,12 @@ def prep(job: Job) -> Prep:
                 lo_why = f"{err['why']}: its text and its embedded PDFs read directly"
             elif err:
                 return err
+            if kind == "office" and not lo_why and raw_bytes_text(pdf):
+                return {
+                    "status": "error",
+                    "why": f"LibreOffice could not open the .{ext} and read its bytes as plain text: a damaged file "
+                    "(get it again)",
+                }
         if kind == "spreadsheet":
             err = sheets_of(job, src, ext, w, log)
             if err:

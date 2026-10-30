@@ -5,7 +5,7 @@ page, Markdown, HTML) laid out as PDF pages, spreadsheets (every sheet a Markdow
 with a note without DjVuLibre), the attachments of letters (.eml, Outlook .msg), and the outline a file gives
 itself (PDF bookmarks, DOCX heading styles) as the first source of the contents. Every fixture is made here."""
 
-import json, os, struct, zipfile
+import json, os, shutil, struct, zipfile
 from email.message import EmailMessage
 
 import pymupdf
@@ -731,3 +731,41 @@ def test_a_cut_office_file_is_called_damaged(tmp_path):
     }
     res = intake_work.prep(job)
     assert res["status"] == "error" and "cut zip archive" in res["why"]
+
+
+def test_a_word_file_libreoffice_read_as_raw_bytes_is_called_damaged(tmp_path, monkeypatch):
+    """Trial batch b129: a .doc with a broken inner directory; LibreOffice could not open it as Word and read its
+    bytes as plain text: 2 428 pages of «\u0110\u010e#\u0155\u02c7\u00b1#\u00e1###...», hours of conversion. prep calls it damaged."""
+    junk = tmp_path / "junk.pdf"
+    doc = pymupdf.open()
+    for _ in range(3):
+        page = doc.new_page()
+        for k in range(30):
+            page.insert_text((40, 40 + 20 * k), "\u0110\u010e#\u0155\u02c7\u00b1#\u00e1###########>###t###\u00d6##" * 2)
+    doc.save(junk)
+    assert intake_work.raw_bytes_text(junk)
+    good = tmp_path / "good.pdf"
+    text_pdf(good, ["Задача 4.1. Определить потери напора в трубопроводе диаметром 530 мм # 1"] * 3)
+    assert not intake_work.raw_bytes_text(good)
+    src = tmp_path / "task.doc"
+    src.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 600)
+
+    def soffice(job, s, outdir, fmt, log):
+        shutil.copy(junk, outdir / "T0001.pdf")
+
+    monkeypatch.setattr(intake_work, "soffice", soffice)
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(src),
+        "ext": "doc",
+        "ocr": False,
+        "imgocr": False,
+        "soffice": "soffice",
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 0,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert res["status"] == "error" and "read its bytes as plain text" in res["why"]

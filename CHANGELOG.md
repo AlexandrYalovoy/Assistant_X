@@ -12,6 +12,8 @@ The trial intake of a big real folder in batches, continued.
   25 pages at a time (a .doc of 2 428 pages grew a worker to 13 GB); on a memory emergency the worker that holds the
   most memory is not suspended, so it ends its task and gives the memory back (before, every worker was suspended and
   the batch waited for hours).
+- Intake: an office file LibreOffice cannot open and reads as raw bytes (a .doc with a broken inner directory came out
+  as 2 428 pages of signs) is reported as a damaged file to get again, not converted for hours.
 
 ## 0.5.5 — 2026-10-29
 
