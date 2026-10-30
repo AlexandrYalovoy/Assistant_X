@@ -19,6 +19,9 @@ STAGES = ("build", "apply", "build_index", "embed")
 
 
 def main(argv=None):
+    from assistant_x.cli.main import safe_output
+
+    safe_output()
     argv = sys.argv[1:] if argv is None else argv
     intake = [sys.executable, "-m", "assistant_x.intake.pipeline"]
     write_progress("build")

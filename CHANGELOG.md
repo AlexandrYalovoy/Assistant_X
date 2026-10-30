@@ -11,6 +11,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: a card may be written in the document language first ("en_later": true in meta.jsonl): it is checked without
   its English part, its file name is its title transliterated, and the card carries an issue that lists it for the
   English part later.
+- The intake run by itself (python -m assistant_x.intake.pipeline, apply_job, search.reindex) with its output in a file
+  of a legacy code page no longer stops on a character such as an arrow: an apply stopped so on the line of the
+  recognition vocabulary.
 
 ## 0.5.6 — 2026-10-30
 

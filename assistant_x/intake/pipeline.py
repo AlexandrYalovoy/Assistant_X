@@ -167,6 +167,9 @@ HEAVY = ("run", "build", "apply", "redo")  # also take the machine lock (core/lo
 
 
 def main(argv=None):
+    from assistant_x.cli.main import safe_output
+
+    safe_output()  # run as a module (apply_job, by hand) with a log file in a legacy code page
     ap = argparse.ArgumentParser(
         prog="assistant-x intake",
         description="Intake of inbox on the PC",

@@ -73,9 +73,11 @@ def _device(before, after, cpu):
 
 
 def main(argv=None):
+    from assistant_x.cli.main import safe_output
     from assistant_x.core import gpu_guard
     from assistant_x.core.common import load_config
 
+    safe_output()
     argv = sys.argv[1:] if argv is None else argv
     if {"-h", "--help"} & set(argv):  # the options only: --help once built the base in the middle of a redo
         print(__doc__)
