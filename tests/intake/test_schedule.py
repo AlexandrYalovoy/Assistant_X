@@ -352,3 +352,37 @@ def test_a_long_flattened_copy_is_built_in_parts(tmp_path, monkeypatch):
     assert copy.page_count == 8 and "page 1 of" in copy[0].get_text() and "page 7 of" in copy[6].get_text()
     assert not copy[1].get_text().strip() and copy[1].get_images() and copy[7].get_images()
     assert not list(tmp_path.glob("*.part*"))  # the parts are gone
+
+
+def test_page_images_of_a_broken_layer_are_made_in_parts(tmp_path, monkeypatch):
+    """Trial batch b129: the page images read instead of a broken layer (imgocr) were kept raw in memory, 2 428 pages
+    failed a worker of 3 GB. They are made by flatten, FLAT_PART pages at a time."""
+    import os
+
+    import pymupdf
+
+    monkeypatch.setattr(intake_work, "FLAT_PART", 2)
+    src = tmp_path / "doc.pdf"
+    doc = pymupdf.open()
+    for i in range(5):
+        doc.new_page().insert_text((72, 72), f"page {i + 1}")
+    doc.save(src)
+    (tmp_path / "w" / "src").mkdir(parents=True)
+    doc.save(tmp_path / "w" / "src" / "T0001.pdf")  # the copy the batch makes
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "ext": "pdf",
+        "src": str(src),
+        "soffice": None,
+        "ocr": False,
+        "imgocr": True,
+        "timeouts": {"soffice": 60, "hidden": 300, "convert": 600},
+        "memory_mb": 3000,
+        "env": dict(os.environ),
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    out = pymupdf.open(res["pdf"])
+    assert res["pdf"].endswith("T0001.img.pdf") and out.page_count == 5 and all(p.get_images() for p in out)
+    assert not list((tmp_path / "w" / "pdf").glob("*.part*"))

@@ -630,16 +630,13 @@ def prep(job: Job) -> Prep:
         if cache.exists():
             for f in [*cache.glob("*.json"), *cache.glob("ocr/*.json")]:
                 f.unlink()
-        sd, im = pymupdf.open(pdf), pymupdf.open()
-        for pg in sd:
-            # 300 dpi, at most FLAT_PIXELS on the longer side: a sheet of 2.4 m at 300 dpi asked 210 MB at once and the
-            # worker failed the file (trial batch b061, the second reading of a project volume)
-            zoom = min(300 / 72, FLAT_PIXELS / max(pg.rect.width, pg.rect.height))
-            pix = pg.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), colorspace=pymupdf.csGRAY)
-            npg = im.new_page(width=pg.rect.width, height=pg.rect.height)
-            npg.insert_image(npg.rect, pixmap=pix)
-        pdf = w / "pdf" / f"{tid}.img.pdf"
-        im.save(pdf, deflate=True)
+        # every page as its image (300 dpi, at most FLAT_PIXELS on the longer side: a sheet of 2.4 m asked 210 MB at
+        # once, trial batch b061), FLAT_PART pages in memory at a time (trial batch b129: 2 428 pages kept raw failed a
+        # worker of 3 GB, then grew one to 13 GB)
+        with pymupdf.open(pdf) as sd:
+            img = w / "pdf" / f"{tid}.img.pdf"
+            flatten(sd, set(range(1, sd.page_count + 1)), img)
+        pdf = img
     elif not has_text_layer(pdf):
         pass  # page images only: no text at all, so none a reader does not see (the hidden text check is skipped)
     else:
