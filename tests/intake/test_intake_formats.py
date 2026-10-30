@@ -6,6 +6,7 @@ with a note without DjVuLibre), the attachments of letters (.eml, Outlook .msg),
 itself (PDF bookmarks, DOCX heading styles) as the first source of the contents. Every fixture is made here."""
 
 import json, os, shutil, struct, zipfile
+from pathlib import Path
 from email.message import EmailMessage
 
 import pymupdf
@@ -769,3 +770,45 @@ def test_a_word_file_libreoffice_read_as_raw_bytes_is_called_damaged(tmp_path, m
     }
     res = intake_work.prep(job)
     assert res["status"] == "error" and "read its bytes as plain text" in res["why"]
+
+
+def test_a_doc_libreoffice_cannot_draw_is_read_from_its_docx(tmp_path, monkeypatch):
+    """Trial batch b130: a textbook .doc of embedded equations went past the memory cap of LibreOffice twice when drawn
+    as PDF; saved as .docx it took 22 s and read as a .docx 68 pages of text. The second failure takes that way."""
+    w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    xml = (
+        f'<w:document xmlns:w="{w}"><w:body>'
+        '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>Расчет массообменных установок</w:t></w:r></w:p>'
+        "<w:p><w:r><w:t>Глава 1. Ректификация</w:t></w:r></w:p></w:body></w:document>"
+    )
+    calls = []
+
+    def soffice(job, s, outdir, fmt, log):
+        calls.append(fmt)
+        if fmt == "pdf":
+            return {"status": "error", "why": "LibreOffice: memory cap exceeded", "retry": "memory"}
+        with zipfile.ZipFile(outdir / f"{Path(s).stem}.docx", "w") as z:
+            z.writestr("word/document.xml", xml)
+
+    monkeypatch.setattr(intake_work, "soffice", soffice)
+    src = tmp_path / "textbook.doc"
+    src.write_bytes(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\0" * 600)
+    job = {
+        "work": str(tmp_path / "w"),
+        "tid": "T0001",
+        "src": str(src),
+        "ext": "doc",
+        "ocr": False,
+        "imgocr": False,
+        "soffice": "soffice",
+        "timeouts": {"soffice": 60, "hidden": 60},
+        "memory_mb": 6144,
+        "memory_retried": True,
+        "env": {},
+        "inproc": True,
+    }
+    res = intake_work.prep(job)
+    assert calls == ["pdf", "docx"] and res["status"] == "prepped" and "saved as .docx" in res["why"], res
+    assert "Ректификация" in "".join(p.get_text() for p in pymupdf.open(res["pdf"]))
+    job.update(memory_retried=False, work=str(tmp_path / "w2"))
+    assert intake_work.prep(job).get("retry") == "memory"  # the first time: the doubled cap first

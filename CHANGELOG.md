@@ -17,6 +17,8 @@ The trial intake of a big real folder in batches, continued.
 - Intake: a damaged file (a cut PDF or Office file, an archive that cannot be read, an office file LibreOffice can only
   read as raw bytes) is moved after the batch to inbox\_to_delete\damaged with its folders and its SHA-256 in the
   journal; the ledger says damaged and the summary lists them.
+- Intake: a .doc, .rtf or .odt LibreOffice cannot draw even with the doubled memory (a textbook of embedded equations)
+  is saved as .docx by LibreOffice and read from it: its text kept, the equations drawn as objects lost.
 
 ## 0.5.5 — 2026-10-29
 

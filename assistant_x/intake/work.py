@@ -284,6 +284,7 @@ def scanned(page, text, by_area=True):
     return (cover >= SCAN_COVER and chars / max(area, 1) < SCAN_DENSITY) or (chars < TEXT_PAGE and cover > 0)
 
 
+WORD_TO_DOCX = ("doc", "rtf", "odt")  # a text document LibreOffice cannot draw goes .docx first (work.prep)
 RAW_SHARE = 0.2  # share of the characters of the first pages that are no text ("#", U+FFFD, control) past which
 RAW_PAGES = 3  # a PDF LibreOffice made is the bytes of a file it could not open, read as plain text
 RAW_CHARS = re.compile(r"[#\ufffd\x00-\x08\x0b\x0c\x0e-\x1f\u02d9\u02c7]")
@@ -523,6 +524,18 @@ def prep(job: Job) -> Prep:
                 if docxtext.to_pdf(src, pdf, w / "pdf" / f"{tid}.md"):
                     return err
                 lo_why = f"{err['why']}: its text and its embedded PDFs read directly"
+            elif err and ext in WORD_TO_DOCX and (not err.get("retry") or job.get("memory_retried")):
+                # LibreOffice saves it as .docx (it only failed to draw it), read as a .docx is (trial batch b130: a
+                # textbook .doc of embedded equations past the memory cap twice: 68 pages of text from its .docx)
+                from assistant_x.intake.tools import docxtext
+
+                (w / "docx").mkdir(exist_ok=True)
+                docx = w / "docx" / f"{Path(src).stem}.docx"
+                if soffice(job, src, w / "docx", "docx", log) or not docx.exists():
+                    return err
+                if docxtext.to_pdf(docx, pdf, w / "pdf" / f"{tid}.md"):
+                    return err
+                lo_why = f"{err['why']}: saved as .docx by LibreOffice, its text and its embedded PDFs read directly"
             elif err:
                 return err
             if kind == "office" and not lo_why and raw_bytes_text(pdf):
