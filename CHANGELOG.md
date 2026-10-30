@@ -23,6 +23,9 @@ The trial intake of a big real folder in batches, continued.
   \spreadsheets when the batch is applied, "set aside" in the ledger, and the summary and the status list them as taken
   on request with how to take them (--pictures include, --web-pages include, --spreadsheets include). A folder of page
   scans is still joined into one PDF and read.
+- Intake: the check of a card line accepts a title that shares a word with the file name when it shares none with the
+  first pages: a document joined from phone photos is read badly by OCR and gets its title from its file or folder
+  name.
 
 ## 0.5.6 — 2026-10-30
 

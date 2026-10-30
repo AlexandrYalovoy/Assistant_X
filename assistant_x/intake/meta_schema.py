@@ -193,7 +193,8 @@ def text_checks(meta, texts, names=None):
     """(errors, warnings) of the document lines against the texts of their files ({tid: Markdown}; names: {tid: file
     name}): a designation must be on the first 3 pages (or in the file name; its digits are enough after OCR), the year
     should be in the text, half of the keywords in the languages of the document should be in it, and the title
-    must share a word with the first pages of a text of two pages or more (a line written for another tid)."""
+    must share a word with the first pages of a text of two pages or more, or with its file name (a line written for
+    another tid; a page photo read badly by OCR has a title from its file name)."""
     from assistant_x.core.common import split_pages
 
     errors, warnings = [], []
@@ -221,7 +222,7 @@ def text_checks(meta, texts, names=None):
             if kws and found < len(kws) / 2:
                 warnings.append(f"{tid}: {found} of {len(kws)} keywords ({lg}) occur in the text")
         title = _stems(" ".join(_texts(m.get("title"))))
-        if len(pages) >= 2 and title and not title & _stems(first):
+        if len(pages) >= 2 and title and not title & _stems(first) and not title & _stems((names or {}).get(tid, "")):
             errors.append(f"{tid}: the title shares no word with the first pages of the text: a line of another file?")
     return errors, warnings
 

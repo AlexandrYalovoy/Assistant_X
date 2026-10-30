@@ -158,3 +158,12 @@ def test_personal_only_on_request(project):
     code = json.loads((work / "codes.json").read_text(encoding="utf-8"))[t]
     assert code == "N-00002" and C.load(cfg.index / "cards" / f"{code}.json")["intake"]["personal"] is True
     assert list((cfg.library / "01_Standards").glob(f"{code}_*"))  # the same shelf and folder as every document
+
+
+def test_a_title_from_the_file_name_of_a_badly_read_photo():
+    """A passport joined from phone photos is read badly by OCR: its title (from the folder or the file name) shares
+    no word with the text, but one with the file name, and that is enough (the clean intake, 2026-10-30)."""
+    noise = "\n".join(f"=== page {i} ===\n\nae Fey ier aerial Rental фен Геля у а бе ar Poe\n" for i in (1, 2, 3))
+    meta = {"T0001": doc_line("T0001", "E", "Паспорт сосуда ГС-2 (фото страниц)", "Vessel-Passport-GS-2")}
+    assert meta_schema.text_checks(meta, {"T0001": noise}, {"T0001": "Фото страниц паспорта.pdf"})[0] == []
+    assert meta_schema.text_checks(meta, {"T0001": noise}, {"T0001": "IMG_0001.pdf"})[0]
