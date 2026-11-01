@@ -4,6 +4,22 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.10 — 2026-11-01
+
+The install of a big base package is reliable and fast: the colleague test of a real base of 30 GB found three faults.
+
+- An install interrupted midway and resumed skipped files: the resume listed again the files left to place, and the
+  indexes of the moves noted done no longer matched that list (2099 documents without their texts on a real base). The
+  list of the moves stays the one of the start now.
+- The journal of an install was written whole after each moved file: 22 660 files rewrote a journal of megabytes
+  22 660 times, about 90 GB written for a base of 30 GB. It is written every few seconds now; a resume and a rollback
+  take a move whose source is gone and whose target is there as done, so a power cut loses nothing.
+- Windows refuses to replace a file another program (an antivirus, an indexer) reads at that moment: the journal is
+  tried again for a few seconds instead of stopping the install.
+- Install-Base.bat after an interrupted install asks to continue it ("Continue it? [Y/N]") and goes on with a double
+  click, no command line; Setup.bat says so when the base stops. The answers "lf" (да in the English layout) count as
+  yes too.
+
 ## 0.5.9 — 2026-11-01
 
 The base export and install of a big library in minutes, not an hour.
