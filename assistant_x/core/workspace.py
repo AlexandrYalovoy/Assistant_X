@@ -220,12 +220,12 @@ class Workspace:
         self.index = at("index", "index")
         self.reports = at("reports", "reports")
         self.data = at("data", DATA)
-        self.db = at("db", Path(DATA) / "db")
+        self.db = at("db", self.data / "db")  # [paths] data moves the base, the batches and the journals too
         own = self.data / "models"  # models kept with the workspace (or a link to them), else those of the PC
         self.models = at("models", "") if p.get("models") else own if own.exists() else machine_dir() / "models"
-        self.packages = at("packages", Path(DATA) / "packages")  # an older offline installation: its wheels
-        self.work = at("work", Path(DATA) / "work")
-        self.debug = at("debug", Path(DATA) / "debug")
+        self.packages = at("packages", self.data / "packages")  # an older offline installation: its wheels
+        self.work = at("work", self.data / "work")
+        self.debug = at("debug", self.data / "debug")
         self.fingerprints = self.data / "fingerprints"
         self.ocr_vocab = self.data / "ocr_vocab.txt"
         self.cards = self.index / "cards"

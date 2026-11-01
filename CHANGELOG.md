@@ -70,6 +70,9 @@ The trial intake of a big real folder in batches, continued.
   name en_later now.
 - journal.md: a file taken out of the library (remove) or given another name (a "renamed" event) is no longer
   counted "in the journal but not in the manifest": 10 false alarms of a real library hid a real one.
+- [paths] data moves the base, the batches of the intake, the packages and the debug journals as its comment says
+  (before, only the models, the fingerprints and the recognition vocabulary, which the intake then wrote where the
+  recognition score did not read it).
 
 ## 0.5.6 — 2026-10-30
 

@@ -23,6 +23,19 @@ def test_data_folders_of_a_workspace(tmp_path):
     assert workspace.Workspace(tmp_path, {"db": "base"}).db == tmp_path / "base"
 
 
+def test_the_data_folder_holds_the_base_the_batches_and_the_journals(tmp_path, monkeypatch):
+    """Audit 9 I-01: [paths] data moved only the models, the fingerprints and the recognition vocabulary; the base, the
+    batches, the packages and the journals stayed in .assistant_x, and the intake wrote the vocabulary where the
+    recognition score never read it."""
+    data = (tmp_path / "mydata").resolve()
+    w = workspace.Workspace(tmp_path, {"data": "mydata"})
+    assert w.data == data and {w.db.parent, w.work.parent, w.debug.parent, w.packages.parent} == {data}
+    assert workspace.Workspace(tmp_path, {"data": "mydata", "work": "batches"}).work == tmp_path / "batches"
+    (tmp_path / "assistant_x.toml").write_text('[paths]\ndata = "mydata"\n', encoding="utf-8")
+    monkeypatch.setenv("AX_WORKSPACE", str(tmp_path))
+    assert intake_cfg.load(tmp_path / "assistant_x.toml")["ocr_vocab"] == w.ocr_vocab == data / "ocr_vocab.txt"
+
+
 def test_workspace_is_found(tmp_path, monkeypatch):
     (tmp_path / "ws" / "sub").mkdir(parents=True)
     (tmp_path / "ws" / workspace.CONFIG).write_text("", encoding="utf-8")
