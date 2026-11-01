@@ -288,6 +288,28 @@ def test_claude_code_through_its_command_line(home, monkeypatch):
     assert claude_code.connect(entry(), False)[0][1] == "unchanged"
 
 
+def test_claude_code_allows_the_reading_tools_in_advance(home, monkeypatch):
+    from assistant_x.clients import claude_code
+
+    monkeypatch.setattr(claude_code, "exe", lambda: "claude")
+    monkeypatch.setattr(claude_code, "claude", lambda *a: (0, ""))
+    p = home / ".claude" / "settings.json"
+    p.parent.mkdir()
+    p.write_text(json.dumps({"theme": "dark", "permissions": {"allow": ["Bash(git push:*)"]}}), encoding="utf-8")
+    assert claude_code.connect(entry(), False)[1][1] == "written"
+    conf = json.loads(p.read_text(encoding="utf-8"))
+    rules = conf["permissions"]["allow"]
+    assert conf["theme"] == "dark" and rules[0] == "Bash(git push:*)"
+    assert "mcp__assistant-x__search_library" in rules and "mcp__assistant-x__read_pages" in rules
+    assert not any("intake_apply" in r or "base_install" in r for r in rules)  # changes of the library stay asked
+    assert claude_code.allow(False)[1] == "unchanged"
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {"assistant-x": {"type": "stdio"}}}), encoding="utf-8")
+    claude_code.disconnect(False)
+    assert json.loads(p.read_text(encoding="utf-8"))["permissions"]["allow"] == ["Bash(git push:*)"]
+    p.write_text("[1]", encoding="utf-8")
+    assert claude_code.allow(False)[1].startswith("left alone")
+
+
 def test_skill_variants_from_one_core():
     claude, agent, guide = skill.render("general", "claude"), skill.render("general", "agent"), skill.guide("general")
     safety = (skill.TEMPLATES / "safety.md").read_text(encoding="utf-8").strip()
