@@ -85,6 +85,9 @@ def test_debug_report_quick_on_the_copy(kit):
     text = report(kit)
     for part in ("## What stands out", "## Computer", "## Self-test", "## Failure journal"):
         assert part in text
+    # the steps of the self-test run (the install of 0.5.7 from its medium: "No module named 'search'", an old name)
+    selftest = text.split("## Self-test", 1)[1].split("\n## ", 1)[0]
+    assert "No module named" not in selftest and "opening the base" in selftest, selftest[:600]
     import platform
     from assistant_x.core import debuglog
 
@@ -218,3 +221,15 @@ def test_install_json_for_an_agent(tmp_path, capsys, monkeypatch):
     assert len(out) == 1 and s["ok"] and s["dry_run"] and s["device"] == "cpu" and s["workspace"].endswith("ws")
     assert s["command"].endswith(("assistant-x.exe", "assistant-x")) and "connect --check" in " ".join(s["next"])
     assert "packages" in s["downloads"] and s["lmstudio_link"].startswith("lmstudio://")
+
+
+def test_a_new_workspace_without_a_base_is_no_finding(tmp_path):
+    """The install of 0.5.7 from its medium into a new workspace listed "No path db" among its problems: a library with
+    no document has no base yet, that is no problem; a workspace with cards and no base still is one."""
+    ws = tmp_path / "Новая библиотека"
+    (ws / "index" / "cards").mkdir(parents=True)
+    (ws / "assistant_x.toml").write_text('profile = "general"\n', encoding="utf-8")
+    findings = report(ws).split("## What stands out", 1)[1].split("\n## ", 1)[0]
+    assert "No path db" not in findings
+    (ws / "index" / "cards" / "N-00001.json").write_text("{}", encoding="utf-8")
+    assert "No path db" in report(ws).split("## What stands out", 1)[1].split("\n## ", 1)[0]

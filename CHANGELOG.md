@@ -83,6 +83,9 @@ The trial intake of a big real folder in batches, continued.
   passports were set aside photo by photo and 51 of them were joined by hand.
 - docs/LMSTUDIO.md (and its Russian twin): Assistant X with a local model in LM Studio step by step: what is needed, the
   install in three steps, how to ask, a preset for small models, what to do when it fails.
+- Setup: the self-test of the install loads the search modules again (it imported them by an old name and failed on
+  every new PC: "No module named 'search'"; its test only looked for the sections of the report), and a new workspace
+  with no document yet lists no missing base among its problems.
 
 ## 0.5.6 — 2026-10-30
 

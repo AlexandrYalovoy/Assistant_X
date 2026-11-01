@@ -5,7 +5,7 @@ Claude Desktop connection, self-test of every search layer and the failure journ
 Every section is collected on its own, so the report is written even when half of the installation is broken.
 Usage: assistant-x debug-report [--quick] [--no-open]   (--quick: skip loading the embedding models)"""
 
-import argparse, datetime, glob, hashlib, json, locale, os, platform, shutil, sys, time, traceback
+import argparse, datetime, glob, hashlib, importlib, json, locale, os, platform, shutil, sys, time, traceback
 
 from assistant_x.core import proc
 
@@ -13,6 +13,7 @@ PACKAGE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # assista
 from assistant_x.core import debuglog
 
 TEST_QUERY = "residence time of oil in a three-phase separator"
+SEARCH_MODULE = "assistant_x.search.retrieval"  # its Library is what the MCP server searches with
 PACKAGES = [
     "mcp",
     "numpy",
@@ -283,6 +284,9 @@ def installation():
                 hints.append(
                     f"{k} is not a local folder, and HF_HUB_OFFLINE=1: the model will not load without a downloaded cache."
                 )
+        elif k == "db" and not glob.glob(os.path.join(os.path.dirname(cfg.get("catalog") or ""), "cards", "*.json")):
+            # a new workspace: no document yet, so no base either; it is made by the first batch (no problem)
+            what = "not made yet: the library has no documents (assistant-x intake run, or a base package)"
         elif k == "rerank_model" and cfg.get("rerank") is not True:
             # a reranker is optional: "auto" goes without it (search.may_rerank), so it is not a finding
             what = "missing: the reranker is not part of the kit, the search works without it"
@@ -508,7 +512,7 @@ def mcp_check():
 @section("Self-test")
 def selftest(quick):
     rows, ctx = [], {}
-    if not step(rows, "loading the search modules", lambda: ctx.update(mod=__import__("search"))):
+    if not step(rows, "loading the search modules", lambda: ctx.update(mod=importlib.import_module(SEARCH_MODULE))):
         return table(rows, ("Step", "Result", "Time", "Details"))
     step(rows, "opening the base", lambda: ctx.update(lib=ctx["mod"].Library()) or f"fragments {ctx['lib']._total}")
     lib = ctx.get("lib")
