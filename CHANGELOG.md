@@ -17,6 +17,16 @@ Answers from the whole library and no question before every page.
 - The install of a base package into an empty workspace kept its assistant_x.toml whole only when a comment stood
   between [documents] and languages; with languages at once below it the two lines were joined and the install
   stopped on a TOML error.
+- Answers in the form of the assistant with a reference after every fact, also from a small local model: the guide
+  (library_guide) starts with the mandatory form (short answer, from the library, independent assessment,
+  recommendation, sources) and the rule never to answer without references; every page hit of search_library
+  carries a line "Cite: [code, p. N, PDF N]" and read_pages its references on top.
+- LM Studio: assistant-x connect lmstudio writes the preset "Assistant X" (the guide as the system prompt, thinking off),
+  picked once in a chat; disconnect removes only it. The compact search gives the 3 best fragments and the 3 best of
+  the standards and company documents (shelf N), so that a small model gets the norms without asking for them.
+- A subject the library has no document on: when the reranker is not sure of its best fragment (below 0.9; the
+  questions the library answers score 0.96-1.00) the answer of search_library starts with "Weak match", and the guide
+  says to stop after two searches that find only neighbouring subjects and to tell the user so.
 
 ## 0.5.10 — 2026-11-01
 
