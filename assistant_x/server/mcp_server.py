@@ -73,18 +73,18 @@ MISSING_TOP = 5  # the results looked at for the words of the question
 RERANK_UNSURE = 0.88  # the reranker's certainty of its best fragment below which the fragments may be only near the question ([search] rerank_unsure)
 WEAK_MATCH = (
     "Weak match ({top:.2f}): the best fragments may be only near the question, not about it. If none of them is about "
-    "its subject, tell the user first that the library has no document on it, then answer from general knowledge "
-    'marked "not from the library"; do not search on.'
+    "its subject, tell the user that the library has no document on it; do not answer from general knowledge and "
+    "do not search on."
 )
 UNSURE_MARGIN = 0.08  # above the weak threshold by less than this, the meaning search does not vouch for its results
 RERANK_WEAK = 0.3  # the reranker's certainty of its best fragment below which it agrees ([search] rerank_weak)
 LOW_CLOSENESS = (
-    "Low closeness ({close:.2f}): the library may not cover this question — say so to the user before answering from "
+    "Low closeness ({close:.2f}): the library may not cover this question — say so to the user; do not answer from "
     "general knowledge."
 )
 LOW_WORDS = (
     "Low closeness: the library has nothing on «{words}» (none of the best results has these words of the question) — "
-    "say so to the user before answering from general knowledge."
+    "say so to the user; do not answer from general knowledge."
 )
 NO_DENSE = (
     'Found by words only: {why}. The failure was logged; run "assistant-x doctor", and if that does not help, '

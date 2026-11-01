@@ -86,16 +86,17 @@ WEAK_MARK = "Weak match ("  # the note of search_library when the reranker is no
 WEAK_LIMIT = 3  # weak searches in a row after which the compact bridge stops a small model searching on
 WEAK_STOP = (
     "STOP. The library has no document on this topic. Do not search again. Answer the user now, in the user's "
-    'language: "The library has no documents on this question", and suggest rephrasing the question; anything from '
-    'general knowledge only marked "not from the library".'
+    'language: "The library has no documents on this question", and suggest rephrasing the question. Do not answer '
+    "from general knowledge."
 )
 
 
 FORM_HINT = (
-    "Answer form (mandatory), in the user's language: 1) short answer; 2) from the library: every fact with its "
-    "reference right after it, as the Cite: line gives it, e.g. [N-00390, PDF 131]; 3) independent assessment, marked "
-    "not from the library; 4) recommendation (a calculation in SI for a design question); 5) sources: code, title, "
-    "pages. Never answer without references."
+    "Answer form (mandatory), in the user's language, only from the library: 1) short answer; 2) requirements from "
+    "the library, standards (GOST) first, then company documents (TTR, STO), then books: every fact with its reference "
+    "right after it, as the Cite: line gives it, e.g. [N-00001, PDF 36], numbers with their quote; 3) engineering "
+    "procedure from the documents found only; 4) what the library lacks; 5) sources: code, title, pages. No knowledge "
+    "from outside the library; never answer without references."
 )
 
 
