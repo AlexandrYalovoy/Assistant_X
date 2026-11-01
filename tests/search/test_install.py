@@ -230,7 +230,7 @@ def test_a_new_workspace_without_a_base_is_no_finding(tmp_path):
     (ws / "index" / "cards").mkdir(parents=True)
     (ws / "assistant_x.toml").write_text('profile = "general"\n', encoding="utf-8")
     findings = report(ws).split("## What stands out", 1)[1].split("\n## ", 1)[0]
-    assert "No path db" not in findings
+    assert "No path db" not in findings and "failed" not in findings, findings  # the self-test opens no base either
     (ws / "index" / "cards" / "N-00001.json").write_text("{}", encoding="utf-8")
     assert "No path db" in report(ws).split("## What stands out", 1)[1].split("\n## ", 1)[0]
 

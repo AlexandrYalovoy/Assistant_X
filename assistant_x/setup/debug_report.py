@@ -284,7 +284,7 @@ def installation():
                 hints.append(
                     f"{k} is not a local folder, and HF_HUB_OFFLINE=1: the model will not load without a downloaded cache."
                 )
-        elif k == "db" and not glob.glob(os.path.join(os.path.dirname(cfg.get("catalog") or ""), "cards", "*.json")):
+        elif k == "db" and no_documents_yet(cfg):
             # a new workspace: no document yet, so no base either; it is made by the first batch (no problem)
             what = "not made yet: the library has no documents (assistant-x intake run, or a base package)"
         elif k == "rerank_model" and cfg.get("rerank") is not True:
@@ -509,12 +509,23 @@ def mcp_check():
     return asyncio.run(asyncio.wait_for(go(), 180))
 
 
+def no_documents_yet(cfg=None):
+    """True for a new workspace: no card yet, so no search base either (made by the first batch or a package)."""
+    from assistant_x.core.common import load_config
+
+    cfg = cfg or load_config()
+    return not glob.glob(os.path.join(os.path.dirname(cfg.get("catalog") or ""), "cards", "*.json"))
+
+
 @section("Self-test")
 def selftest(quick):
     rows, ctx = [], {}
     if not step(rows, "loading the search modules", lambda: ctx.update(mod=importlib.import_module(SEARCH_MODULE))):
         return table(rows, ("Step", "Result", "Time", "Details"))
-    step(rows, "opening the base", lambda: ctx.update(lib=ctx["mod"].Library()) or f"fragments {ctx['lib']._total}")
+    if not no_documents_yet():
+        step(rows, "opening the base", lambda: ctx.update(lib=ctx["mod"].Library()) or f"fragments {ctx['lib']._total}")
+    else:  # a new workspace: no document, so no base to open yet (no failure)
+        rows.append(("opening the base", "skipped", "", "the library has no documents yet (assistant-x intake run)"))
     lib = ctx.get("lib")
     if lib:
         step(
