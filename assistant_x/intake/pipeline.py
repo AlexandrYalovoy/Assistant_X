@@ -35,7 +35,7 @@ from assistant_x.intake.tools import unpack  # noqa: F401 — re-exported for th
 
 def cmd_run(cfg, a):
     work = work_dir(cfg, a.work, new=not getattr(a, "resume", False))  # --resume: the latest batch, its done files stay
-    for key in ("spreadsheets", "pictures", "web_pages"):  # this batch only
+    for key in ("spreadsheets", "pictures", "web_pages", "order"):  # this batch only
         if getattr(a, key, None):
             cfg[key] = getattr(a, key)
     if not cfg.inbox.is_dir():
@@ -64,7 +64,21 @@ def cmd_run(cfg, a):
     state.set_meta("problems", state.get_meta("problems", []) + problems)
     moved = [[e[1].removeprefix("inbox\\").replace("\\", "/"), e[2], e[6]] for e in events]  # for the ledger
     state.set_meta("moved", state.get_meta("moved", []) + moved)
-    n = register(cfg, state)
+    only = None
+    if cfg.get("order", "all") == "cost":  # the fast files first, then the medium ones, then a few slow ones a run
+        from assistant_x.intake import order
+
+        new = [(full, rel) for full, rel in walk(cfg.inbox) if state.by_rel(rel) is None]
+        chosen, took, left = order.pick(new, cfg)
+        only = {rel for _, rel in chosen}
+        state.set_meta("order", {"took": took, "left": left})
+        if left:
+            say(
+                f"Order by cost: this batch takes the {took} files ({len(chosen)}); left in inbox for the next batches: "
+                + ", ".join(f"{c} {k}" for c, k in left.items())
+                + " (intake run --order all takes everything)"
+            )
+    n = register(cfg, state, only)
     say(f"New files: {n}; preparation: {dict(counts) or 'nothing to do'}")
     workers = cfg.workers if a.workers is None else a.workers
     state.set_meta("started", time.time())  # the estimate of the time left counts from here (intake status)
@@ -213,6 +227,12 @@ def main(argv=None):
                 choices=("reject", "skip", "include"),
                 help="this batch only: set the spreadsheets aside to _rejected (reject), hold them in inbox (skip) or "
                 "read them (include); [intake] spreadsheets",
+            )
+            p.add_argument(
+                "--order",
+                choices=("cost", "all"),
+                help="this batch only: take the fast files first, then the medium, then a few slow ones a run (cost), "
+                "or everything at once (all); [intake] order",
             )
             for opt, what in (("pictures", "loose pictures and photos"), ("web-pages", "web pages (htm, html)")):
                 p.add_argument(

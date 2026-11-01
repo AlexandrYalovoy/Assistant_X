@@ -779,10 +779,13 @@ class Batch:
             say(f"  {tid}: the card draft was not written now ({type(e).__name__}: {e}); it comes at the end")
 
 
-def register(cfg, state):
-    """Files of inbox into the state (a file seen before keeps its tid and status)."""
+def register(cfg, state, only=None):
+    """Files of inbox into the state (a file seen before keeps its tid and status); only: the names (rel) a batch by
+    cost takes (intake/order.py), the others stay in inbox for the next batch."""
     n = 0
     for full, rel in walk(cfg.inbox):
+        if only is not None and rel not in only and state.by_rel(rel) is None:
+            continue
         if state.by_rel(rel) is None:
             state.add(rel, os.path.getsize(full))
             n += 1

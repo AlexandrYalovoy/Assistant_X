@@ -37,6 +37,10 @@ The trial intake of a big real folder in batches, continued.
   the intake places it from a meta line {tid, attach, what}, and remove, base export and install (new codes too) and
   assistant-x check take it with the document. assistant-x check also warns of a file of the library that no card
   names.
+- Intake: the batches of a big inbox go by cost by default ([intake] order = "cost"): a run takes the fast files (a
+  PDF with a text layer, office files, text), the next one the medium ones (a scan of up to 100 pages, a .chm), then
+  the slow ones (DjVu, a longer scan) [intake] slow_batch at a time; the other files wait in inbox untouched and the
+  summary counts them. order = "all" (or intake run --order all) takes everything at once as before.
 
 ## 0.5.6 — 2026-10-30
 

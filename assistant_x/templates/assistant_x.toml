@@ -34,13 +34,19 @@ profile = "general"
 
 [intake]
 # workers = 16
-# profile = "auto"                 # load of the PC: "auto" | "weak" | "night"
+# profile = "auto"                 # load of the PC: "auto" | "weak" | "day" | "night"
 # priority = "below_normal"        # "below_normal" | "idle" | "normal"
 # affinity = "auto"                # "auto" | "ecores" | "all" | "8,9,10"
 # ocr_threads = 2
 # worker_memory_mb = 3072
 # personal = false                 # true: every batch is marked personal; by default your documents go onto the same
 #                                   shelves as an installed base package, as if you had filled it yourself
+# spreadsheets = "reject"          # "reject" (set aside to inbox\_rejected) | "skip" (left in inbox) | "include" (read)
+# pictures = "reject"              # loose pictures and photos: "reject" | "include"; a folder of page scans is read
+# web_pages = "reject"             # htm, html: "reject" | "include"
+# order = "cost"                   # "cost": a run takes the fast files, then the medium, then slow_batch slow ones;
+#                                   "all": everything at once
+# slow_batch = 12                  # DjVu and long scans a run takes at most with order = "cost"
 
 # [intake.disk]
 # factor = 3

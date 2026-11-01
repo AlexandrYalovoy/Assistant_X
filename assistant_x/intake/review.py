@@ -91,6 +91,15 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"damaged (moved to _to_delete\\damaged) {len(damaged)}, "
         f"errors {c['error']}, still queued {c['queued'] + c['running']}"
         + (f", moved into the library {went['done']}" if went["done"] else ""),
+        *(
+            [
+                f"- Order by cost: this batch took the {o['took']} files; left in inbox for the next batches: "
+                + ", ".join(f"{c} {n}" for c, n in o["left"].items())
+                + " (intake run again; --order all takes everything)"
+            ]
+            if (o := state.get_meta("order") or {}).get("left")
+            else []
+        ),
         f"- Preparing the folder: archives unpacked {prep_counts.get('archives', 0)} (files from them {prep_counts.get('archive_files', 0)}), "
         f"not unpacked {prep_counts.get('archive_failed', 0)}; letters {prep_counts.get('letters', 0)} (their "
         f"attachments taken out {prep_counts.get('letter_files', 0)}) to delete, archives with a password "

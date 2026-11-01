@@ -57,6 +57,10 @@ INTAKE = {
     "spreadsheets": "reject",
     "pictures": "reject",
     "web_pages": "reject",
+    # the batches of a big inbox by cost (intake/order.py, the author, 2026-10-31): "cost" takes the fast files first,
+    # then the medium ones, then slow_batch slow ones a run; "all" takes everything at once
+    "order": "cost",
+    "slow_batch": 12,
     # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
     # without a text layer are then read from their images)
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},

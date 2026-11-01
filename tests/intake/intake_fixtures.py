@@ -195,6 +195,7 @@ def make_project(root, soffice=None):
             "priority": "normal",
             "affinity": "all",
             "regulate": False,
+            "order": "all",  # every file of the small inbox in one batch; the order by cost: tests/intake/test_order.py
             "timeouts": {"soffice": 300, "hidden": 300, "convert": 900, "unpack": 300},
         },
     }

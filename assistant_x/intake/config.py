@@ -105,8 +105,14 @@ def load(path=None):
         cfg[key] = str(raw.get(key) or default[key])
         if cfg[key] not in TAKE_ON_REQUEST:
             sys.exit(f"{path}: {key} {cfg[key]!r}, one of these is needed: {', '.join(TAKE_ON_REQUEST)}")
-    from assistant_x.intake import schedule
+    from assistant_x.intake import order, schedule
 
+    cfg["order"] = str(raw.get("order") or default["order"])
+    if cfg["order"] not in order.ORDERS:
+        sys.exit(f"{path}: order {cfg['order']!r}, one of these is needed: {', '.join(order.ORDERS)}")
+    cfg["slow_batch"] = int(raw.get("slow_batch") or default["slow_batch"])
+    if cfg["slow_batch"] < 1:
+        sys.exit(f"{path}: slow_batch {cfg['slow_batch']}: a whole number of files from 1")
     cfg["ocr_shards"] = str(raw.get("ocr_shards") or default["ocr_shards"])
     if cfg["ocr_shards"] not in schedule.SHARD_MODES:
         sys.exit(f"{path}: ocr_shards {cfg['ocr_shards']!r}, one of these is needed: {', '.join(schedule.SHARD_MODES)}")
