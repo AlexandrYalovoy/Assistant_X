@@ -90,7 +90,7 @@ def series_file(b, name, lib_name):
 
 def test_another_drawing_of_a_series_stays_suspect(batch):
     b, _ = batch
-    tid = series_file(b, "ГПН-ТПР.КПНС.С-П.2022-ТПР-ЭМ.03.01-ГЧ02.pdf", "ГПН-ТПР.КПНС.С-П.2022-ТПР-ЭМ.03.01-ГЧ01.pdf")
+    tid = series_file(b, "АБВ-ТПР.ОБЪ.2022-ТПР-ЭМ.03.01-ГЧ02.pdf", "АБВ-ТПР.ОБЪ.2022-ТПР-ЭМ.03.01-ГЧ01.pdf")
     cand = candidate(b, tid, 0.96, "НЕФТЬ Общие технические условия", 20)
     upd = b.dup_verdict(tid, b.state.get(tid), cand)
     assert upd.get("status") != "dup" and upd["suspect"] == "N-00005"

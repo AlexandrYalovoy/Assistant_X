@@ -311,7 +311,7 @@ def test_the_title_block_of_a_big_drawing_sheet_is_read_at_300_dpi(tmp_path, mon
     def recognise(png, dpi, language, tmp, tag, psm=None):
         seen.append((tag, dpi))
         text = (
-            "Изм Лист Разраб Иванов ГПН-ТПР-ИП.02.05.03-ГЧ-001 Схема генерального плана"
+            "Изм Лист Разраб Иванов АБВ-ТПР-ИП.02.05.03-ГЧ-001 Схема генерального плана"
             if tag == "stamp"
             else "aeq xzqv qqvh zzkr wqx jjq vvqz"
         )

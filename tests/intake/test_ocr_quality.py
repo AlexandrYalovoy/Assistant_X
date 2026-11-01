@@ -129,7 +129,7 @@ def test_words_put_on_the_page_keep_their_gaps():
 def test_lost_words_take_the_plain_text():
     from assistant_x.intake.tools import convert_md
 
-    rec = convert_md.words("Год Наименование заказчика КТК Новатек Роснефть приводы редукторы " * 5)
+    rec = convert_md.words("Год Наименование заказчика АБВ Северная Южная приводы редукторы " * 5)
     assert convert_md.kept(rec, convert_md.words("Референс")) < ocr_page.LOST_SHARE
     assert convert_md.kept(rec, rec) == 1.0
 
