@@ -580,3 +580,21 @@ def test_the_installer_refuses_a_medium_it_cannot_check(tmp_path, monkeypatch):
         cmd + ["--allow-unverified"], capture_output=True, text=True, encoding="utf-8", env=env, cwd=CODE, timeout=300
     )
     assert "WARNING, not checked" in p.stdout and "cannot be checked" not in p.stdout
+
+
+def test_the_models_on_a_medium_carry_their_licenses(tmp_path):
+    """Audit 9 S-05: the medium said the models carry their own LICENSE files; they carry none (a README with the license
+    name only, the ONNX exports nothing), and MIT and Apache-2.0 ask for the text with every copy."""
+    from assistant_x.setup import prepare_media as PM
+
+    for d in ("bge-m3", "bge-reranker-v2-m3", "onnx/bge-m3"):
+        (tmp_path / d).mkdir(parents=True)
+    paths = PM.model_licenses(str(tmp_path))
+    texts = {os.path.basename(p): open(p, encoding="utf-8").read() for p in paths}
+    assert set(texts) == {"bge-m3.LICENSE.txt", "bge-reranker-v2-m3.LICENSE.txt"}
+    assert "MIT License" in texts["bge-m3.LICENSE.txt"] and "BAAI" in texts["bge-m3.LICENSE.txt"]
+    assert (
+        "Apache License" in texts["bge-reranker-v2-m3.LICENSE.txt"]
+        and "TERMS AND CONDITIONS" in texts["bge-reranker-v2-m3.LICENSE.txt"]
+    )
+    assert PM.model_licenses(str(tmp_path / "none")) == []

@@ -73,6 +73,9 @@ The trial intake of a big real folder in batches, continued.
 - [paths] data moves the base, the batches of the intake, the packages and the debug journals as its comment says
   (before, only the models, the fingerprints and the recognition vocabulary, which the intake then wrote where the
   recognition score did not read it).
+- prepare-media puts the license texts of the models on the medium (models\LICENSES: bge-m3 MIT, bge-reranker-v2-m3
+  Apache-2.0), prepare-media --check misses none, and THIRD_PARTY_LICENSES names the license of the Python installer;
+  before, the medium said the models carried their own license files, which they do not.
 
 ## 0.5.6 — 2026-10-30
 

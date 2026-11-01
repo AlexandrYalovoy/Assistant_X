@@ -110,6 +110,70 @@ def license_texts(dist):
     return out
 
 
+MIT = """MIT License
+
+Copyright (c) {holder}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+# the models a medium carries: (license, the page of the model, the holder); the model card names the license, the
+# repository of the model holds no LICENSE file, so the medium carries the text (the licenses ask for it with a copy)
+MODEL_LICENSES = {
+    "bge-m3": ("MIT", "https://huggingface.co/BAAI/bge-m3", "Beijing Academy of Artificial Intelligence (BAAI)"),
+    "bge-reranker-v2-m3": (
+        "Apache-2.0",
+        "https://huggingface.co/BAAI/bge-reranker-v2-m3",
+        "Beijing Academy of Artificial Intelligence (BAAI)",
+    ),
+}
+APACHE_FROM = ("transformers", "sentence-transformers", "huggingface-hub")  # installed packages that ship its full text
+
+
+def apache_text():
+    """The full text of the Apache License 2.0, from the license file of an installed package under it."""
+    for name in APACHE_FROM:
+        try:
+            dist = metadata.distribution(name)
+        except metadata.PackageNotFoundError:
+            continue
+        for _, text in license_texts(dist):
+            if "Apache License" in text and "Version 2.0" in text and "TERMS AND CONDITIONS" in text:
+                return text
+    return None
+
+
+def model_licenses(models):
+    """models\\LICENSES\\<model>.LICENSE.txt for every model of MODEL_LICENSES on the medium (its folder or its ONNX
+    export): the license, the page of the model and the full text; the paths written. SystemExit when the text of a
+    license cannot be found: a medium never carries a model without it."""
+    out, folder = [], os.path.join(models, "LICENSES")
+    for name, (lic, page, holder) in MODEL_LICENSES.items():
+        here = [p for p in (os.path.join(models, name), os.path.join(models, "onnx", name)) if os.path.isdir(p)]
+        if not here:
+            continue
+        text = MIT.format(holder=holder) if lic == "MIT" else apache_text()
+        if not text:
+            raise SystemExit(f"No text of the {lic} license here (install {APACHE_FROM[0]}): {name} not put on a medium")
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f"{name}.LICENSE.txt")
+        head = f"The model {name} ({page}), in models\\{name} and its ONNX export: {lic}.\n\n"
+        with open(path, "w", encoding="utf-8", newline="\r\n") as f:
+            f.write(head + text)
+        out.append(path)
+    return out
+
+
 def third_party(pins, torch, extra=()):
     """THIRD_PARTY_LICENSES.txt of the media: every package with its version, license, license texts and, for the
     AGPL packages, where their source code is; extra: "name==version" of more packages on the medium (the builds of
@@ -123,7 +187,9 @@ def third_party(pins, torch, extra=()):
         "The programs of the intake (Tesseract-OCR, LibreOffice, 7-Zip, DjVuLibre) are in programs/VERSIONS.txt,",
         "each with its license and where its source code is; the source archives of DjVuLibre (GPL-2.0-or-later)",
         f"and 7-Zip (LGPL-2.1) are in programs/{M.SOURCES_DIR}/. " + M.VC_RUNTIME,
-        "The models carry their own LICENSE files. Assistant X itself: LICENSE and NOTICE of its folder.",
+        "The licenses of the models (bge-m3: MIT, bge-reranker-v2-m3: Apache-2.0): models/LICENSES/. The Python",
+        "installer in packages/ is under the PSF License 2.0 (https://docs.python.org/3/license.html).",
+        "Assistant X itself: LICENSE and NOTICE of its folder.",
         "",
     ]
     for name in names:
@@ -390,6 +456,8 @@ def medium(out, models=None, download=False, no_models=False, programs=False, ba
             if os.path.isdir(os.path.join(src, name)) and copy_tree(os.path.join(src, name), os.path.join(dst, name)):
                 print(f"  {name}")
     if os.path.isdir(dst):
+        for p in model_licenses(dst):
+            print(f"  {p}")
         if not os.path.exists(os.path.join(dst, *ML.ONNX_EMBEDDER)):
             print(
                 f"  no {os.path.join(ML.MODELS_DIR, *ML.ONNX_EMBEDDER)}: a PC with an AMD or Intel card searches on the "
@@ -508,6 +576,10 @@ def check(out):
             problems += [f"models/{p}" for p in D.check(models, data)]
         except (OSError, ValueError):
             problems.append(f"models/{D.MANIFEST}: missing or not readable")
+        for name in MODEL_LICENSES:  # a model goes nowhere without the text of its license
+            there = any(os.path.isdir(os.path.join(models, *p)) for p in ((name,), ("onnx", name)))
+            if there and not os.path.isfile(os.path.join(models, "LICENSES", f"{name}.LICENSE.txt")):
+                problems.append(f"models/LICENSES/{name}.LICENSE.txt: missing (the license of the model)")
     programs = os.path.join(out, ML.PROGRAMS_DIR)
     if os.path.isdir(programs):
         problems += [f"programs: {p}" for p in downloads.check_sums(programs)]
