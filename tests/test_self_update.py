@@ -94,6 +94,8 @@ def test_a_good_update_keeps_the_old_environment(monkeypatch, tmp_path):
     monkeypatch.setattr(U, "doctor", lambda py, dry: True)
     assert U.update("https://github.com/o/r", old_py=str(tmp_path / "venv" / "Scripts" / "python.exe")) == 0
     assert (workspace.machine_dir() / "venv-9.9.9").is_dir()
+    # the python in use for Install-Base.bat and Update.bat: the new environment
+    assert (workspace.machine_dir() / "python.txt").read_text(encoding="utf-8").strip() == "NEW-PY"
 
 
 def test_update_from_goes_to_the_update_of_the_program(monkeypatch):

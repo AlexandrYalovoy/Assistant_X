@@ -185,6 +185,8 @@ def update(url, dry=False, force=False, old_py=None):
         reconnect(old_py, dry)
         shutil.rmtree(new_dir, ignore_errors=True)
         return 1
+    with open(os.path.join(str(machine), "python.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(new_py + "\n")  # the python of the program in use: Install-Base.bat and Update.bat start it
     say(f"Updated to {rel['version']}: {new_py}. Restart the apps (Claude, Codex, LM Studio …) to use it.")
     say(f"The old environment stays for a return: {os.path.dirname(os.path.dirname(old_py))}")
     return 0

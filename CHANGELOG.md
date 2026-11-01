@@ -4,6 +4,20 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.8 — 2026-11-01
+
+A base installed without a command line, for a colleague who has LM Studio only.
+
+- Setup.bat offers at its end a base package (a .axbase file) beside it or in its base folder, with its title and
+  its count of documents ("Install it? [Y/N]"); with none, the Windows window "Open a file" asks for one, Cancel goes
+  on without a base. With --yes it asks nothing and opens no window (an agent gives the package with --base).
+- Install-Base.bat installs a base later with a double click: the file beside it or one chosen in the window "Open a
+  file", the plan of the installation, one confirmation, "Base installed: N documents".
+- Update.bat takes the latest release with a double click (assistant-x update --from the page of the project).
+- The two find the program in use after an update too (python.txt of the machine folder, written by Setup.bat and
+  by the update); the messages follow the language of Windows (English, Russian).
+- docs/LMSTUDIO, README and INSTALL_FOR_AI describe the program as one archive and the base as a separate file.
+
 ## 0.5.7 — 2026-11-01
 
 The release for colleagues after the trial intake of a big real folder and a full audit: the intake by cost,

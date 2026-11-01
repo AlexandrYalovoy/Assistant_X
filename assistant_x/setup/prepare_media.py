@@ -266,6 +266,9 @@ def build_python():
     return sys.executable
 
 
+TOP_BATS = ("Setup.bat", "Install-Base.bat", "Update.bat")  # at the top of a medium, beside app
+
+
 def app_files(code):
     """The files of the program for a medium: the ones under Git (the tests aside), else every file but the
     environment, the build folders and the private notes."""
@@ -319,7 +322,8 @@ def readme(out, cuda, dml):
         "Assistant X — installation medium",
         "",
         "Setup.bat (a double click) installs the program into %USERPROFILE%\\.assistant_x and connects it to Claude.",
-        "Setup.bat --base base\\<package>.axbase also installs a base package.",
+        "A base package: put its .axbase file beside Setup.bat (Setup.bat offers it at its end, else asks for one in",
+        "a dialog), or double-click Install-Base.bat later. Setup.bat --base FILE installs it without a question.",
         "",
         "The search runs on:",
         f"  - an NVIDIA video card with driver {install.MIN_DRIVER} or newer: torch for CUDA "
@@ -437,8 +441,9 @@ def medium(out, models=None, download=False, no_models=False, programs=False, ba
         dst = os.path.join(app, *f.split("/"))
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(os.path.join(CODE, *f.split("/")), dst)
-    shutil.copy2(os.path.join(CODE, "Setup.bat"), os.path.join(out, "Setup.bat"))
-    print(f"  {app}, {os.path.join(out, 'Setup.bat')}")
+    for bat in TOP_BATS:  # the double clicks of the medium: the install, a base package, an update
+        shutil.copy2(os.path.join(CODE, bat), os.path.join(out, bat))
+    print(f"  {app}, {', '.join(os.path.join(out, b) for b in TOP_BATS)}")
     dst = os.path.join(out, ML.MODELS_DIR)
     if download:
         print("\n6. The models (downloading)")
@@ -514,6 +519,9 @@ def check(out):
             rel = os.path.relpath(os.path.join(dp, n), app)
             if rel not in want and "__pycache__" not in rel:
                 problems.append(f"app/{rel.replace(os.sep, '/')}: not a file of this code")
+    for bat in TOP_BATS[1:]:
+        if not os.path.isfile(os.path.join(out, bat)) or not _same(os.path.join(out, bat), os.path.join(CODE, bat)):
+            problems.append(f"{bat}: missing or not the one of this code")
     if not os.path.isfile(os.path.join(out, "Setup.bat")) or not _same(
         os.path.join(out, "Setup.bat"), os.path.join(CODE, "Setup.bat")
     ):

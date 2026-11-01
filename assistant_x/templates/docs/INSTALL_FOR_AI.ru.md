@@ -69,6 +69,8 @@ py -3.11 -m assistant_x.setup.install --online --yes --json [--workspace "D:\My 
 
 `<command> base inspect FILE` показывает, что в пакете, и вопросы; покажите их пользователю. Только после его явного
 «да»: `<command> base install FILE --confirm` (с `--keep own|package`, если проверка спросила, чьи шифры сохранять).
+Setup.bat с `--yes` ничего не спрашивает и не открывает окон, поэтому пакет передайте ему через `--base FILE`;
+человек без агента дважды щёлкает `Setup.bat` (он предлагает `.axbase`, лежащий рядом) или позже `Install-Base.bat`.
 
 ## 8. Расскажите пользователю, как пользоваться
 

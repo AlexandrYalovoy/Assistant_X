@@ -40,6 +40,7 @@ PACKAGE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # assista
 CODE = os.path.dirname(PACKAGE)  # the folder with pyproject.toml
 LOCAL = str(workspace.machine_dir())
 SERVER = "assistant-x"
+CURRENT_PYTHON = "python.txt"  # in the machine folder: the python of the program in use (the .bat files read it)
 IMPORTS = (
     "import mcp, numpy, snowballstemmer, pymupdf, sentence_transformers, pymupdf4llm, onnxruntime, psutil, torch; "
     "print('torch=' + torch.__version__)"
@@ -633,6 +634,20 @@ def copy_programs(dry):
             shutil.copy2(s, d)
 
 
+def remember_python(py):
+    """The python of the program in use, in python.txt of the machine folder (setup/self_update.py writes it too)."""
+    with open(os.path.join(LOCAL, CURRENT_PYTHON), "w", encoding="utf-8", newline="\n") as f:
+        f.write(py + "\n")
+
+
+def pick_base():
+    r"""A base package without --base (setup/base_pick.py): a .axbase beside Setup.bat or in its base\ folder, offered
+    with its title and count of documents; with none, the dialog "Open a file" (no window with --yes)."""
+    from assistant_x.setup import base_pick
+
+    return base_pick.choose([P.MEDIUM or CODE], ask=ask, yes=YES, say=say)
+
+
 def install_base(py, path, keep, dry):
     """A base package right after the installation (--base): assistant-x base install --confirm."""
     cmd = [py, "-m", "assistant_x.base.cli", "install", os.path.abspath(path), "--confirm"] + (
@@ -1027,6 +1042,8 @@ def main():
         say(f"2. Environment: {vdir}")
         py = make_venv(vdir, dry)
         summary.update(python=py, command=command_of(py))
+        if not a.venv and not dry:  # the python of the program: Install-Base.bat and Update.bat start it
+            remember_python(py)
         say("3. Workspace and models")  # the models first: the device may need their ONNX export (DirectML)
         problems += check_workspace(dry)
         problems += copy_models(dry)
@@ -1049,9 +1066,10 @@ def main():
             register_others(py, dry)
         say("9. Self-test")
         problems += self_check(py, dry)
-        if a.base:
+        base = a.base or (None if dry else pick_base())
+        if base:
             say("10. Base package")
-            problems += install_base(py, a.base, a.keep, dry)
+            problems += install_base(py, base, a.keep, dry)
     except Stop as e:
         say(f"\nInstallation stopped: {e}")
         return report(summary, problems, device, error=str(e))

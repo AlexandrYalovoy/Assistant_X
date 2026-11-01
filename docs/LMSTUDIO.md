@@ -14,21 +14,25 @@ library: it searches, reads the pages and cites the document and the page.
 - Memory for the model: about 8 GB of RAM or video memory for a model of 8 billion parameters in 4 bits, more for a
   larger one, besides the memory of the search of the library.
 
-## Install in three steps
+## Install without a command line
+
+The program comes as one archive (`AssistantX_<version>_setup.zip`), a base of documents, when you have one, as a
+separate file (`<name>.axbase`).
 
 1. Install LM Studio and download the model in it first (then the installer finds LM Studio).
-2. Run `Setup.bat` of the medium (a double-click). It installs the program and the models of the search, makes the
-   library `Documents\Assistant X` and writes the library into the settings of LM Studio (`~/.lmstudio/mcp.json`): the
-   8 reading tools with short answers, made for small local models. When it does not find LM Studio, the summary at
-   its end gives a link "Add to LM Studio" instead.
-3. Open LM Studio, start a chat with the model and turn on the server `assistant-x` among its tools (integrations).
-   When LM Studio was installed after Assistant X, run in a terminal
+2. Unpack the archive of the program into a folder. When you have a base, put its `.axbase` file into the same folder,
+   beside `Setup.bat`.
+3. Double-click `Setup.bat`. It installs the program and the models of the search, makes the library
+   `Documents\Assistant X` and writes the library into the settings of LM Studio (`~/.lmstudio/mcp.json`): the 8 reading
+   tools with short answers, made for small local models. At its end it names the base beside it ("A base package was
+   found: ... Install it? [Y/N]"): answer Y. With no base beside it, the Windows window "Open a file" asks for one:
+   choose the `.axbase` file, or press Cancel to go on without a base.
+4. Open LM Studio, start a chat with the model and turn on the server `assistant-x` among its tools (integrations).
 
-   ```
-   assistant-x connect lmstudio --link
-   ```
-
-   and open the link it prints: LM Studio asks to add the server.
+A base you get later: double-click `Install-Base.bat` in the folder of the program (the window "Open a file" asks for
+the file, or it takes the one beside it); it shows what it installs, asks once and ends with "Base installed: N
+documents". LM Studio installed after Assistant X: double-click `Setup.bat` once more, it connects the apps it finds.
+A new version: double-click `Update.bat` (the latest release from GitHub; the library stays as it is).
 
 ## Ask
 

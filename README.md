@@ -33,7 +33,7 @@ students, doctors, lawyers, economists.
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
-Version 0.5.7 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+Version 0.5.8 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
 [License](#license)) · Author: Alexandr Yalovoy. What comes next: [`ROADMAP.md`](ROADMAP.md).
 
 ## Features in detail
@@ -203,8 +203,11 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
    self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` with `MODELS.json`, `programs\`) everything of the program goes to
    `%USERPROFILE%\.assistant_x` — `app\<version>`, the environment `venv`, the models (checked against `MODELS.json`),
-   the programs of the intake — and the workspace holds your data only; `Setup.bat --base E:\base\x.axbase` installs
-   a base package right after. Another folder or the oil-and-gas profile: `Setup.bat --workspace "D:\My library"
+   the programs of the intake — and the workspace holds your data only; a base package (a `.axbase` file) beside `Setup.bat`
+   is offered at its end, else the window "Open a file" asks for one (Cancel goes on without a base);
+   [`Install-Base.bat`](Install-Base.bat) installs one later and [`Update.bat`](Update.bat) takes the latest release,
+   each with a double click ([docs/LMSTUDIO.md](docs/LMSTUDIO.md)); `Setup.bat --base E:\base\x.axbase` installs it
+   with no question. Another folder or the oil-and-gas profile: `Setup.bat --workspace "D:\My library"
    --profile oil-gas-ru`. From a folder of the code (a development checkout) it uses `.venv` beside it; then
    `assistant-x.bat download-models` downloads the models (≈ 4.5 GB) into `%USERPROFILE%\.assistant_x\models`;
    without them the search is by words. The PC folder `%USERPROFILE%\.assistant_x` (program, models, programs of the

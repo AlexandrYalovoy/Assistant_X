@@ -70,6 +70,8 @@ Skills.
 
 `<command> base inspect FILE` shows what it holds and the questions; show them to the user. Only after their explicit
 yes: `<command> base install FILE --confirm` (with `--keep own|package` when the inspect asked who keeps the codes).
+Setup.bat with `--yes` asks nothing and opens no window, so give the package to it with `--base FILE`; a person
+without an agent double-clicks `Setup.bat` (it offers a `.axbase` beside it) or `Install-Base.bat` later.
 
 ## 8. Tell the user how to use it
 

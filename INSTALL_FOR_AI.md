@@ -7,7 +7,7 @@ English | [Русский](INSTALL_FOR_AI.ru.md)
 You are an agent (Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked you to
 install or connect **Assistant X**: a local library of the user's documents (PDF, DOC/DOCX, PPTX, scans) with search by
 words and by meaning, served to AI apps over MCP. Follow these steps in order. Run every command only after the user
-agreed to it; say in one line what each one does. These instructions are of version 0.5.7; always install the
+agreed to it; say in one line what each one does. These instructions are of version 0.5.8; always install the
 **latest release**: https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## 1. Tell the user what will happen, and ask
@@ -70,6 +70,8 @@ Skills.
 
 `<command> base inspect FILE` shows what it holds and the questions; show them to the user. Only after their explicit
 yes: `<command> base install FILE --confirm` (with `--keep own|package` when the inspect asked who keeps the codes).
+Setup.bat with `--yes` asks nothing and opens no window, so give the package to it with `--base FILE`; a person
+without an agent double-clicks `Setup.bat` (it offers a `.axbase` beside it) or `Install-Base.bat` later.
 
 ## 8. Tell the user how to use it
 
