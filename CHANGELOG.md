@@ -62,6 +62,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: an archive (with its nested ones) of more than [intake.unpack] max_files files (20 000) is refused like one
   past its size, and two members whose names differ only in case are both kept (the second as name_2); before, a
   small zip of 20 000 empty files gave 20 000 files of the batch, and Windows kept one of the two names.
+- Intake: intake_card names every field of the card from the schema, adopts, amends and page_offset among them:
+  they were left out, so the drafts had them and no card did (a national standard was not found by the foreign one
+  it adopts).
 
 ## 0.5.6 — 2026-10-30
 

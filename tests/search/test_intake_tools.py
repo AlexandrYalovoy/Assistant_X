@@ -258,6 +258,22 @@ def test_reindex_asks_before_the_processor(monkeypatch):
     assert "on the processor" in intake_tools.reindex(cpu=True) and seen[0][-1] == "--cpu"
 
 
+def test_intake_card_names_every_field_of_the_card(proj, monkeypatch, tmp_path):
+    """Audit 9 C-09: the instructions of intake_card named the doc fields by hand and left out adopts, amends and
+    page_offset, so the drafts had them (13 adopts in a real intake) and no card did; a foreign standard (ISO 6976) did
+    not find the national one that adopts it."""
+    from assistant_x.intake.meta_schema import DOC_FIELDS
+
+    work = tmp_path / "w"
+    work.mkdir()
+    monkeypatch.setattr(intake_tools, "_last_work", lambda: str(work))
+    monkeypatch.setattr(intake_tools, "_intake", lambda *a: (0, "brief"))
+    out = intake_tools.card()
+    line = out[out.index("document {") : out.index("}", out.index("document {"))]
+    missing = [f for f in DOC_FIELDS if f != "other_versions" and f not in line]
+    assert not missing and "adopts" in line and "amends" in line
+
+
 def test_the_drafts_explain_the_shelves(proj):
     """intake_card tells Claude the shelves of the profile, the genres, the card languages and the topics in use."""
     text = intake_tools.classification()

@@ -640,12 +640,16 @@ def card(tids=None):
                 drafts.append(line.strip())
     done = os.path.join(work, "meta.jsonl")
     have = sum(1 for _ in open(done, encoding="utf-8")) if os.path.exists(done) else 0
+    from assistant_x.intake.meta_schema import DOC_FIELDS
+
+    # every doc field of the schema: a field of the draft not named here was dropped (adopts, amends: audit 9 C-09)
+    fields = ", ".join(f for f in DOC_FIELDS if f != "other_versions")  # other_version {code} sets it
     head = (
         f"Batch {os.path.basename(work)}; lines in meta.jsonl so far: {have}.\n"
         "Check the draft of every file against its text (intake_card with tids shows the start of the text and the "
-        "headings) and save the result with intake_save_meta: document {tid, sec, doc_type, en, au, title, "
-        "designation, authors, year, publisher, edition, lang, scope, summary, topics, keywords, terms, questions, "
-        "toc, tables, references, units, serial, note, issues}, part {tid, part, what}, attachment {tid, attach, what} "
+        f"headings) and save the result with intake_save_meta: document {{tid, sec, doc_type, en, au, {fields}, "
+        "issues; keep the adopts, amends and page_offset of the draft}, part {tid, part, what}, attachment "
+        "{tid, attach, what} "
         "(a workbook of appendices or a calculation of a document of the batch: kept beside it, not searched), "
         "duplicate {tid, dupof, why}, rejected {tid, drop}.\n" + classification()
     )
