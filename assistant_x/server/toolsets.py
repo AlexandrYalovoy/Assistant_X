@@ -23,7 +23,8 @@ READER = (
 )
 TOOLSETS = ("reader", "all")
 COMPACT_CHARS = 6000  # about 1 500–2 000 tokens of an answer
-COMPACT_K = 4  # search_library results in the compact mode, at most
+COMPACT_K = 3  # search_library results in the compact mode, at most: the best of the library
+COMPACT_NORMS = 3  # and the best of shelf N (standards, company documents) after them
 CUT_NOTE = (
     "\n\n[Cut at {n} characters (compact mode). Ask for less: fewer results (k), fewer pages, or one document (codes).]"
 )
@@ -72,9 +73,12 @@ def compact_tools(tools):
 
 
 def compact_arguments(name, args):
-    """The arguments of a call in the compact mode: search_library asks for COMPACT_K results at most."""
+    """The arguments of a call in the compact mode: search_library asks for COMPACT_K results at most and, unless the
+    model chose shelves or documents itself, COMPACT_NORMS of shelf N after them."""
     if name == "search_library" and isinstance(args, dict):
         args = dict(args, k=min(int(args.get("k") or COMPACT_K), COMPACT_K))
+        if not args.get("sections") and not args.get("codes"):
+            args["norms"] = COMPACT_NORMS
     return args
 
 

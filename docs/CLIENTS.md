@@ -30,7 +30,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | all | `~/.claude/skills/assistant-x` |
 | Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
 | DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
-| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | reader, compact | none: `library_guide`; `assistant-x skill --app guide` writes a system prompt for a preset |
+| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | reader, compact | the preset `~/.lmstudio/config-presets/Assistant X.preset.json` (the guide as the system prompt) |
 | Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | all | a block of the short rules in `~/.gemini/GEMINI.md` |
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | none: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | none: `library_guide` |
