@@ -4,6 +4,20 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.11 — 2026-11-01
+
+Answers from the whole library and no question before every page.
+
+- Claude searches 2-3 times with other terms and once more on the shelf of the standards and the company documents
+  (shelf N) before it answers, and puts the company documents after the standards in the priority: an answer no
+  longer stops at the first handbook (the skill, the guide and the instructions of the server).
+- assistant-x connect claude_code adds the eight reading tools of the library to the permissions of Claude Code
+  (~/.claude/settings.json, permissions.allow): Claude Code and the Code tab of Claude Desktop stop asking before every
+  page; the tools that change the library still wait for the user's yes, and disconnect takes only these out.
+- The install of a base package into an empty workspace kept its assistant_x.toml whole only when a comment stood
+  between [documents] and languages; with languages at once below it the two lines were joined and the install
+  stopped on a TOML error.
+
 ## 0.5.10 — 2026-11-01
 
 The install of a big base package is reliable and fast: the colleague test of a real base of 30 GB found three faults.
