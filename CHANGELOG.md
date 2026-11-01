@@ -4,9 +4,11 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.5.7 — unreleased
+## 0.5.7 — 2026-11-01
 
-The trial intake of a big real folder in batches, continued.
+The release for colleagues after the trial intake of a big real folder and a full audit: the intake by cost,
+attachments of documents, assistant-x update --from a release, Gemini CLI, Antigravity, Cursor and Cline, a guide for
+LM Studio, the measured speed of the search, and the fixes the audit and the install from the medium found.
 
 - Intake: a card may be written in the document language first ("en_later": true in meta.jsonl): it is checked without
   its English part, its file name is its title transliterated, and the card carries an issue that lists it for the
