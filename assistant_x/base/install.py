@@ -567,7 +567,7 @@ def _files(entry, index="index"):
     """The files of a document or a part, relative to the workspace (the text in the index folder given)."""
     code = entry.get("code") or ""
     text = re.sub(r"^index/", f"{index}/", entry.get("text") or "")
-    out = [x for x in (entry.get("library"), entry.get("pdf_copy")) if x]
+    out = [x for x in (entry.get("library"), entry.get("pdf_copy")) if x] + [a["library"] for a in C.attachments(entry)]
     if text:
         out += [text, re.sub(r"\.(md|txt)$", "", text) + ".pages.json"]
     return out + ([f"{index}/texts/{code}.md", f"{index}/texts/{code}.pages.json"] if code and not text else [])

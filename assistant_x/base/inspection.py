@@ -128,6 +128,7 @@ def unsafe_paths(card):
     out = []
     file = card.get("file") if isinstance(card.get("file"), dict) else {}
     entries = [file] + [p for p in file.get("parts") or [] if isinstance(p, dict)]
+    entries += [a for a in file.get("attachments") or [] if isinstance(a, dict)]  # each with its library place only
     for e in entries:
         for key, top in (("library", "library/"), ("pdf_copy", "library/"), ("text", "index/texts/")):
             v = e.get(key)

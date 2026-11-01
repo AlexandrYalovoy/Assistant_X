@@ -178,6 +178,8 @@ texts and card drafts. You write the cards from the drafts; the move into the li
    - `issues` — what is wrong with the source and what is needed: `[{"what", "need", "priority": "high|medium|low"}]`;
      the problems of the quality report are added by themselves (`"quality_ok": true` — they are no problem).
    - a part of a multi-file document: `{"tid", "part": "<tid of the main one>", "what": "Scan"}`;
+   - an attachment of a document of the batch (a workbook of its appendices, a calculation): `{"tid", "attach": "<tid
+     of the document>", "what": "Appendix 9"}` — kept beside it under its code, not searched, named by the card;
    - a duplicate: `{"tid", "dupof": "<tid or code>", "why"}`; if the new copy is better — tell the user;
    - rejected: `{"tid", "drop": "administrative pages only"}` — only a title page, an approval sheet, an order, a covering
      letter without technical content;

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from assistant_x.core import card as C
 from assistant_x.intake import ledger, meta_schema
+from assistant_x.intake.prepare import sha256 as hash_file
 from assistant_x.core.formats import (
     EVENT_DONE,
     EVENT_DUP,
@@ -245,10 +246,12 @@ def build(cfg, work, date=None, personal=False):
         C.raise_high_water(cfg.index, codes.values())
     finally:
         lock_f.close()
-    parts = {}
+    parts, attached = {}, {}
     for t, m in meta.items():
         if m.get("part"):
             parts.setdefault(m["part"], []).append(t)
+        if m.get("attach"):
+            attached.setdefault(m["attach"], []).append(t)
     quality = json.loads((work / "quality.json").read_text(encoding="utf-8")) if (work / "quality.json").exists() else {}
     # the user's documents go into the library as any others; marked personal only when the user asked to keep this
     # addition apart (assistant-x intake build --personal, or [intake] personal = true for every batch)
@@ -368,6 +371,30 @@ def build(cfg, work, date=None, personal=False):
         main = dict(files[0][0])
         del main["code"]
         file = {**main, "hidden_text": hidden, "issues": issues, "parts": [e for e, _ in files[1:]]}
+        # files kept beside the document under its code, not read: a workbook of its appendices, a calculation
+        for i, a in enumerate(sorted(attached.get(t, []), key=lambda x: natural_key(by[x]["rel"])), 1):
+            ra = by[a]
+            what = str(meta[a].get("what") or "")
+            fn = f"{code}_attachment-{i}_{clean(latin_title({'title': {'ru': what}}) if what else '', 40) or 'File'}"
+            fn = f"{fn}.{ext_of(ra['rel'])}"
+            moves.append({"tid": a, "src": "inbox\\" + win(ra["rel"]), "dst": f"{base}\\{fn}"})
+            facts = {k: v for k, v in file_facts(ra).items() if k != "format" and v not in ("", None)}
+            if "sha256" not in facts:  # a file set aside at its preparation was never hashed
+                facts["sha256"] = hash_file(cfg.inbox.joinpath(*ra["rel"].split("/")))
+            file.setdefault("attachments", []).append(
+                {"library": posix(f"{base}\\{fn}"), **facts, **({"what": what} if what else {})}
+            )
+            events.append(
+                [
+                    date,
+                    "inbox\\" + win(ra["rel"]),
+                    ra.get("size") or "—",
+                    ra.get("sha") or "—",
+                    code,
+                    f"{base}\\{fn}",
+                    f"{EVENT_DONE}: an attachment of {code}, kept beside it, not searched",
+                ]
+            )
         cards[code] = C.complete(
             {
                 "schema": C.SCHEMA_VERSION,

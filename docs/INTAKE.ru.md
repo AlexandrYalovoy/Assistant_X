@@ -173,7 +173,10 @@ assistant-x intake apply [--dry-run | --resume]  (apply.py)
 слов языковых пакетов (`digest_heads`).
 
 meta.jsonl: по строке на файл — документ `{tid, sec, doc_type, en, au, …the doc fields of the card…}`, часть
-`{tid, part, what}`, дубликат `{tid, dupof, why}`, отклонённый файл `{tid, drop}` (`meta_schema.py`). Строка документа
+`{tid, part, what}`, вложение `{tid, attach, what}` (книга Excel с приложениями или расчёт к документу партии: файл
+ложится рядом с документом как `<code>_attachment-N_<what>`, не читается и не ищется, карточка называет его в
+`file.attachments`; remove, экспорт и установка пакета базы и `assistant-x check` переносят его вместе с документом),
+дубликат `{tid, dupof, why}`, отклонённый файл `{tid, drop}` (`meta_schema.py`). Строка документа
 проверяется так же, как будет проверяться его карточка (`core/card.validate`: схема, языки карточки, полки, ограничения).
 Действует ли документ, решает пользователь: статуса действия у карточки нет.
 

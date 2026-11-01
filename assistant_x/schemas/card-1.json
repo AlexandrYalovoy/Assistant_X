@@ -158,6 +158,17 @@
     "text": {"$ref": "#/$defs/text_path"},
     "format": {"$ref": "#/$defs/format"},
     "pdf_copy": {"$ref": "#/$defs/library_path", "description": "a PDF made from a DOC/DOCX and kept beside it, for page images"},
+    "attachments": {
+     "type": "array",
+     "description": "files kept beside the document under its code and not searched (a workbook of its appendices, a calculation): they go with the document when it is removed, exported or installed",
+     "items": {
+      "type": "object", "additionalProperties": false, "required": ["library"],
+      "properties": {
+       "library": {"$ref": "#/$defs/library_path"}, "source_name": {"type": "string"},
+       "sha256": {"$ref": "#/$defs/sha256"}, "size": {"$ref": "#/$defs/size"}, "what": {"type": "string"}
+      }
+     }
+    },
     "hidden_text": {
      "type": "array",
      "items": {

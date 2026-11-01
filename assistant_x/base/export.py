@@ -230,8 +230,10 @@ def export(
                 p = os.path.join(texts, sub + ext)
                 if os.path.exists(p):
                     files.append((f"texts/{sub}{ext}", p))
-            for k in ("library", "pdf_copy"):
-                place = (entry.get(k) or "").replace("\\", "/")
+            for place in [entry.get(k) or "" for k in ("library", "pdf_copy")] + [
+                a["library"] for a in C.attachments(entry)
+            ]:
+                place = place.replace("\\", "/")
                 if place.startswith("library/"):
                     files.append((place, os.path.join(root, *place.split("/"))))
     files = list(dict.fromkeys(files))

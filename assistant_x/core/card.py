@@ -192,6 +192,8 @@ def remap(card, mapping):
         for k in ("library", "text", "pdf_copy"):
             if entry.get(k):
                 entry[k] = map_path(entry[k], mapping)
+    for a in attachments(file):
+        a["library"] = map_path(a["library"], mapping)
     for h in file.get("hidden_text") or []:
         if h.get("code"):
             h["code"] = map_code(h["code"], mapping)
@@ -232,11 +234,17 @@ def renames(card, mapping, index="index"):
             entry.get("library") or "",
             entry.get("pdf_copy") or "",
         ]
+        paths += [a["library"] for a in attachments(entry)]  # the main file only has them
         for p in dict.fromkeys(x for x in paths if x):
             new = map_path(p, mapping)
             if new != p:
                 out.append((p, new))
     return out
+
+
+def attachments(file):
+    """The attachments of the file block of a card (files kept beside the document, not searched) that name a place."""
+    return [a for a in (file or {}).get("attachments") or [] if isinstance(a, dict) and a.get("library")]
 
 
 # ---------- reading and writing ----------
@@ -651,6 +659,8 @@ def brief(card, fields=None):
                     + (f" ({p['what']})" if p.get("what") else "")
                     + ("" if p.get("text") else " — no text")
                 )
+            for a in attachments(file):
+                lines.append(f"  attachment (not searched): {a['library']}" + (f" ({a['what']})" if a.get("what") else ""))
             continue
         if key == "issues":
             for i in file.get("issues") or []:
@@ -664,6 +674,9 @@ def brief(card, fields=None):
         parts = [p["code"] for p in file.get("parts") or []]
         if parts:
             lines.append(f"Parts (each with its own PDF pages): {', '.join(parts)}")
+        names = [a.get("what") or a["library"].rsplit("/", 1)[-1] for a in attachments(file)]
+        if names:
+            lines.append(f"Attachments beside it, not searched: {'; '.join(names)} (document_info with fields=['file'])")
         if doc.get("toc"):
             lines.append(f"Contents: {len(doc['toc'])} entries (document_info with fields=['toc'], or book_map)")
     return "\n".join(lines)

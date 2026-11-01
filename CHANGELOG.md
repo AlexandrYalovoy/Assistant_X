@@ -32,6 +32,11 @@ The trial intake of a big real folder in batches, continued.
 - assistant-x remove (library_remove) of one part of a document (N-00268-02) takes the part out of the card of its
   document, with its issues and hidden texts, the card as it was aside; before, the card still named the part, the
   base could not be built and the removal failed again on every resume.
+- Attachments of a document (file.attachments of the card): a workbook of its appendices or a calculation is kept
+  beside the document under its code (`<code>_attachment-N_<what>`), neither read nor searched, and named by the card;
+  the intake places it from a meta line {tid, attach, what}, and remove, base export and install (new codes too) and
+  assistant-x check take it with the document. assistant-x check also warns of a file of the library that no card
+  names.
 
 ## 0.5.6 — 2026-10-30
 

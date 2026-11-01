@@ -172,7 +172,10 @@ characteristics; any other the start of its text. The headings of the parts are 
 (`digest_heads`).
 
 meta.jsonl: a line per file — a document `{tid, sec, doc_type, en, au, …the doc fields of the card…}`, a part
-`{tid, part, what}`, a duplicate `{tid, dupof, why}`, rejected `{tid, drop}` (`meta_schema.py`). A document line is
+`{tid, part, what}`, an attachment `{tid, attach, what}` (a workbook of the appendices or a calculation of a document
+of the batch: the file goes beside the document as `<code>_attachment-N_<what>`, is neither read nor searched, and the
+card names it in `file.attachments`; remove, base export and install and `assistant-x check` take it with the
+document), a duplicate `{tid, dupof, why}`, rejected `{tid, drop}` (`meta_schema.py`). A document line is
 checked as its card will be (`core/card.validate`: the schema, the card languages, the shelves, the limits). Whether a
 document is in force is the user's matter: a card has no validity status.
 

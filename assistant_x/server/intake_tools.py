@@ -645,8 +645,9 @@ def card(tids=None):
         "Check the draft of every file against its text (intake_card with tids shows the start of the text and the "
         "headings) and save the result with intake_save_meta: document {tid, sec, doc_type, en, au, title, "
         "designation, authors, year, publisher, edition, lang, scope, summary, topics, keywords, terms, questions, "
-        "toc, tables, references, units, serial, note, issues}, part {tid, part, what}, duplicate {tid, dupof, why}, "
-        "rejected {tid, drop}.\n" + classification()
+        "toc, tables, references, units, serial, note, issues}, part {tid, part, what}, attachment {tid, attach, what} "
+        "(a workbook of appendices or a calculation of a document of the batch: kept beside it, not searched), "
+        "duplicate {tid, dupof, why}, rejected {tid, drop}.\n" + classification()
     )
     if tids:
         rc2, digest = _intake("digest", *tids)

@@ -139,12 +139,30 @@ def check(cfg, files=True):
                 if files and have_lib and place.startswith("library"):
                     if not exists(library_path(root, place)):
                         err("the original is not on disk at its place in the library", f"{sub}: {place}")
+        for a in C.attachments(file):  # beside the document under its code, not searched
+            places[a["library"].lower()].append(f"{code} (attachment)")
+            if not a["library"].startswith("library/") or not os.path.basename(a["library"]).startswith(f"{code}_"):
+                err("an attachment is not a file of the library named with the code", f"{code}: {a['library']}")
+            elif files and have_lib and not exists(library_path(root, a["library"])):
+                err("an attachment is not on disk at its place in the library", f"{code}: {a['library']}")
         for other in (c.get("doc") or {}).get("other_versions") or []:
             if other not in cards:
                 warn("another version a card names is not in the library", f"{code}: {other}")
     for place, codes in places.items():
         if len(codes) > 1:
             err("one file belongs to several documents", f"{', '.join(codes)}: {place}")
+    if files and have_lib:  # a file of the library no card names is not searched, exported or installed (audit 9)
+        from assistant_x.core import journal
+
+        named = set(places) | {
+            (f.get("pdf_copy") or "").lower()
+            for c in cards.values()
+            for f in [c.get("file") or {}] + [p for p in (c.get("file") or {}).get("parts") or [] if isinstance(p, dict)]
+        }
+        for rel in sorted(journal.read_manifest(os.path.join(os.path.dirname(cfg["catalog"]), "manifest.tsv"))):
+            place = rel.replace("\\", "/")
+            if place.lower() not in named and not os.path.basename(place).startswith("_"):
+                warn("a file of the library no card names (not searched; an attachment of a card?)", place)
     if os.path.isdir(cfg["texts_dir"]):
         for f in sorted(os.listdir(cfg["texts_dir"])):
             if f.endswith(".md") and not f.startswith("_") and f not in known_texts:

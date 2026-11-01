@@ -16,6 +16,9 @@ A line is one of:
              is made of the title transliterated, the card gets the issue core/card.ENGLISH_LATER)}
   part      {"tid": "T0002", "part": "T0001", "what": "Scan", "order": 2}  — file of a multi-file document; "order"
             (optional) places it among the parts, else they go by file name ("Chapter 2" before "Chapter 10")
+  attached  {"tid": "T0005", "attach": "T0001", "what": "Appendix 9 (workbook)"}  — a file kept beside a document of
+            the batch under its code, not read nor searched (a workbook of its appendices, a calculation): the card
+            names it in file.attachments; it goes with the document when it is removed, exported or installed
   duplicate {"tid": "T0003", "dupof": "T0001" | "L-00012", "why": "…"}
   dropped   {"tid": "T0004", "drop": "administrative pages only"}  — to inbox\\_rejected
 The `doc` fields are checked by core/card.py as the card will be: the card languages (English and the document
@@ -28,7 +31,7 @@ from pathlib import Path
 
 from assistant_x.core import card as C
 
-KINDS = ("sec", "part", "dupof", "drop")
+KINDS = ("sec", "part", "attach", "dupof", "drop")
 DOC_FIELDS = tuple(C.schema()["$defs"]["doc"]["properties"])
 CONTROL = {
     "tid",
@@ -44,6 +47,7 @@ CONTROL = {
     "issues",
     "quality_ok",
     "part",
+    "attach",
     "what",
     "order",
     "dupof",
@@ -114,8 +118,8 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
         kinds = [k for k in KINDS if m.get(k)]
         if len(kinds) != 1:
             e(
-                "exactly one of the fields sec (document), part (part), dupof (duplicate), drop (rejected) is needed"
-                + (f", but there are {', '.join(kinds)}" if kinds else "")
+                "exactly one of the fields sec (document), part (part), attach (attachment), dupof (duplicate), drop "
+                "(rejected) is needed" + (f", but there are {', '.join(kinds)}" if kinds else "")
             )
             continue
         unknown = sorted(set(m) - KNOWN)
@@ -163,6 +167,12 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
                 e(f"part refers to {m['part']}, which is not a document (no sec)")
             if "order" in m and not (isinstance(m["order"], int) and not isinstance(m["order"], bool) and m["order"] >= 1):
                 e(f"order={m['order']!r}: the place of the part among the parts of its document, a whole number from 1")
+        elif kinds[0] == "attach":
+            p = meta.get(m["attach"])
+            if m["attach"] == tid:
+                e("attach refers to itself")
+            elif not p or not p.get("sec"):
+                e(f"attach refers to {m['attach']}, which is not a document of this batch (a line with sec)")
         elif kinds[0] == "dupof":
             d = m["dupof"]
             if not (C.is_code(d) or d in meta or (tids is not None and d in tids)):
