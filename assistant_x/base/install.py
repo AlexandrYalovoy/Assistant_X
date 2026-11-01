@@ -228,8 +228,8 @@ def adopt(w, profile, languages):
     text = w.config.read_text(encoding="utf-8") if w.config.is_file() else ""
     line = f"profile = {settings.toml_value(profile)}"  # escaped: a value never becomes TOML of its own
     text = (
-        re.sub(r"(?m)^\s*profile\s*=.*$", lambda _: line, text, count=1)
-        if re.search(r"(?m)^\s*profile\s*=", text)
+        re.sub(r"(?m)^[ \t]*profile[ \t]*=.*$", lambda _: line, text, count=1)
+        if re.search(r"(?m)^[ \t]*profile[ \t]*=", text)
         else line + "\n" + text
     )
     order = (
@@ -238,15 +238,15 @@ def adopt(w, profile, languages):
         else [x for x in languages if x != "en" or languages == ["en"]]
     )
     langs = f"languages = {settings.toml_value(order)}"
-    m = re.search(r"(?m)^\[documents\]\s*$", text)
+    m = re.search(r"(?m)^\[documents\][ \t]*$", text)  # [ \t]: a line end is never taken
     if not m:
         text = text.rstrip("\n") + f"\n\n[documents]\n{langs}\n"
     else:
         rest = text[m.end() :]
         nxt = re.search(r"(?m)^\[", rest)
         block = rest[: nxt.start()] if nxt else rest
-        if re.search(r"(?m)^\s*languages\s*=", block):
-            block = re.sub(r"(?m)^\s*languages\s*=.*$", lambda _: langs, block, count=1)
+        if re.search(r"(?m)^[ \t]*languages[ \t]*=", block):
+            block = re.sub(r"(?m)^[ \t]*languages[ \t]*=.*$", lambda _: langs, block, count=1)
         else:
             block = f"\n{langs}" + block
         text = text[: m.end()] + block + (rest[nxt.start() :] if nxt else "")

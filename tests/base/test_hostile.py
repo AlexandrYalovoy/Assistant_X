@@ -143,6 +143,24 @@ def test_the_adopted_settings_are_escaped(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "toml",
+    [
+        'profile = "general"\n\n[documents]\nlanguages = ["en"]\n',  # no comment between: the line end was taken
+        'profile = "general"\n[documents]\n\nlanguages = ["en"]\n[search]\nk = 5\n',
+        "[documents]\n\n[search]\nk = 5\n",
+    ],
+)
+def test_the_adopted_settings_stay_valid_toml(tmp_path, toml):
+    """An empty workspace takes the profile and the languages of a package: the file stays TOML whatever its layout."""
+    path = tmp_path / "assistant_x.toml"
+    path.write_text(toml, encoding="utf-8")
+    B.adopt(settings.load(str(path))[0], "oil-gas-ru", ["ru", "en"])
+    data = settings.read(str(path))
+    assert data["profile"] == "oil-gas-ru" and data["documents"]["languages"] == ["ru", "en"]
+    assert data.get("search", {}).get("k") == (5 if "[search]" in toml else None)
+
+
+@pytest.mark.parametrize(
     "field,value",
     [
         ("pdf_copy", "../../../../VICTIM.txt"),
