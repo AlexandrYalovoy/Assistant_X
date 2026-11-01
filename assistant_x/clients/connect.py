@@ -9,8 +9,9 @@
     assistant-x disconnect APP|all [--dry-run]                                  take the entry out
     assistant-x update                                                          every connected app again
 
-APP: claude_desktop, claude_code, codex, dsh, lmstudio; auto: every one found on this PC. The tool set of an app is
-its default (the reading tools for DeepSeek Harness and LM Studio, all for Claude and Codex) unless --full (all, no
+APP: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline; auto: every one found on
+this PC. The tool set of an app is its default (the reading tools for DeepSeek Harness and LM Studio, all for the
+others) unless --full (all, no
 compact answers) or --reader; LM Studio gets the compact answers by default. Every connection is recorded in
 connections.json of the machine folder: `update` writes them again (a new version of the program, another python),
 and the library service refreshes their outdated skills when it starts."""
@@ -277,7 +278,14 @@ def refresh_skills(say=lambda s: None):
 
 
 def update_main(argv=None):
-    argparse.ArgumentParser(prog="assistant-x update", description=update.__doc__).parse_args(argv)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if any(a == "--from" or a.startswith("--from=") for a in argv):  # a newer release of the program (self_update)
+        from assistant_x.setup import self_update
+
+        return self_update.main(argv)
+    ap = argparse.ArgumentParser(prog="assistant-x update", description=update.__doc__)
+    ap.add_argument("--from", dest="url", help="a newer release from the page of the project on GitHub or GitFlic")
+    ap.parse_args(argv)
     return 0 if update() else 1
 
 

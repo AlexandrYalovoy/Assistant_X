@@ -86,6 +86,23 @@ their settings), then run both checks again. `ok: true` and every app `"ok": tru
 
 {{troubleshooting}}
 
+## 10. Update ("update my assistant" and a link to GitHub or GitFlic)
+
+Ask the user first: the update downloads the wheel of the latest release (a few MB) and installs it beside the
+version in use. Then run
+
+```
+<command> update --from https://github.com/OWNER/REPO --dry-run
+<command> update --from https://github.com/OWNER/REPO
+```
+
+(or `https://gitflic.ru/project/OWNER/REPO`). It takes only the latest release with a tag, never a draft, a
+pre-release or the last commit of a branch; it checks the wheel against the `SHA256SUMS` of the release and refuses
+a release without it; it installs the program into a new environment `venv-<version>` of the machine folder beside
+the old one, connects the apps again with the new python and runs `doctor --json` there. When a step fails it
+connects the apps back to the old version and removes the new environment. The library, the workspace and its
+settings are never touched. Tell the user to restart the apps; the old environment stays for a return.
+
 ## What the tools are
 
 {{tools_table}}

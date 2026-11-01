@@ -52,6 +52,10 @@ pyproject.toml).
 - assistant-x connect gemini (Gemini CLI: ~/.gemini/settings.json и краткие правила в ~/.gemini/GEMINI.md),
   antigravity (~/.gemini/antigravity/mcp_config.json), cursor (~/.cursor/mcp.json) и cline (настройки MCP расширения
   Cline для VS Code): их знают connect auto, connect --check, update и Setup.
+- assistant-x update --from <страница проекта на GitHub или GitFlic> ставит последний релиз с тегом рядом с текущей
+  версией: колесо проверяется по SHA256SUMS релиза, новое окружение venv-<version> видит пакеты старого, приложения
+  подключаются заново, там же запускается doctor; если шаг не удался, приложения возвращаются к старой версии.
+  Библиотека и настройки не трогаются (INSTALL_FOR_AI, шаг 10).
 
 ## 0.5.6 — 2026-10-30
 

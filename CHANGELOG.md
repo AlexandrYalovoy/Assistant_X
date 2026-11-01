@@ -52,6 +52,10 @@ The trial intake of a big real folder in batches, continued.
 - assistant-x connect gemini (Gemini CLI: ~/.gemini/settings.json and the short rules in ~/.gemini/GEMINI.md),
   antigravity (~/.gemini/antigravity/mcp_config.json), cursor (~/.cursor/mcp.json) and cline (the MCP settings of the
   Cline extension of VS Code): connect auto, connect --check, update and Setup know them.
+- assistant-x update --from <the page of the project on GitHub or GitFlic> installs the latest release with a
+  tag beside the version in use: its wheel checked against the SHA256SUMS of the release, a new environment
+  venv-<version> that sees the packages of the old one, the apps connected again and doctor run there; when a step
+  fails the apps go back to the old version. The library and the settings are not touched (INSTALL_FOR_AI, step 10).
 
 ## 0.5.6 — 2026-10-30
 

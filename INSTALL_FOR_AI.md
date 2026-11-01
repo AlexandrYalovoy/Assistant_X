@@ -103,6 +103,23 @@ their settings), then run both checks again. `ok: true` and every app `"ok": tru
 | `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library_guide search_library"; the server has no resources |
 | `sign-in-limits` | The plan or the sign-in of the app limits it: on the Free plan of ChatGPT, Codex runs in the desktop app only, and its sign-in may ask for a phone number. | use the ChatGPT desktop app, or connect another app: assistant-x connect auto |
 
+## 10. Update ("update my assistant" and a link to GitHub or GitFlic)
+
+Ask the user first: the update downloads the wheel of the latest release (a few MB) and installs it beside the
+version in use. Then run
+
+```
+<command> update --from https://github.com/OWNER/REPO --dry-run
+<command> update --from https://github.com/OWNER/REPO
+```
+
+(or `https://gitflic.ru/project/OWNER/REPO`). It takes only the latest release with a tag, never a draft, a
+pre-release or the last commit of a branch; it checks the wheel against the `SHA256SUMS` of the release and refuses
+a release without it; it installs the program into a new environment `venv-<version>` of the machine folder beside
+the old one, connects the apps again with the new python and runs `doctor --json` there. When a step fails it
+connects the apps back to the old version and removes the new environment. The library, the workspace and its
+settings are never touched. Tell the user to restart the apps; the old environment stays for a return.
+
 ## What the tools are
 
 | Tool | What it does | Set | Changes the library |
@@ -160,7 +177,7 @@ changes the library asks for the user's yes to a plan first.
 | `skill` | write the skill of the profile of the workspace (SKILL.md) |
 | `connect` | connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline |
 | `disconnect` | take the library out of the settings of an app |
-| `update` | connect every connected app again, its skill refreshed |
+| `update` | connect every connected app again, its skill refreshed; --from URL: a newer release |
 | `gen-docs` | make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin |
 | `base` | base packages: export, inspect, install, update, remove |
 | `remove` | take documents of the library aside (inbox\_to_delete), codes reserved |
