@@ -29,6 +29,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: a duplicate, a file set aside or a program file moved by an apply keeps its outcome in the ledger of the
   next batch (before, every moved file read "done", and a part line naming such a file stopped the apply with "no
   source file"); the summary counts only the files moved into the library as moved into it.
+- assistant-x remove (library_remove) of one part of a document (N-00268-02) takes the part out of the card of its
+  document, with its issues and hidden texts, the card as it was aside; before, the card still named the part, the
+  base could not be built and the removal failed again on every resume.
 
 ## 0.5.6 — 2026-10-30
 

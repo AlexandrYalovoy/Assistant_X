@@ -66,6 +66,23 @@ def test_a_document_goes_aside(lib, tmp_path):
     assert not (cfg.index / remove.JOURNAL).exists()
 
 
+def test_a_part_taken_out_alone_leaves_a_coherent_card(lib):
+    """Audit 9 C-08: a part removed by its code (E-00001-02) leaves the parts of its document's card; before, the card
+    still named it, the base could not be built ("the original is not on disk") and every resume failed the same way."""
+    from assistant_x.search import check_index
+
+    root, path, cfg, pdf, sha = lib
+    main = cfg.index / "cards" / "E-00001.json"
+    assert "E-00001-02" in [p["code"] for p in C.load(main)["file"]["parts"]]
+    assert remove.main(["E-00001-02", "--why", "a wrong part", "--config", path]) == 0
+    card = C.load(main)
+    assert "E-00001-02" not in [p["code"] for p in card["file"].get("parts") or []]
+    assert not [x for k in ("issues", "hidden_text") for x in card["file"].get(k) or [] if x.get("code") == "E-00001-02"]
+    assert next((root / "inbox" / "_to_delete").rglob("E-00001.before.json"))  # the card as it was, aside
+    rep, _ = check_index.check(load_config(path))
+    assert not rep.lines(levels=("error",)) and not (cfg.index / remove.JOURNAL).exists()
+
+
 def test_an_unknown_code_changes_nothing(lib, capsys):
     root, path, cfg, pdf, sha = lib
     assert remove.main(["N-00099", "--config", path]) == 1

@@ -7,7 +7,8 @@ r"""Take documents out of the library (one that got in by mistake): nothing is d
 For every code (and the parts of a document of several files, N-00268-02 …) the plan lists the originals in library
 (manifest.tsv; a PDF copy of a DOCX too), the card index\cards\<code>.json and the text index\texts\<code>.md with
 <code>.pages.json and <code>.hidden.json. The removal moves them into inbox\_to_delete\removed_<code>_<date>\ under the
-same folders (library\…, index\cards, index\texts), takes the code out of the other_versions of the other cards and
+same folders (library\…, index\cards, index\texts), takes a part removed alone out of the card of its document (the
+card as it was goes aside as <code>.before.json), takes the code out of the other_versions of the other cards and
 its row out of ocr_quality.tsv, writes an event per file to intake_events.tsv ("removed: <why>"; event_kind "removed":
 a file that comes back is no duplicate, intake/prepare.known_hashes), makes manifest.tsv, journal.md, CATALOG.md and
 sources_to_update.md again, keeps the code reserved (index\codes.json: a number never comes back) and rebuilds the base
@@ -25,7 +26,18 @@ from assistant_x.intake import config as intake_cfg
 from assistant_x.intake import manifest
 
 JOURNAL = "remove.journal.json"
-STEPS = ("moves", "links", "ocr", "events", "manifest", "journal", "codes", "catalog", "dirs", "build")
+STEPS = ("moves", "parts", "links", "ocr", "events", "manifest", "journal", "codes", "catalog", "dirs", "build")
+
+
+def drop_parts(card, gone):
+    """The card of a document without the parts of gone: its parts, and the issues and the hidden texts of those
+    parts; True when it changed."""
+    f = card["file"]
+    before = (len(f.get("parts") or []), len(f.get("issues") or []), len(f.get("hidden_text") or []))
+    for k in ("parts", "issues", "hidden_text"):
+        if f.get(k):
+            f[k] = [x for x in f[k] if not (isinstance(x, dict) and x.get("code") in gone)]
+    return before != (len(f.get("parts") or []), len(f.get("issues") or []), len(f.get("hidden_text") or []))
 
 
 def say(*a):
@@ -140,6 +152,20 @@ def run_steps(cfg, jr, codes, items, why, date, build=True):
             if i not in made:
                 jr.moved(i)
         jr.mark("moves")
+    if step("parts"):  # a part taken out alone: the card of its document no longer names it (its old card goes aside)
+        gone = {c for c in codes if C.main_code(c) != c and C.main_code(c) not in codes}
+        for main in sorted({C.main_code(c) for c in gone}):
+            p = cfg.index / "cards" / f"{main}.json"
+            if not p.exists():
+                continue
+            card = C.load(p)
+            if drop_parts(card, gone):
+                old = path_of(cfg, f"inbox\\_to_delete\\removed_{main}_{date}\\index\\cards\\{main}.before.json")
+                if not old.exists():
+                    old.parent.mkdir(parents=True, exist_ok=True)
+                    old.write_bytes(p.read_bytes())
+                C.dump(card, p)
+        jr.mark("parts")
     if step("links"):  # the other versions of the removed documents no longer name them
         gone = set(codes)
         for code, p in C.paths(cfg.index / "cards").items():
