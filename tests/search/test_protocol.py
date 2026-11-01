@@ -170,3 +170,24 @@ def test_the_bridge_stops_the_weak_searches_only_in_the_compact_mode():
         full.calls[i] = "search_library"
         last = full.adjust({"id": i, "result": weak})
     assert last["result"]["content"][0]["text"].startswith("Weak match")
+
+
+def test_the_compact_bridge_puts_the_answer_form_before_every_result():
+    """LM Studio without the preset gives a small model no system prompt: the compact bridge puts the form of the
+    answer before every search_library and read_pages result (not before the order to stop, not in the full mode)."""
+    from assistant_x.server import bridge
+
+    page = {"content": [{"type": "text", "text": "[N-00390, PDF 131] …\nCite: [N-00390, PDF 131]"}]}
+    b = bridge.Bridge(toolset="reader", compact=True, out=io.BytesIO())
+    for i, name in enumerate(("search_library", "read_pages", "document_info")):
+        b.calls[i] = name
+        out = b.adjust({"id": i, "result": page})["result"]["content"]
+        assert (out[0]["text"] == toolsets.FORM_HINT) == (name != "document_info")
+    full = bridge.Bridge(toolset="all", compact=False, out=io.BytesIO())
+    full.calls[9] = "search_library"
+    assert full.adjust({"id": 9, "result": page})["result"]["content"] == page["content"]
+    weak = {"content": [{"type": "text", "text": "Weak match (0.80): …"}]}
+    for i in range(10, 13):
+        b.calls[i] = "search_library"
+        out = b.adjust({"id": i, "result": weak})["result"]["content"]
+    assert out[0]["text"].startswith("STOP.") and len(out) == 1

@@ -91,6 +91,20 @@ WEAK_STOP = (
 )
 
 
+FORM_HINT = (
+    "Answer form (mandatory), in the user's language: 1) short answer; 2) from the library: every fact with its "
+    "reference right after it, as the Cite: line gives it, e.g. [N-00390, PDF 131]; 3) independent assessment, marked "
+    "not from the library; 4) recommendation (a calculation in SI for a design question); 5) sources: code, title, "
+    "pages. Never answer without references."
+)
+
+
+def with_form(content):
+    """The content of a search_library or read_pages answer with FORM_HINT before it: a small local model that got
+    no system prompt (LM Studio without the preset) sees the form of the answer at every result."""
+    return [{"type": "text", "text": FORM_HINT}] + list(content)
+
+
 def weak_guard(count, content):
     """(the count of weak searches in a row, the content to give) after one more search_library answer: a search with
     the weak-match note counts, any other resets; at WEAK_LIMIT in a row the fragments give way to WEAK_STOP (a small

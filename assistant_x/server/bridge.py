@@ -282,7 +282,10 @@ class Bridge:
                 content = result["content"]
                 if name == "search_library":  # a small model searching on a subject the library lacks is stopped
                     self.weak, content = toolsets.weak_guard(self.weak, content)
-                m = dict(m, result=dict(result, content=toolsets.compact_content(content)))
+                content = toolsets.compact_content(content)
+                if name in ("search_library", "read_pages") and self.weak < toolsets.WEAK_LIMIT:
+                    content = toolsets.with_form(content)  # the form of the answer reaches a model with no preset
+                m = dict(m, result=dict(result, content=content))
         return m
 
     # ---------- the messages of the client ----------
