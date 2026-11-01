@@ -26,6 +26,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: the check of a card line accepts a title that shares a word with the file name when it shares none with the
   first pages: a document joined from phone photos is read badly by OCR and gets its title from its file or folder
   name.
+- Intake: a duplicate, a file set aside or a program file moved by an apply keeps its outcome in the ledger of the
+  next batch (before, every moved file read "done", and a part line naming such a file stopped the apply with "no
+  source file"); the summary counts only the files moved into the library as moved into it.
 
 ## 0.5.6 — 2026-10-30
 

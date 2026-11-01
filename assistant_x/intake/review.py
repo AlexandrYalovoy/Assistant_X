@@ -57,8 +57,16 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
     from assistant_x.intake import quality_report
 
     rows = state.all()
+    from assistant_x.intake.ledger import applied_outcome
+
     c = collections.Counter(r["status"] for r in rows)
-    dups = [r for r in rows if r["status"] == "dup"]
+    # a file an apply moved counts by where it went: into the library, or a duplicate to _duplicates (M-139)
+    went = collections.Counter(applied_outcome(r.get("place")) for r in rows if r["status"] == "applied")
+    dups = [
+        r
+        for r in rows
+        if r["status"] == "dup" or (r["status"] == "applied" and applied_outcome(r.get("place")) == "duplicate")
+    ]
     sha = sum("SHA-256" in (r.get("why") or "") for r in dups)
     from assistant_x.intake.ledger import HELD
 
@@ -77,12 +85,12 @@ def summary(cfg, work, state, prep_counts, problems, seconds, quality=None):
         f"# Intake summary {work.name}",
         "",
         f"- Work folder: {work}",
-        f"- Files in the batch: {len(rows)}; done (text obtained) {c['done']}, duplicates {c['dup']} "
+        f"- Files in the batch: {len(rows)}; done (text obtained) {c['done']}, duplicates {len(dups)} "
         f"(by SHA-256 {sha}, by content {len(dups) - sha}), skipped {len(skipped)} (no LibreOffice {no_lo}), "
         f"held in inbox {len(held)}, set aside (taken on request) {len(aside)}, "
         f"damaged (moved to _to_delete\\damaged) {len(damaged)}, "
         f"errors {c['error']}, still queued {c['queued'] + c['running']}"
-        + (f", moved into the library {c['applied']}" if c["applied"] else ""),
+        + (f", moved into the library {went['done']}" if went["done"] else ""),
         f"- Preparing the folder: archives unpacked {prep_counts.get('archives', 0)} (files from them {prep_counts.get('archive_files', 0)}), "
         f"not unpacked {prep_counts.get('archive_failed', 0)}; letters {prep_counts.get('letters', 0)} (their "
         f"attachments taken out {prep_counts.get('letter_files', 0)}) to delete, archives with a password "

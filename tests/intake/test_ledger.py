@@ -183,3 +183,72 @@ def test_include_reads_a_picture(tmp_path):
     job.update(soffice=None, timeouts={"soffice": 60, "hidden": 60}, memory_mb=0, env={}, inproc=True, pictures="include")
     res = intake_work.prep(job)
     assert not (res.get("why") or "").startswith(ledger.SET_ASIDE)
+
+
+def test_an_applied_move_keeps_its_outcome(tmp_path):
+    """M-139, M-140: an apply marks every file it moved "applied"; the ledger reads where the file went, so a duplicate,
+    a file set aside or a program set aside does not read "done" in the next ledger (a part line naming it stopped an
+    apply: "no source file")."""
+    state = State(tmp_path / "state.sqlite")
+    places = {
+        r"library\01_Standards\N-00001_A.pdf": "done",
+        r"inbox\_duplicates\copy\a.pdf": "duplicate",
+        r"inbox\_rejected\spreadsheets\x\book.xlsm": "set aside",
+        r"inbox\_rejected\pictures\photo.jpg": "set aside",
+        r"inbox\_rejected\programs\setup.exe": "unsupported",
+        r"inbox\_rejected\x\dropped.pdf": "done",  # read, then dropped by the card line: its text was obtained
+    }
+    for i, place in enumerate(places):
+        state.update(state.add(f"f{i}", 10), status="applied", place=place)
+    assert [r["outcome"] for r in ledger.rows(state)] == list(places.values())
+    state.close()
+
+
+def test_the_ledger_after_a_real_apply(project):
+    """The whole way: a SHA copy goes to _duplicates and a workbook to _rejected\\spreadsheets by the apply, and the
+    ledger written after it still names them a duplicate and a file set aside."""
+    import json, shutil
+
+    from assistant_x.intake import apply as intake_apply
+    from assistant_x.intake import build as intake_build
+    from assistant_x.intake import metadraft
+    from assistant_x.intake import pipeline as intake
+    from tests.intake.intake_fixtures import claude_line, doc_line
+
+    root, cfg = project
+    (cfg.inbox / "Copy").mkdir()
+    shutil.copy2(cfg.inbox / "text.pdf", cfg.inbox / "Copy" / "text.pdf")
+    (cfg.inbox / "sheet.xlsm").write_bytes(b"PK\x05\x06" + b"\0" * 18)
+    work = cfg.work / "2026-11-01"
+    work.mkdir(parents=True)
+    state = State(work / "state.sqlite")
+    intake.prepare(cfg, state)
+    intake.register(cfg, state)
+    tids = {r["rel"]: r["tid"] for r in state.all()}
+    intake.Batch(cfg, work, state, 0).hash_all()
+    dup, sheet = tids["Copy/text.pdf"], tids["sheet.xlsm"]
+    state.update(sheet, status="skipped", why=ledger.set_aside_why("spreadsheets"))
+    (work / "md").mkdir()
+    md = "=== page 1 ===\n\n# Паспорт насоса ЦНС 60-330\n\n" + "Насос центробежный. " * 10
+    for rel in ("text.pdf", "Сканы/scan.pdf", "Архив/Насос/паспорт.pdf"):
+        (work / "md" / f"{tids[rel]}.md").write_text(md, encoding="utf-8")
+        state.update(tids[rel], status="done", pages=1)
+    metadraft.write_drafts(work, state)
+    drafts = {
+        json.loads(x)["tid"]: json.loads(x) for x in (work / "meta_draft.jsonl").read_text(encoding="utf-8").splitlines()
+    }
+    lines = [
+        claude_line(drafts[tids["text.pdf"]], "Pump-Passport-A"),
+        doc_line(tids["Архив/Насос/паспорт.pdf"], "E", "Паспорт насоса", "Pump-Passport", au="Pump", year=2015),
+        doc_line(tids["Сканы/scan.pdf"], "X", "Скан", "Scan"),
+    ]
+    (work / "meta.jsonl").write_text("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in lines), encoding="utf-8")
+    assert intake_build.build(cfg, work, date="2026-11-01") == 0
+    assert intake_apply.apply(cfg, work, date="2026-11-01") == 0
+    assert (cfg.inbox / "_duplicates" / "Copy" / "text.pdf").exists()
+    assert (cfg.inbox / "_rejected" / "spreadsheets" / "sheet.xlsm").exists()
+    after = State(work / "state.sqlite")
+    out = {r["tid"]: r["outcome"] for r in ledger.rows(after)}
+    assert out[dup] == "duplicate" and out[sheet] == "set aside" and out[tids["text.pdf"]] == "done"
+    after.close()
+    state.close()

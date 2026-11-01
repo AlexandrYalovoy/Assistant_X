@@ -12,7 +12,7 @@ outcome, so that the totals add up to what the folder held:
     set aside    a picture, a web page or a spreadsheet not taken by default ([intake] pictures, web_pages,
                  spreadsheets = "reject"): moved to inbox\\_rejected\\<pictures | web pages | spreadsheets> after the
                  batch, taken on request
-    damaged      a damaged or cut file (get it again): moved to inbox\_to_delete\damaged after the batch
+    damaged      a damaged or cut file (get it again): moved to inbox\\_to_delete\\damaged after the batch
     moved        taken aside before the work: a letter (its attachments are files of the batch), an unpacked archive
                  (its files are files of the batch), personal papers, a macOS service file
     queued       not processed yet (the batch was stopped)
@@ -70,9 +70,26 @@ SECONDS = ("prep_seconds", "convert_seconds", "ocr_seconds")  # the stages of a 
 OUTCOMES = ("done", "duplicate", "error", "damaged", "unsupported", "skipped", "held", "set aside", "moved", "queued")
 
 
+def applied_outcome(place):
+    """The outcome of a file an apply moved (status "applied"), by where it went: a duplicate, a file set aside or a
+    damaged one keeps its outcome after the apply (M-139, M-140); into the library it is done."""
+    p = (place or "").replace("/", "\\").lower()
+    if p.startswith("inbox\\_duplicates\\"):
+        return "duplicate"
+    if any(p.startswith(f"inbox\\_rejected\\{folder}\\") for _, folder in TAKEN_ON_REQUEST.values()):
+        return "set aside"
+    if p.startswith("inbox\\_rejected\\programs\\"):
+        return "unsupported"
+    if p.startswith("inbox\\_to_delete\\damaged\\"):
+        return "damaged"
+    return "done"
+
+
 def outcome(row):
     s = row["status"]
-    if s in ("done", "applied"):
+    if s == "applied":
+        return applied_outcome(row.get("place"))
+    if s == "done":
         return "done"
     if s == "dup":
         return "duplicate"
