@@ -252,3 +252,43 @@ def test_the_ledger_after_a_real_apply(project):
     assert out[dup] == "duplicate" and out[sheet] == "set aside" and out[tids["text.pdf"]] == "done"
     after.close()
     state.close()
+
+
+def test_a_scanned_tiff_is_no_loose_picture(tmp_path):
+    """M-138: the sheets of an assembly drawing scanned to TIFF were set aside as loose pictures (pictures = "reject");
+    a TIFF of several pages, or of a sheet of 2000 pixels and more, is a scanned document and is read. A small TIFF is
+    still a picture set aside."""
+    import struct
+
+    from assistant_x.intake import work as intake_work
+
+    def tiff(path, pages):
+        """A plain TIFF (grey, no compression) of pages [(width, height)]."""
+        data, offsets = b"", []
+        for w, h in pages:
+            offsets.append(8 + len(data))
+            data += b"\xff" * (w * h)
+        out = b"II*\x00" + struct.pack("<I", 8 + len(data)) + data
+        for k, ((w, h), at) in enumerate(zip(pages, offsets)):
+            tags = [(256, 4, w), (257, 4, h), (258, 3, 8), (259, 3, 1), (262, 3, 1), (273, 4, at), (277, 3, 1),
+                    (278, 4, h), (279, 4, w * h)]  # fmt: skip
+            nxt = 0 if k == len(pages) - 1 else len(out) + 2 + 12 * len(tags) + 4
+            out += struct.pack("<H", len(tags)) + b"".join(struct.pack("<HHII", t, c, 1, v) for t, c, v in tags)
+            out += struct.pack("<I", nxt)
+        path.write_bytes(out)
+        return path
+
+    sheets = tiff(tmp_path / "drawing.tif", [(300, 200), (300, 200)])
+    big = tiff(tmp_path / "sheet.tiff", [(2100, 2970)])
+    small = tiff(tmp_path / "photo.tif", [(640, 480)])
+    assert intake_work.scanned_sheet(sheets) and intake_work.scanned_sheet(big) and not intake_work.scanned_sheet(small)
+
+    def prep(path, tid):
+        job = {"work": str(tmp_path / "w"), "tid": tid, "src": str(path), "ext": path.suffix.lstrip("."), "ocr": False,
+               "imgocr": False, "soffice": None, "timeouts": {"soffice": 60, "hidden": 60}, "memory_mb": 0, "env": {},
+               "inproc": True, "pictures": "reject"}  # fmt: skip
+        return intake_work.prep(job)
+
+    assert prep(small, "T0001") == {"status": "skipped", "why": ledger.set_aside_why("pictures")}
+    for path, tid in ((sheets, "T0002"), (big, "T0003")):
+        assert not str(prep(path, tid).get("why") or "").startswith(ledger.SET_ASIDE)

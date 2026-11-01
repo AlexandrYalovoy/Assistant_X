@@ -481,6 +481,24 @@ def has_text_layer(pdf):
         return any(page.get_text().strip() for page in doc)
 
 
+SHEET_SHORT = 2000  # pixels of the shorter side from which a TIFF is a scanned sheet (A4 at 240 dpi), not a photo
+
+
+def scanned_sheet(path):
+    """True for a TIFF that is a scanned document: several pages, or a page of SHEET_SHORT pixels and more (a sheet of
+    a drawing, M-138: the sheets of an assembly drawing were set aside as loose pictures)."""
+    import pymupdf
+
+    try:
+        with pymupdf.open(path) as doc:
+            if doc.page_count > 1:
+                return True
+        pix = pymupdf.Pixmap(str(path))
+        return min(pix.width, pix.height) >= SHEET_SHORT
+    except Exception:  # noqa: BLE001 — a picture that does not open is set aside as one
+        return False
+
+
 def prep(job: Job) -> Prep:
     import pymupdf
 
@@ -499,6 +517,8 @@ def prep(job: Job) -> Prep:
     from assistant_x.intake import ledger
 
     group = ledger.request_group(ext)
+    if group == "pictures" and ext in ("tif", "tiff") and scanned_sheet(src):  # M-138: a scan is a document
+        group = None
     if group and job.get(group, "include") == "reject":  # a picture, a web page, a workbook: taken on request only
         return {"status": "skipped", "why": ledger.set_aside_why(group)}
     if kind == "spreadsheet" and job.get("spreadsheets") == "skip":

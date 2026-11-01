@@ -76,6 +76,8 @@ The trial intake of a big real folder in batches, continued.
 - prepare-media puts the license texts of the models on the medium (models\LICENSES: bge-m3 MIT, bge-reranker-v2-m3
   Apache-2.0), prepare-media --check misses none, and THIRD_PARTY_LICENSES names the license of the Python installer;
   before, the medium said the models carried their own license files, which they do not.
+- Intake: a TIFF of several pages, or of a sheet of 2 000 pixels and more, is a scanned document and is read; it is
+  no loose picture set aside (the sheets of an assembly drawing went to inbox\_rejected\pictures).
 
 ## 0.5.6 — 2026-10-30
 
