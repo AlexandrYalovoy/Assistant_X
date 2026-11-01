@@ -308,6 +308,8 @@ on 127.0.0.1: the models are loaded once for all the apps. By hand (any MCP clie
 }
 ```
 
+A local model in LM Studio step by step: [docs/LMSTUDIO.md](docs/LMSTUDIO.md).
+
 **Add to LM Studio** without the command line: `assistant-x connect lmstudio --link` prints a link
 (`lmstudio://add_mcp?...`, the entry of this PC); opened, LM Studio asks to add the server. The installer's summary
 gives it too.

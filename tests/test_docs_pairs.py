@@ -22,6 +22,7 @@ DOCS = [
     "docs/PACKAGES.md",
     "docs/GLOSSARY.md",
     "docs/CLIENTS.md",
+    "docs/LMSTUDIO.md",
 ]
 FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 LINK = re.compile(r"\]\(([^)\s]+)\)")

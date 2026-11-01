@@ -317,6 +317,8 @@ connect APP` — в одно приложение (`claude_desktop`, `claude_cod
 }
 ```
 
+Локальная модель в LM Studio по шагам: [docs/LMSTUDIO.ru.md](docs/LMSTUDIO.ru.md).
+
 **Добавление в LM Studio** без командной строки: `assistant-x connect lmstudio --link` выводит ссылку
 (`lmstudio://add_mcp?...`, запись этого ПК); если её открыть, LM Studio предложит добавить сервер. Её же приводит
 итоговая сводка установщика.

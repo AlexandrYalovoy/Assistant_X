@@ -81,6 +81,8 @@ The trial intake of a big real folder in batches, continued.
 - Intake: a folder of 4 pictures and more that stand upright like pages (a vessel passport of 6-10 phone photos) is
   joined into one PDF like a book of 8 scans and more; photos of a site, lying across, stay pictures. Before, such
   passports were set aside photo by photo and 51 of them were joined by hand.
+- docs/LMSTUDIO.md (and its Russian twin): Assistant X with a local model in LM Studio step by step: what is needed, the
+  install in three steps, how to ask, a preset for small models, what to do when it fails.
 
 ## 0.5.6 — 2026-10-30
 
