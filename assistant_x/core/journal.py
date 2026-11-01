@@ -17,6 +17,7 @@ from assistant_x.core.formats import EVENTS_HEADER as HEADER, event_kind as kind
 
 COLS = ["Date", "Source file", "Size, bytes", "SHA-256", "Code", "File in the library", "Status"]
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+RENAMED = "renamed"  # the status of an event of a file of the library given another name (source_file: its old place)
 TITLE = """# Intake journal
 
 The size and the SHA-256 (first 16 characters) of an original are there to find duplicates.
@@ -111,7 +112,13 @@ def render(events, manifest):
         and p.rsplit(".", 1)[0] not in stems
         and not p.rsplit("\\", 1)[-1].startswith("_")
     )  # _README.md of the section folders
-    gone = sorted(n for n in named if "." in n.rsplit("\\", 1)[-1] and n not in manifest) if manifest else []
+    # a file taken out (removed) or renamed later left its old place on purpose: no file lost (audit 9 C-01)
+    moved_on = {r[1].rstrip("\\") for r in events if kind(r[6]) == "removed" or r[6].startswith(RENAMED)}
+    gone = (
+        sorted(n for n in named if "." in n.rsplit("\\", 1)[-1] and n not in manifest and n not in moved_on)
+        if manifest
+        else []
+    )
     L += [
         "",
         "## Check against the manifest",

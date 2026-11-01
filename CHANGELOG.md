@@ -68,6 +68,8 @@ The trial intake of a big real folder in batches, continued.
 - Intake: "en_later" is refused for an English document (it gets its bilingual card at once, the author's rule);
   before, its English card with en_later was refused and a card without English passed. The skill and docs/INTAKE
   name en_later now.
+- journal.md: a file taken out of the library (remove) or given another name (a "renamed" event) is no longer
+  counted "in the journal but not in the manifest": 10 false alarms of a real library hid a real one.
 
 ## 0.5.6 — 2026-10-30
 

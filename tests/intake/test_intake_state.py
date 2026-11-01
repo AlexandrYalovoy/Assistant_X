@@ -127,3 +127,19 @@ def test_posix_tells_the_memory_cap_by_the_output():
     assert limits.says_memory(1, b"Traceback ...\nMemoryError\n") and limits.says_memory(-9, b"")
     assert limits.says_memory(134, b"terminate called after throwing an instance of 'std::bad_alloc'")
     assert not limits.says_memory(1, b"Error: no such file") and not limits.says_memory(0, b"MemoryError")
+
+
+def test_the_journal_check_knows_removed_and_renamed_files():
+    """Audit 9 C-01: a file taken out (assistant-x remove) or given another name stayed "in the journal but not in the
+    manifest" in the check of journal.md: 10 false alarms in the real library hid a real one."""
+    from assistant_x.core import journal as J
+
+    lib = "library" + chr(92) + "01_Standards" + chr(92)
+    done = ["2026-10-27", "inbox" + chr(92) + "a.pdf", "100", "abcd", "N-00268", lib + "N-00268_A.pdf", "done"]
+    removed = ["2026-10-28", lib + "N-00268_A.pdf", "100", "abcd", "N-00268", "inbox", "removed: not ours"]
+    done2 = ["2026-10-27", "inbox" + chr(92) + "b.pdf", "5", "ef", "N-00001", lib + "N-00001_B_2027.pdf", "done"]
+    renamed = ["2026-11-01", lib + "N-00001_B_2027.pdf", "5", "ef", "N-00001", lib + "N-00001_B.pdf", "renamed: the year"]
+    lost = ["2026-10-27", "inbox" + chr(92) + "c.pdf", "5", "ef", "N-00002", lib + "N-00002_C.pdf", "done"]
+    out = J.render([done, removed, done2, renamed, lost], {lib + "N-00001_B.pdf": ("5", "ef" * 32)})
+    check = out.split("## Check against the manifest")[1]
+    assert "in the journal but not in the manifest: 1" in check and "N-00002_C.pdf" in check and "N-00268" not in check
