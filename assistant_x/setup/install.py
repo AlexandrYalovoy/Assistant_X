@@ -878,9 +878,15 @@ def register_others(py, dry):
     from assistant_x import clients
     from assistant_x.clients import connect
 
-    names = [n for n in ("claude_code", "codex", "dsh", "lmstudio") if clients.app(n).found()]
+    names = [
+        n
+        for n in ("claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline")
+        if clients.app(n).found()
+    ]
     if not names:
-        say("   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio)")
+        say(
+            "   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline)"
+        )
         return
     connect.connect(names, dry=dry, python=py, root=P.ROOT, say=lambda s: say("   " + s.replace("\n", "\n   ")))
 

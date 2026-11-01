@@ -58,7 +58,7 @@ py -3.11 -m assistant_x.setup.install --online --yes --json [--workspace "D:\My 
 
 ## 6. Подключите приложения и проверьте
 
-`<command> connect auto` подключает все приложения, найденные на этом ПК (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`); `<command> connect APP` — одно
+`<command> connect auto` подключает все приложения, найденные на этом ПК (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`); `<command> connect APP` — одно
 приложение. Установщик это уже сделал; запустите снова, если приложение поставили позже. Затем
 `<command> connect --check`: рукопожатие и поиск через запись каждого приложения. Каждое приложение нужно
 перезапустить (Claude Desktop: значок у часов → Quit), кроме DeepSeek Harness и LM Studio, которые перечитывают
@@ -158,7 +158,7 @@ py -3.11 -m assistant_x.setup.install --online --yes --json [--workspace "D:\My 
 | `prepare-media` | пакеты для установки без интернета (сборочный ПК) |
 | `lock` | кто держит блокировку машины; команда под ней |
 | `skill` | записать навык профиля рабочей папки (SKILL.md) |
-| `connect` | подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio |
+| `connect` | подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline |
 | `disconnect` | убрать библиотеку из настроек приложения |
 | `update` | заново подключить все подключённые приложения и обновить их навыки |
 | `gen-docs` | создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин |

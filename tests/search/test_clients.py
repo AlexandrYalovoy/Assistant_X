@@ -183,6 +183,48 @@ def test_lmstudio_json(home):
     assert json.loads(p.read_text(encoding="utf-8")) == {"mcpServers": {"hf": {"url": "https://example.org/mcp"}}}
 
 
+def test_gemini_cli_settings_and_rules(home):
+    from assistant_x.clients import gemini
+
+    d = home / ".gemini"
+    d.mkdir()
+    (d / "settings.json").write_text(json.dumps({"theme": "dark", "mcpServers": {"git": {"command": "uvx"}}}), "utf-8")
+    (d / "GEMINI.md").write_text("# My rules\n\nAnswer briefly.\n", encoding="utf-8")
+    assert gemini.found() and "gemini" in K.APPS
+    e = entry()
+    assert [s for _, s in gemini.connect(e, False)] == ["written", "written"]
+    conf = json.loads((d / "settings.json").read_text(encoding="utf-8"))
+    ours = conf["mcpServers"]["assistant-x"]
+    assert conf["theme"] == "dark" and conf["mcpServers"]["git"] == {"command": "uvx"}
+    assert ours["timeout"] == K.TOOL_TIMEOUT * 1000 and ours["trust"] is False and ours["command"] == e["command"]
+    rules = (d / "GEMINI.md").read_text(encoding="utf-8")
+    assert rules.startswith("# My rules\n\nAnswer briefly.\n") and gemini.BEGIN in rules and "library_guide" in rules
+    assert [s for _, s in gemini.connect(e, False)] == ["unchanged", "unchanged"]
+    gemini.disconnect(False)
+    assert "assistant-x" not in json.loads((d / "settings.json").read_text(encoding="utf-8"))["mcpServers"]
+    assert (d / "GEMINI.md").read_text(encoding="utf-8") == "# My rules\n\nAnswer briefly.\n"
+
+
+@pytest.mark.parametrize("name", ["antigravity", "cursor", "cline"])
+def test_the_mcp_json_of_ide_agents(home, name):
+    a = K.app(name)
+    assert not a.found() and a.read() is None
+    path = __import__("pathlib").Path(a.configs()[0])
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"mcpServers": {"other": {"command": "node", "args": ["x.js"]}}}), encoding="utf-8")
+    assert a.found()
+    e = entry(a.TOOLSET, a.COMPACT)
+    assert a.connect(e, False)[0][1] == "written"
+    conf = json.loads(path.read_text(encoding="utf-8"))
+    ours = conf["mcpServers"]["assistant-x"]
+    assert conf["mcpServers"]["other"] == {"command": "node", "args": ["x.js"]} and ours["env"]["PYTHONUTF8"] == "1"
+    assert a.read()["args"] == e["args"] and a.connect(e, False)[0][1] == "unchanged"
+    if name == "cline":  # a long first answer, the tools not approved in advance
+        assert ours["timeout"] == K.TOOL_TIMEOUT and ours["disabled"] is False and ours["autoApprove"] == []
+    a.disconnect(False)
+    assert json.loads(path.read_text(encoding="utf-8")) == {"mcpServers": {"other": {"command": "node", "args": ["x.js"]}}}
+
+
 def test_claude_desktop_left_alone_when_unreadable(home):
     d = home / "AppData" / "Roaming" / "Claude"
     if os.name != "nt":

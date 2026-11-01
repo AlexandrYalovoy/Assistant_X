@@ -49,6 +49,9 @@ pyproject.toml).
 - Разбор: год черновика — не будущий год, не число после знака номера (рег. № 1928) и не год из заголовков таблицы лет
   (экономическая модель со столбцами 2025..2028 получала 2027); на 4 186 текстах реальной библиотеки черновики
   совпадают с проверенными годами карточек 3 184 раза вместо 3 181.
+- assistant-x connect gemini (Gemini CLI: ~/.gemini/settings.json и краткие правила в ~/.gemini/GEMINI.md),
+  antigravity (~/.gemini/antigravity/mcp_config.json), cursor (~/.cursor/mcp.json) и cline (настройки MCP расширения
+  Cline для VS Code): их знают connect auto, connect --check, update и Setup.
 
 ## 0.5.6 — 2026-10-30
 

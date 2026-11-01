@@ -195,7 +195,8 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
 
 1. [`Setup.bat`](Setup.bat) — finds or installs Python, installs the packages and the program, makes the workspace
    `Documents\Assistant X` with the profile `general`, connects the library to every app it finds (Claude Desktop,
-   Claude Code, Codex, DeepSeek Harness, LM Studio: `assistant-x connect auto`), writes the skills and runs a
+   Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline:
+   `assistant-x connect auto`), writes the skills and runs a
    self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` with `MODELS.json`, `programs\`) everything of the program goes to
    `%USERPROFILE%\.assistant_x` — `app\<version>`, the environment `venv`, the models (checked against `MODELS.json`),

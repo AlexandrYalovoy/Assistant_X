@@ -49,6 +49,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: the draft year is no year to come, no number after the number sign (reg. No 1928) and no year of the heads of
   a table of years (an economic model with columns 2025..2028 got 2027); on the 4 186 texts of a real library the
   drafts agree with the checked card years 3 184 times instead of 3 181.
+- assistant-x connect gemini (Gemini CLI: ~/.gemini/settings.json and the short rules in ~/.gemini/GEMINI.md),
+  antigravity (~/.gemini/antigravity/mcp_config.json), cursor (~/.cursor/mcp.json) and cline (the MCP settings of the
+  Cline extension of VS Code): connect auto, connect --check, update and Setup know them.
 
 ## 0.5.6 — 2026-10-30
 

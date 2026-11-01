@@ -199,7 +199,8 @@ oil-gas-ru`).
 
 1. [`Setup.bat`](Setup.bat) — находит или устанавливает Python, устанавливает пакеты и программу, создаёт рабочую папку
    `Documents\Assistant X` с профилем `general`, подключает библиотеку ко всем найденным приложениям (Claude Desktop,
-   Claude Code, Codex, DeepSeek Harness, LM Studio: `assistant-x connect auto`), записывает навыки и запускает
+   Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline:
+   `assistant-x connect auto`), записывает навыки и запускает
    самопроверку. При установке с носителя (`assistant-x prepare-media --out E:\` на ПК с интернетом:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` с `MODELS.json`, `programs\`) всё, что относится к
    программе, помещается в `%USERPROFILE%\.assistant_x` — `app\<version>`, окружение `venv`, модели (сверяются с

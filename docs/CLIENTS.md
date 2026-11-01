@@ -31,6 +31,10 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
 | DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
 | LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | reader, compact | none: `library_guide`; `assistant-x skill --app guide` writes a system prompt for a preset |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | all | a block of the short rules in `~/.gemini/GEMINI.md` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | none: `library_guide` |
+| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | none: `library_guide` |
+| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | none: `library_guide` |
 
 `--full` gives an app every tool without the compact answers, `--reader` only the reading tools, `--compact` the short
 answers. A copy of a settings file is kept beside it before a change (`<name>.backup-<date>`, the newest three), the

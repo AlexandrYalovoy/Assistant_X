@@ -18,7 +18,7 @@ import datetime, importlib, json, os, shutil, sys
 from pathlib import Path
 
 SERVER = "assistant-x"
-APPS = ("claude_desktop", "claude_code", "codex", "dsh", "lmstudio")
+APPS = ("claude_desktop", "claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline")
 BACKUPS_KEPT = 3
 TOOL_TIMEOUT = 900  # s: an answer of the library (a cold start loads the models)
 STARTUP_TIMEOUT = 60  # s: the bridge answers the handshake at once; the tool list waits for the service
@@ -126,11 +126,14 @@ def json_text(conf):
     return json.dumps(conf, ensure_ascii=False, indent=2) + "\n"
 
 
-def json_connect(path, e, dry):
+def json_connect(path, e, dry, extra=None):
+    """The entry e into mcpServers of path; extra: keys of the app (a timeout) written when the entry lacks them, so a
+    value the user set stays."""
     conf = json_read(path)
     servers = conf.setdefault("mcpServers", {})
     old = servers.get(SERVER) or {}
-    new = dict(old, command=e["command"], args=e["args"], env=dict(old.get("env") or {}, **e["env"]))
+    new = dict(extra or {}, **old)
+    new.update(command=e["command"], args=e["args"], env=dict(old.get("env") or {}, **e["env"]))
     if old == new and Path(path).exists():
         return "unchanged"
     servers[SERVER] = new
@@ -145,6 +148,21 @@ def json_disconnect(path, dry):
         return "not connected"
     del conf["mcpServers"][SERVER]
     return put(path, json_text(conf), dry)
+
+
+def json_app_connect(path, e, dry, extra=None):
+    """[(path, status)] of the entry written into the mcpServers of an app (Cursor, Antigravity, Cline)."""
+    try:
+        return [(path, json_connect(path, e, dry, extra))]
+    except Refused as why:
+        return [(path, f"left alone: {why}; add by hand:\n{by_hand(e)}")]
+
+
+def json_app_disconnect(path, dry):
+    try:
+        return [(path, json_disconnect(path, dry))]
+    except Refused as why:
+        return [(path, f"left alone: {why}")]
 
 
 def by_hand(e, fmt="json"):

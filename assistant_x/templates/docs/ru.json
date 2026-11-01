@@ -6,7 +6,11 @@
   "commands": "| Команда | Что делает |",
   "problems": "| Код | Что это значит | Как исправить |"
  },
- "toolsets": {"reader": "reader", "all": "all", "compact": "компактный"},
+ "toolsets": {
+  "reader": "reader",
+  "all": "all",
+  "compact": "компактный"
+ },
  "change": {
   "no": "нет",
   "destructive": "да, после «да» пользователя на план",
@@ -37,6 +41,26 @@
    "TITLE": "LM Studio",
    "SETTINGS": "`~/.lmstudio/mcp.json`, `mcpServers`",
    "SKILL": "нет: `library_guide`; `assistant-x skill --app guide` пишет системный промпт для пресета"
+  },
+  "gemini": {
+   "TITLE": "Gemini CLI",
+   "SETTINGS": "`~/.gemini/settings.json`, `mcpServers` (`timeout`); правила в `~/.gemini/GEMINI.md`",
+   "SKILL": "блок кратких правил в `~/.gemini/GEMINI.md`"
+  },
+  "antigravity": {
+   "TITLE": "Antigravity",
+   "SETTINGS": "`~/.gemini/antigravity/mcp_config.json`, `mcpServers`",
+   "SKILL": "нет: `library_guide`"
+  },
+  "cursor": {
+   "TITLE": "Cursor",
+   "SETTINGS": "`~/.cursor/mcp.json`, `mcpServers`",
+   "SKILL": "нет: `library_guide`"
+  },
+  "cline": {
+   "TITLE": "Cline (VS Code)",
+   "SETTINGS": "`%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`)",
+   "SKILL": "нет: `library_guide`"
   }
  },
  "tools": {
@@ -85,7 +109,7 @@
   "prepare-media": "пакеты для установки без интернета (сборочный ПК)",
   "lock": "кто держит блокировку машины; команда под ней",
   "skill": "записать навык профиля рабочей папки (SKILL.md)",
-  "connect": "подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio",
+  "connect": "подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline",
   "disconnect": "убрать библиотеку из настроек приложения",
   "update": "заново подключить все подключённые приложения и обновить их навыки",
   "gen-docs": "создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин",
@@ -93,21 +117,69 @@
   "remove": "отложить документы библиотеки в сторону (inbox\\_to_delete), шифры остаются занятыми"
  },
  "problems": {
-  "workspace-missing": ["Рабочая папка библиотеки ещё не создана.", "assistant-x init \"{workspace}\""],
-  "folder-missing": ["Не хватает папки рабочей папки.", "assistant-x init \"{workspace}\""],
-  "base-missing": ["В библиотеке есть карточки, но нет поисковой базы.", "assistant-x build"],
-  "model-missing": ["Нет смысловой модели: поиск идёт только по словам.", "assistant-x download-models (около 4,5 ГБ: сначала спросите пользователя)"],
-  "vectors-missing": ["Фрагменты без векторов находятся только по словам.", "assistant-x embed"],
-  "older-folder": ["Старой служебной папкой ПК (до 0.5.1 или приватной копией Claude Desktop из Microsoft Store) может ещё пользоваться приложение, подключённое раньше.", "assistant-x connect auto"],
-  "app-not-connected": ["В приложении нет записи Assistant X.", "assistant-x connect {app}"],
-  "models-in-app-package": ["Модели ПК лежат в папке приложения из Microsoft Store: удаление или сброс этого приложения удалит их.", "закройте приложения библиотеки на минуту (сервис библиотеки тогда остановится) и выполните любую команду assistant-x: она перенесёт модели в служебную папку ПК"],
-  "app-in-process": ["Приложение запускает собственный сервер библиотеки (запись сделана до 0.5): он держит модели и видеокарту отдельно от общего сервиса остальных приложений.", "assistant-x connect {app}, затем перезапустите приложение"],
-  "app-check-failed": ["Запись приложения не отвечает на рукопожатие, список инструментов или поиск.", "assistant-x connect --check {app} --json; если снова не работает: assistant-x debug-report"],
-  "search-words-only": ["Поиск приложения отвечает только по словам (нет модели или векторов).", "assistant-x doctor --json (он назовёт, какой модели или векторов не хватает)"],
-  "service-not-started": ["Сервис библиотеки не запустился.", "прочитайте конец журнала сервиса {log}; затем assistant-x doctor --json"],
-  "gpu-memory-low": ["На видеокарте мало свободной памяти: модели поиска и локальная языковая модель тормозят друг друга.", "в assistant_x.toml в разделе [search] задайте device = \"cpu\" (тогда библиотека оставит видеокарту локальной модели) или загрузите локальную модель с меньшим числом параллельных потоков"],
-  "skill-outdated": ["Навык, загруженный в Claude Desktop, старше программы.", "assistant-x skill; заархивируйте папку {folder} в zip и загрузите в Claude (Settings, Capabilities, Skills)"],
-  "tools-hidden": ["Приложение прячет инструменты сервера за своим поиском инструментов (Codex).", "найдите инструменты по запросу «assistant-x library_guide search_library»; ресурсов у сервера нет"],
-  "sign-in-limits": ["Тариф или вход ограничивают приложение: на бесплатном тарифе ChatGPT Codex работает только в приложении для компьютера, а при входе может попросить номер телефона.", "используйте приложение ChatGPT для компьютера или подключите другое приложение: assistant-x connect auto"]
+  "workspace-missing": [
+   "Рабочая папка библиотеки ещё не создана.",
+   "assistant-x init \"{workspace}\""
+  ],
+  "folder-missing": [
+   "Не хватает папки рабочей папки.",
+   "assistant-x init \"{workspace}\""
+  ],
+  "base-missing": [
+   "В библиотеке есть карточки, но нет поисковой базы.",
+   "assistant-x build"
+  ],
+  "model-missing": [
+   "Нет смысловой модели: поиск идёт только по словам.",
+   "assistant-x download-models (около 4,5 ГБ: сначала спросите пользователя)"
+  ],
+  "vectors-missing": [
+   "Фрагменты без векторов находятся только по словам.",
+   "assistant-x embed"
+  ],
+  "older-folder": [
+   "Старой служебной папкой ПК (до 0.5.1 или приватной копией Claude Desktop из Microsoft Store) может ещё пользоваться приложение, подключённое раньше.",
+   "assistant-x connect auto"
+  ],
+  "app-not-connected": [
+   "В приложении нет записи Assistant X.",
+   "assistant-x connect {app}"
+  ],
+  "models-in-app-package": [
+   "Модели ПК лежат в папке приложения из Microsoft Store: удаление или сброс этого приложения удалит их.",
+   "закройте приложения библиотеки на минуту (сервис библиотеки тогда остановится) и выполните любую команду assistant-x: она перенесёт модели в служебную папку ПК"
+  ],
+  "app-in-process": [
+   "Приложение запускает собственный сервер библиотеки (запись сделана до 0.5): он держит модели и видеокарту отдельно от общего сервиса остальных приложений.",
+   "assistant-x connect {app}, затем перезапустите приложение"
+  ],
+  "app-check-failed": [
+   "Запись приложения не отвечает на рукопожатие, список инструментов или поиск.",
+   "assistant-x connect --check {app} --json; если снова не работает: assistant-x debug-report"
+  ],
+  "search-words-only": [
+   "Поиск приложения отвечает только по словам (нет модели или векторов).",
+   "assistant-x doctor --json (он назовёт, какой модели или векторов не хватает)"
+  ],
+  "service-not-started": [
+   "Сервис библиотеки не запустился.",
+   "прочитайте конец журнала сервиса {log}; затем assistant-x doctor --json"
+  ],
+  "gpu-memory-low": [
+   "На видеокарте мало свободной памяти: модели поиска и локальная языковая модель тормозят друг друга.",
+   "в assistant_x.toml в разделе [search] задайте device = \"cpu\" (тогда библиотека оставит видеокарту локальной модели) или загрузите локальную модель с меньшим числом параллельных потоков"
+  ],
+  "skill-outdated": [
+   "Навык, загруженный в Claude Desktop, старше программы.",
+   "assistant-x skill; заархивируйте папку {folder} в zip и загрузите в Claude (Settings, Capabilities, Skills)"
+  ],
+  "tools-hidden": [
+   "Приложение прячет инструменты сервера за своим поиском инструментов (Codex).",
+   "найдите инструменты по запросу «assistant-x library_guide search_library»; ресурсов у сервера нет"
+  ],
+  "sign-in-limits": [
+   "Тариф или вход ограничивают приложение: на бесплатном тарифе ChatGPT Codex работает только в приложении для компьютера, а при входе может попросить номер телефона.",
+   "используйте приложение ChatGPT для компьютера или подключите другое приложение: assistant-x connect auto"
+  ]
  }
 }

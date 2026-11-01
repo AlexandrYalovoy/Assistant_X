@@ -59,7 +59,7 @@ words only.
 
 ## 6. Connect the apps and check
 
-`<command> connect auto` connects every app found on this PC (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`); `<command> connect APP` one app. The
+`<command> connect auto` connects every app found on this PC (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`); `<command> connect APP` one app. The
 installer did it already; run it again when an app was installed later. Then `<command> connect --check`: the
 handshake and a search through the entry of every app. Each app needs a restart (Claude Desktop: the icon by the clock
 → Quit), except DeepSeek Harness and LM Studio, which reload their settings. Claude Desktop also needs its skill
@@ -158,7 +158,7 @@ changes the library asks for the user's yes to a plan first.
 | `prepare-media` | the packages of an offline installation (build PC) |
 | `lock` | who holds the machine lock; a command under it |
 | `skill` | write the skill of the profile of the workspace (SKILL.md) |
-| `connect` | connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio |
+| `connect` | connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline |
 | `disconnect` | take the library out of the settings of an app |
 | `update` | connect every connected app again, its skill refreshed |
 | `gen-docs` | make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin |
