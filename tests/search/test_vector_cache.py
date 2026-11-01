@@ -239,3 +239,26 @@ def test_the_index_of_the_keys():
     with pytest.raises(KeyError):
         idx[b"z" * V.KEY_BYTES]
     assert len(V.KeyIndex(b"")) == 0
+
+
+def test_many_keys_found_at_once_as_one_by_one(tmp_path):
+    """0.5.9: the export of a real base (945 000 fragments) took 73 minutes, as every key was searched alone in a
+    big-endian array (numpy converted the whole array at every call). The keys searched at once give the same rows, and
+    the vectors read in one pass are byte for byte the ones read a key at a time; heads with the high bit (a first byte
+    of 0x80 and more) are found too."""
+    rng = np.random.default_rng(7)
+    keys = [bytes(rng.integers(0, 256, V.KEY_BYTES, dtype=np.uint8)) for _ in range(500)]
+    keys[0] = b"\xff" + keys[0][1:]
+    keys[1] = b"\x80" + keys[1][1:]
+    keys.append(keys[2][:8] + bytes(V.KEY_BYTES - 8))  # the same head as another key
+    idx = V.KeyIndex(b"".join(keys))
+    absent = [bytes(V.KEY_BYTES), b"\xfe" * V.KEY_BYTES]
+    assert idx.rows_of(keys + absent) == list(range(len(keys))) + [None, None]
+    assert [idx.get(k) for k in keys] == list(range(len(keys))) and all(idx.get(k) is None for k in absent)
+    cfg = {"vector_cache": str(tmp_path / "cache"), "index_dir": str(tmp_path)}
+    cache = V.Cache(cfg)
+    vecs = rng.random((len(keys), 16)).astype(np.float16)
+    assert cache.add(keys, vecs) == len(keys)
+    got = V.Cache(cfg).get(list(reversed(keys)) + absent)
+    assert set(got) == set(keys)
+    assert all(got[k].tobytes() == vecs[i].tobytes() for i, k in enumerate(keys))

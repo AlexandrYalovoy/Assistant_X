@@ -131,14 +131,38 @@ class KeyIndex:
             np.frombuffer(raw, dtype=">u8", count=n * (KEY_BYTES // 8))[:: KEY_BYTES // 8] if n else np.zeros(0, dtype=">u8")
         )
         self.order = np.argsort(heads, kind="stable")
-        self.heads = heads[self.order]
+        # in the byte order of the machine: searchsorted on a big-endian array converted the whole array at every call
+        # (2 ms a key, an hour for the 945 000 fragments of a base export)
+        self.heads = heads[self.order].astype(np.uint64)
         self.added = {}
+
+    def rows_of(self, keys):
+        """[row or None] of many keys at once: their heads searched in one call (a call a key cost about 1 ms on the
+        million keys of a real library)."""
+        keys = list(keys)
+        out = [self.added.get(k) for k in keys]
+        if not len(self.heads) or not keys:
+            return out
+        heads = np.frombuffer(b"".join(k[:8] for k in keys), dtype=">u8").astype(np.uint64)
+        starts = np.searchsorted(self.heads, heads, side="left")
+        n = len(self.heads)
+        for j, (k, i) in enumerate(zip(keys, starts.tolist())):
+            if out[j] is not None:
+                continue
+            h = int(heads[j])
+            while i < n and int(self.heads[i]) == h:
+                row = int(self.order[i])
+                if self.raw[row * KEY_BYTES : (row + 1) * KEY_BYTES] == k:
+                    out[j] = row
+                    break
+                i += 1
+        return out
 
     def get(self, key, default=None):
         row = self.added.get(key)
         if row is not None:
             return row
-        h = int.from_bytes(key[:8], "big")
+        h = np.uint64(int.from_bytes(key[:8], "big"))
         i = int(np.searchsorted(self.heads, h, side="left"))
         while i < len(self.heads) and int(self.heads[i]) == h:
             row = int(self.order[i])
@@ -207,13 +231,18 @@ class Cache:
     def get(self, keys):
         """{key: float16 vector} of the keys the cache has."""
         idx = self.index()
-        found = [(k, idx[k]) for k in dict.fromkeys(keys) if k in idx]
+        wanted = list(dict.fromkeys(keys))
+        pairs = [(k, r) for k, r in zip(wanted, idx.rows_of(wanted)) if r is not None]
+        found, rows = [k for k, _ in pairs], [r for _, r in pairs]
         if not found:
             return {}
         vecs = np.memmap(self.vecs_path, dtype=np.float16, mode="r").reshape(-1, self.dim)
-        out = {k: np.array(vecs[r]) for k, r in found}
+        rows = np.asarray(rows, dtype=np.int64)
+        order = np.argsort(rows, kind="stable")  # one read of the file in its order, not a read a key
+        block = np.empty((len(rows), self.dim), dtype=np.float16)
+        block[order] = vecs[rows[order]]
         del vecs
-        return out
+        return dict(zip(found, block))
 
     def add(self, keys, vectors):
         """Append the rows of the keys it does not have yet; vectors: an array (n, dim)."""
@@ -232,8 +261,8 @@ class Cache:
         n = self.rows()
         self._truncate(n)  # a cut row of an interrupted write goes
         new, seen = [], set()
-        for i, k in enumerate(keys):
-            if k not in idx and k not in seen:
+        for i, (k, r) in enumerate(zip(keys, idx.rows_of(keys))):
+            if r is None and k not in seen:
                 new.append(i)
                 seen.add(k)
         if not new:
@@ -255,7 +284,7 @@ class Cache:
     def compact(self, keep):
         """Keep only the rows of the keys in keep; returns (rows before, rows after)."""
         idx, before = self.index(), self.rows()
-        rows = sorted(idx[k] for k in set(keep) if k in idx)
+        rows = sorted(r for r in idx.rows_of(set(keep)) if r is not None)
         if len(rows) == before:
             return before, before
         vecs = np.memmap(self.vecs_path, dtype=np.float16, mode="r").reshape(-1, self.dim)

@@ -14,7 +14,7 @@ events keep only date, code and status. The vectors come from the vector cache o
 the vectors of the base are put into it first): a package installed on a PC with the same model needs no embedding.
 Never in a package: assistant_x.toml and assistant_x.local.toml, the debug journals, the query logs, the work folder."""
 
-import argparse, datetime, hashlib, json, os, re, shutil, sys, zipfile
+import argparse, datetime, hashlib, json, os, re, shutil, sys, time, zipfile
 
 from assistant_x.base import package as P
 from assistant_x.core import card as C
@@ -270,8 +270,17 @@ def export(
                 "parts": [p["code"] for p in (card.get("file") or {}).get("parts") or []],
             }
         )
-    for name_, src in files:
+    t0, done, step = time.time(), 0, max(total // 20, 1)  # the progress of the files: a line every 5 % of the bytes
+    say(f"Files of the documents: {len(files)}, {total / 1024**3:.1f} GB")
+    for i, (name_, src) in enumerate(files, 1):
         w.add_file(name_, src)
+        size = os.path.getsize(lp(src))
+        if (done + size) // step > done // step or i == len(files):
+            left = (time.time() - t0) / max(done + size, 1) * (total - done - size)
+            say(
+                f"  {i}/{len(files)} files, {(done + size) / 1024**3:.1f} of {total / 1024**3:.1f} GB, about {left / 60:.0f} min left"
+            )
+        done += size
     subs = {sub for code in chosen for sub, _ in file_entries(chosen[code])}
     scores = read_ocr_scores(os.path.join(idx, "ocr_quality.tsv"))
     if any(s in scores for s in subs):
@@ -292,7 +301,10 @@ def export(
                 "utf-8"
             ),
         )
+    t1 = time.time()
     vec = vectors_of(cfg, set(chosen)) if vectors else None
+    if vectors:
+        say(f"Vectors: {vec[0]['rows'] if vec else 0} in {time.time() - t1:.0f} s")
     if vec:
         info, keys, blob = vec
         w.add_bytes("vectors/meta.json", json.dumps(info, indent=1).encode("utf-8"))
