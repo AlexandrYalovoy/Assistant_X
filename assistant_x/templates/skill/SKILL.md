@@ -161,7 +161,9 @@ texts and card drafts. You write the cards from the drafts; the move into the li
      this library: {{card_languages}} — `title`, `designation`, `keywords`, `terms[].name`, `toc[].title`,
      `tables[].title`, `units[].title`, `serial.name`. English is always there: translate the title, the keywords,
      the contents. `scope` (≤ 300 characters), `summary` (≤ 800), `questions` (≤ 5) and `note` are English only; the
-     search by meaning finds an English summary by a question in any language.
+     search by meaning finds an English summary by a question in any language. A big batch of documents in another
+     language may get their cards in that language first with `"en_later": true` (no `en`, no English texts; the card
+     is marked to get its English part later); an English document never: it gets its full card at once.
    - `title` — the title as in the document (without its designation), `designation` — `GOST R ISO 9001-2015` /
      `ГОСТ Р ИСО 9001-2015` when the document has one; `authors` (a list), `year` (a number), `publisher`, `edition`; `lang` — the languages
      of the text (`["ru"]`).

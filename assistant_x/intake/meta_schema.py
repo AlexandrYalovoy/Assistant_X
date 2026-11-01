@@ -133,6 +133,12 @@ def check(meta, tids=None, year=None, sections=None, languages=("en",), topics=N
                     + (f"one of {' '.join(sections)} is needed" if sections else "the letter of a shelf is needed")
                 )
             later = bool(m.get("en_later"))
+            if later and "en" in (m.get("lang") or []):
+                e(
+                    "en_later is for a document in another language: an English document gets its English card now "
+                    '(the author: English documents have bilingual cards); leave out "en_later"'
+                )
+                later = False
             if not later and (not str(m.get("en") or "").strip() or not re.search(r"[A-Za-z]", str(m.get("en")))):
                 e(
                     'the field "en" is missing or not English: the short English title the file name is made from '

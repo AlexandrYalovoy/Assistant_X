@@ -280,3 +280,17 @@ def test_a_card_in_the_document_language_only_with_en_later():
     card["file"]["issues"] = [{"what": C.ENGLISH_LATER, "need": "", "priority": "low", "noted": "2026-10-30"}]
     assert C.english_later(card) and C.validate(card, ["en", "ru"]) == []
     assert build.clean(build.latin_title({"title": {"ru": "Сепараторы нефти и газа"}}), 55) == "Separatory-nefti-i-gaza"
+
+
+def test_an_english_document_gets_no_en_later():
+    """Audit 9 S-01: en_later took English for the language to come: an English card of an English document with it
+    was refused (no Russian), a Russian-only card of an English document passed. The author's rule: an English document
+    gets its bilingual card at once; en_later is for the documents in another language only."""
+    en_doc = {**GOOD["T0005"], "lang": ["en"]}
+    out = errors({"T0005": {**en_doc, "en_later": True}}, {"T0005"})
+    assert any("en_later is for a document in another language" in x for x in out)
+    ru_only = {k: v for k, v in en_doc.items() if k != "en"}
+    for key in ("title", "keywords"):
+        if isinstance(ru_only.get(key), dict) and "ru" in ru_only[key]:
+            ru_only[key] = {"ru": ru_only[key]["ru"]}
+    assert errors({"T0005": {**ru_only, "en_later": True}}, {"T0005"})  # no longer passes without English

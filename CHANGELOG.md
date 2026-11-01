@@ -65,6 +65,9 @@ The trial intake of a big real folder in batches, continued.
 - Intake: intake_card names every field of the card from the schema, adopts, amends and page_offset among them:
   they were left out, so the drafts had them and no card did (a national standard was not found by the foreign one
   it adopts).
+- Intake: "en_later" is refused for an English document (it gets its bilingual card at once, the author's rule);
+  before, its English card with en_later was refused and a card without English passed. The skill and docs/INTAKE
+  name en_later now.
 
 ## 0.5.6 — 2026-10-30
 

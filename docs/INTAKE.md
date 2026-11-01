@@ -180,6 +180,9 @@ card names it in `file.attachments`; remove, base export and install and `assist
 document), a duplicate `{tid, dupof, why}`, rejected `{tid, drop}` (`meta_schema.py`). A document line is
 checked as its card will be (`core/card.validate`: the schema, the card languages, the shelves, the limits). Whether a
 document is in force is the user's matter: a card has no validity status.
+A document in another language than English may get its card in its own language first (`"en_later": true`:
+no `en`, no English texts; the file name is the title transliterated and the card carries an issue to find it for
+its English part later); an English document never does: it gets its bilingual card at once.
 
 ## Formats
 
