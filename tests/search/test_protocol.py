@@ -4,7 +4,7 @@
 tool, the reader set, library_guide, texts without an app name, argument schemas an OpenAI strict function takes,
 the compact mode."""
 
-import copy
+import copy, io
 
 import anyio
 import pytest
@@ -138,3 +138,35 @@ def test_fit_and_first_sentence():
     assert out.startswith("line\n") and "Cut at 100 characters" in out and len(out) < 100 + len(toolsets.CUT_NOTE) + 5
     assert toolsets.compact_arguments("search_library", {"query": "q", "k": 20})["k"] == toolsets.COMPACT_K
     assert toolsets.allowed("intake_run", "all") and not toolsets.allowed("intake_run", "reader")
+
+
+def test_three_weak_searches_in_a_row_stop_a_small_model():
+    """A small model told the library may lack the subject searched on (twelve times, no answer): the compact bridge
+    counts the weak-match answers of search_library in a row, gives WEAK_STOP instead of the fragments at the third
+    and starts the count again after a search that finds the subject."""
+    weak = [{"type": "text", "text": "Weak match (0.82): the best fragments may be only near the question …\n\n[N-1]"}]
+    good = [{"type": "text", "text": "Before citing a page, read it …\n\n[N-00390, PDF 131] …"}]
+    n, out = toolsets.weak_guard(0, weak)
+    assert (n, out) == (1, weak)
+    n, out = toolsets.weak_guard(n, weak)
+    assert (n, out) == (2, weak)
+    n, out = toolsets.weak_guard(n, weak)
+    assert n == 3 and out[0]["text"].startswith("STOP. The library has no document on this topic")
+    n, out = toolsets.weak_guard(n, good)
+    assert (n, out) == (0, good)
+
+
+def test_the_bridge_stops_the_weak_searches_only_in_the_compact_mode():
+    from assistant_x.server import bridge
+
+    weak = {"content": [{"type": "text", "text": "Weak match (0.80): …"}]}
+    b = bridge.Bridge(toolset="reader", compact=True, out=io.BytesIO())
+    for i in range(3):
+        b.calls[i] = "search_library"
+        last = b.adjust({"id": i, "result": weak})
+    assert last["result"]["content"][0]["text"].startswith("STOP.")
+    full = bridge.Bridge(toolset="all", compact=False, out=io.BytesIO())
+    for i in range(3):
+        full.calls[i] = "search_library"
+        last = full.adjust({"id": i, "result": weak})
+    assert last["result"]["content"][0]["text"].startswith("Weak match")

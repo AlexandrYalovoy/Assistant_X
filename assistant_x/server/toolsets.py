@@ -82,6 +82,26 @@ def compact_arguments(name, args):
     return args
 
 
+WEAK_MARK = "Weak match ("  # the note of search_library when the reranker is not sure (mcp_server.WEAK_MATCH)
+WEAK_LIMIT = 3  # weak searches in a row after which the compact bridge stops a small model searching on
+WEAK_STOP = (
+    "STOP. The library has no document on this topic. Do not search again. Answer the user now, in the user's "
+    'language: "The library has no documents on this question", and suggest rephrasing the question; anything from '
+    'general knowledge only marked "not from the library".'
+)
+
+
+def weak_guard(count, content):
+    """(the count of weak searches in a row, the content to give) after one more search_library answer: a search with
+    the weak-match note counts, any other resets; at WEAK_LIMIT in a row the fragments give way to WEAK_STOP (a small
+    model told twice that the library may lack the subject searched twelve times and never answered)."""
+    text = "\n".join(c.get("text") or "" for c in content if isinstance(c, dict) and c.get("type") == "text")
+    count = count + 1 if WEAK_MARK in text[:2000] else 0
+    if count >= WEAK_LIMIT:
+        return count, [{"type": "text", "text": WEAK_STOP}]
+    return count, content
+
+
 def compact_content(content):
     """The content blocks of a tool result with every text block fitted."""
     return [

@@ -47,6 +47,7 @@ class Bridge:
         self._up_lock = threading.Lock()
         self.calls = {}  # id -> tool name of a tools/call in work (for --tools and --compact on its answer)
         self.lists = set()  # ids of tools/list requests in work
+        self.weak = 0  # search_library answers with the weak-match note in a row (the compact mode)
         self.trace = None  # AX_LOG_LEVEL=DEBUG: bridge-<id>.log beside the service log, a line per message
         if service.log_level() == "DEBUG":
             self.trace = service.files(root)["log"].replace("service-", "bridge-")
@@ -276,9 +277,12 @@ class Bridge:
             tools = [t for t in result["tools"] if toolsets.allowed(t.get("name"), self.toolset)]
             m = dict(m, result=dict(result, tools=toolsets.compact_tools(tools) if self.compact else tools))
         elif rid in self.calls and isinstance(result, dict):
-            self.calls.pop(rid, None)
+            name = self.calls.pop(rid, None)
             if self.compact and isinstance(result.get("content"), list):
-                m = dict(m, result=dict(result, content=toolsets.compact_content(result["content"])))
+                content = result["content"]
+                if name == "search_library":  # a small model searching on a subject the library lacks is stopped
+                    self.weak, content = toolsets.weak_guard(self.weak, content)
+                m = dict(m, result=dict(result, content=toolsets.compact_content(content)))
         return m
 
     # ---------- the messages of the client ----------
