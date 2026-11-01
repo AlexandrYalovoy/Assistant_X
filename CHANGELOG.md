@@ -24,8 +24,8 @@ Answers from the whole library and no question before every page.
 - LM Studio: assistant-x connect lmstudio writes the preset "Assistant X" (the guide as the system prompt, thinking off),
   picked once in a chat; disconnect removes only it. The compact search gives the 3 best fragments and the 3 best of
   the standards and company documents (shelf N), so that a small model gets the norms without asking for them.
-- A subject the library has no document on: when the reranker is not sure of its best fragment (below 0.9; the
-  questions the library answers score 0.96-1.00) the answer of search_library starts with "Weak match", and the guide
+- A subject the library has no document on: when the reranker is not sure of its best fragment (below 0.88; the
+  questions the library answers score 0.945-1.00) the answer of search_library starts with "Weak match", and the guide
   says to stop after two searches that find only neighbouring subjects and to tell the user so.
 
 ## 0.5.10 — 2026-11-01
