@@ -605,6 +605,7 @@ def page_image(code: str, page: int, zoom: float = 1.6):
 @tool("Check a quote")
 @logged
 @needs_base
+@marks_suspect
 def verify_quote(code: str, page: int, text: str) -> str:
     """Check a quote before citing it word for word, or a number taken from a table: is the text on that PDF page of
     the document (or the page before or after it)? Compared without case, the yo/ye difference, look-alike Latin and
@@ -758,6 +759,7 @@ def _asker(ctx):
 
 @tool("Inbox")
 @logged
+@marks_suspect
 def intake_list(ctx: Context | None = None) -> str:
     """What lies in inbox (the user's own documents to sort) and whether an intake is running now."""
     note = start_notice(client_name(ctx))
@@ -775,6 +777,7 @@ def intake_run(night: bool = False, resume: bool = False) -> str:
 
 @tool("Intake status")
 @logged
+@marks_suspect
 def intake_status(full: bool = False) -> str:
     """Progress of the intake, of the transfer into the library and of the base recalculation, and the next step, in a
     short answer. full=True — also the summary of the batch, its quality report and the files without a card."""
@@ -800,6 +803,7 @@ def intake_save_meta(lines: list[dict] | None = None, path: str | None = None, c
 
 @tool("Move into the library", read=False, destructive=True)
 @logged
+@marks_suspect
 def intake_apply(confirm: bool = False, personal: bool = False, token: str | None = None, ctx: Context | None = None) -> str:
     """Build the cards and move the documents into the library. confirm=False — only the plan and a confirmation token:
     show the plan to the user and ask them first; confirm=True with that token only after the user's explicit yes —
@@ -814,6 +818,7 @@ def intake_apply(confirm: bool = False, personal: bool = False, token: str | Non
 
 @tool("Take documents out", read=False, destructive=True)
 @logged
+@marks_suspect
 def library_remove(
     codes: list[str], why: str = "", confirm: bool = False, token: str | None = None, ctx: Context | None = None
 ) -> str:

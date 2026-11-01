@@ -56,6 +56,9 @@ The trial intake of a big real folder in batches, continued.
   tag beside the version in use: its wheel checked against the SHA256SUMS of the release, a new environment
   venv-<version> that sees the packages of the old one, the apps connected again and doctor run there; when a step
   fails the apps go back to the old version. The library and the settings are not touched (INSTALL_FOR_AI, step 10).
+- MCP server: the closest words of a page (verify_quote), the names of the files of inbox (intake_list,
+  intake_status) and the plans of intake_apply and library_remove get the "Suspect text" mark too when they speak to
+  an AI assistant, as the search hits, the pages and the cards did.
 
 ## 0.5.6 — 2026-10-30
 
