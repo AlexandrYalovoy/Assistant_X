@@ -6,8 +6,8 @@ English | [Русский](README.ru.md)
 
 Assistant X turns a folder of your documents (from a few files to tens of thousands of books, standards, papers,
 reports and scans) into a private library that your AI assistant understands by meaning, not just by words. Ask in
-your own words, and in seconds it finds the right passage among thousands of files, reads the page and answers with
-an exact quote. The library runs on your computer and works with Claude, Codex, the ChatGPT desktop app, DeepSeek
+your own words, and in under a second it finds the right passage among thousands of files, reads the page and
+answers with an exact quote. The library runs on your computer and works with Claude, Codex, the ChatGPT desktop app, DeepSeek
 Harness, LM Studio and any other MCP client. It is made for anyone who works from documents: engineers, researchers,
 students, doctors, lawyers, economists.
 
@@ -19,6 +19,9 @@ students, doctors, lawyers, economists.
   FB2, DjVu, images, HTML, archives (ZIP, 7z, RAR) and e-mails with attachments. Duplicates and new editions are
   found, every document gets a card and a shelf, every step is journaled.
 - **Search by words and by meaning**, with reranking, tables of contents of books and a warning when a scan is weak.
+  Measured on a real library of 7 208 documents (945 262 fragments), 25 questions: 0.63 s a question (median), 0.89 s
+  for 95 % of them on an NVIDIA RTX 5080; 2.1 s and 3.7 s on its processor (Intel Core Ultra 9 275HX). The first
+  question after a start waits about 20 s for the models; meanwhile the search answers by words.
 - **One library for all your AI apps.** A single local service loads the models once (an NVIDIA, AMD or Intel video
   card, or the processor) and serves every connected app at the same time.
 - **Private by design.** Documents, texts and the search stay on your PC; a model sees only the pages it reads to

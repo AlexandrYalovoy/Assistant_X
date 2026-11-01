@@ -290,8 +290,9 @@ another server holding 7 GB of it), the reranker on, `k = 8`; 1000 random questi
 | Memory of the process (RSS) | 2533 MB after the warm-up, 2564 MB after 100 questions, 2574 MB after 1000 |
 
 The memory grows while the caches fill (the first ~100 questions) and then stays flat: no leak. The reranker is what a
-question costs; `rerank = false` (or `"auto"` on a processor) answers in about 0.1 s at the price of the order of
-the hits. The ranking was not changed for this measurement.
+question costs; `rerank = false` (or `rerank_cpu_top = 0` on a processor) answers in about 0.1 s at the price of the
+order of the hits; `"auto"` on a processor reranks the best 8 candidates (about 2 s a question, 0.5.7: p50 2.06 s,
+p95 3.65 s on 25 questions). The ranking was not changed for this measurement.
 
 ## AMD and Intel video cards: DirectML (`onnx_models.py`)
 

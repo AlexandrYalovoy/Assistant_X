@@ -332,7 +332,7 @@ def readme(out, cuda, dml):
         f"({install.GPU_TORCH}, packages\\wheels_gpu)" + ("" if cuda else " — NOT on this medium"),
         f"  - an AMD or Intel card with its own memory: ONNX through DirectML ({install.DML_ORT}, packages\\wheels_dml)"
         + ("" if dml else " — NOT on this medium"),
-        "  - else the processor (torch for the CPU, packages\\wheels): slower, without reranking.",
+        "  - else the processor (torch for the CPU, packages\\wheels): slower, the reranker on the best candidates only.",
         "Setup.bat looks at the cards of the PC and says what it chose; --cpu forces the processor.",
         "",
         "packages\\THIRD_PARTY_LICENSES.txt: the licenses of every package; programs\\VERSIONS.txt: the programs.",

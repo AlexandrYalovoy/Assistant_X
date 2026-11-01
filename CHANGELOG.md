@@ -86,6 +86,9 @@ The trial intake of a big real folder in batches, continued.
 - Setup: the self-test of the install loads the search modules again (it imported them by an old name and failed on
   every new PC: "No module named 'search'"; its test only looked for the sections of the report), and a new workspace
   with no document yet lists no missing base among its problems.
+- The installer and the medium say what the search does on a processor (about 2 s a question, the reranker on the
+  best candidates), not "0.1-0.3 s, without reranking"; README names the measured speed of the search (0.63 s a
+  question on a video card, 2.1 s on a processor) instead of "in seconds".
 
 ## 0.5.6 — 2026-10-30
 

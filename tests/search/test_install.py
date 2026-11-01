@@ -233,3 +233,16 @@ def test_a_new_workspace_without_a_base_is_no_finding(tmp_path):
     assert "No path db" not in findings
     (ws / "index" / "cards" / "N-00001.json").write_text("{}", encoding="utf-8")
     assert "No path db" in report(ws).split("## What stands out", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_installer_says_what_the_search_does_on_a_processor():
+    """Stage 5 of 0.5.7: the installer promised "0.1-0.3 s per question, without reranking" on a processor, while the
+    search there reranks the best rerank_cpu_top candidates (measured: p50 2.06 s, p95 3.65 s on 25 questions)."""
+    import inspect
+
+    from assistant_x.search import retrieval
+    from assistant_x.setup import prepare_media
+
+    assert retrieval.RERANK_CPU_TOP > 0
+    for src in (inspect.getsource(install), inspect.getsource(prepare_media)):
+        assert "without reranking" not in src and "0.1–0.3 s" not in src

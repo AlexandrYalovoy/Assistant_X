@@ -283,7 +283,7 @@ def dml_or_cpu(offline):
             if best
             else "no video card"
         )
-        say(f"   {why}: search on the processor (0.1–0.3 s per question), without reranking")
+        say(f"   {why}: search on the processor (about 2 s per question: the reranker reads the best candidates)")
         return "cpu"
     have = (glob.glob(os.path.join(P.WHEELS_DML, M.DML_GLOB)) or not offline) and onnx_models_here()
     if not have:
@@ -1073,7 +1073,7 @@ def main():
         + {
             "cuda": "on the NVIDIA video card (CUDA), with reranking.",
             "dml": "on the video card through DirectML, with reranking.",
-        }.get(device, "on the processor, without reranking.")
+        }.get(device, "on the processor (about 2 s a question), the reranker on the best candidates only.")
     )
     say('Your own documents: put them into the inbox folder, then write to Claude "AX: sort my documents".')
     if changed:
