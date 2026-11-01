@@ -43,6 +43,9 @@ The trial intake of a big real folder in batches, continued.
   summary counts them. order = "all" (or intake run --order all) takes everything at once as before.
 - Intake: an empty folder of inbox marked read-only (copied from a share or a disc) is removed after a batch too; before,
   Windows refused it and such folders were left (the service folders stay as always).
+- Intake: a file whose designation is written as that of a document of the library, its year too, is proposed as a
+  duplicate of it ({"dupof": code}; a better copy may replace it on the user's word); another year stays the question
+  of a new version.
 
 ## 0.5.6 — 2026-10-30
 

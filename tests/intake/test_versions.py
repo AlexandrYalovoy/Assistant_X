@@ -155,3 +155,24 @@ def test_replace_of_a_missing_code_is_refused(project):
         json.dumps(doc_line(tids["gost_2020.pdf"], "N", "Икс", "X", replaces="N-00777")) + "\n", encoding="utf-8"
     )
     assert intake_build.build(cfg, work, date="2026-10-25") == 1 and not (work / "codes.json").exists()
+
+
+def test_a_copy_under_the_same_designation_is_proposed_as_a_duplicate():
+    """c072 of the clean intake: a national standard and a company standard already in the library came again (a scan,
+    another copy); the draft asked "a new version?" and an extra check had to find them. The same designation, the
+    year too, is a duplicate proposal now; another year stays the question of a version."""
+    docs = [
+        ("N-00280", "Трубы стальные бесшовные", "ГОСТ Р 53681-2009"),
+        ("N-00585", "Типовые технические требования к технологическому оборудованию", "СТО АБВ 2-2.1-588-2011"),
+    ]
+    for desig, code in (
+        ("ГОСТ Р 53681-2009", "N-00280"),
+        ("СТО АБВ 2-2.1-588-2011", "N-00585"),
+        ("ГОСТ Р 53681–2009", "N-00280"),
+    ):
+        hit = versions.find(desig, "", docs)
+        assert hit and hit[0] == code
+        q = versions.question(*hit)
+        assert f'{{"dupof": "{code}"}}' in q and "most likely the same document" in q
+    q = versions.question(*versions.find("ГОСТ Р 53681-2020", "", docs))
+    assert "new version" in q and "dupof" not in q

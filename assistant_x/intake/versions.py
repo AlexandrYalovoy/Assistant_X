@@ -57,11 +57,11 @@ def find(desig, title, docs):
     if k:
         for code, t, d in docs:
             if d and key(d) == k:
-                same = re.sub(r"\s+", " ", d).strip() == re.sub(r"\s+", " ", desig).strip()
+                same = norm(d) == norm(desig)  # spaces and dashes aside: the same year too
                 return (
                     code,
                     t,
-                    (f"the same designation {d}" if same else f"the same designation: {d} in the library, {desig} here"),
+                    (f"{SAME}{d}" if same else f"the same designation: {d} in the library, {desig} here"),
                 )
     w = words(title)
     if len(w) >= MIN_WORDS:
@@ -76,7 +76,16 @@ def find(desig, title, docs):
     return None
 
 
+SAME = "the same designation "  # the start of the why of find for a designation written alike, the year too
+
+
 def question(code, title, why):
+    if why.startswith(SAME):  # the same standard of the same year: a copy rather than a new version
+        return (
+            f"has {why} as {code} «{title[:80]}» of the library: most likely the same document — "
+            f'{{"dupof": "{code}"}}; a better copy (a text layer instead of a scan) may take its place — '
+            f'{{"replaces": "{code}"}} — after the user says so'
+        )
     return (
         f"looks like a new version of {code} «{title[:80]}» ({why}): ask the user whether it replaces the old one — "
         f'{{"replaces": "{code}"}} (the old original goes to inbox\\_to_delete) — or both stay — '
