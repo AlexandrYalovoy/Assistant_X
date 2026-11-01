@@ -4,6 +4,17 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.9 — 2026-11-01
+
+The base export and install of a big library in minutes, not an hour.
+
+- The vector cache found every key alone in a big-endian array, which numpy converted at every call: about 1-2 ms a
+  key, 73 minutes for the export of a real base of 945 000 fragments (30 GB). The keys are searched at once and the
+  vectors read in one pass now (20 000 keys: 90 s before, 0.1 s now); assistant-x base export, base install, base
+  update and embed take the cache the same way. The vectors of a package are byte for byte the same.
+- assistant-x base export shows its progress: the files of the documents with the gigabytes done and the minutes left,
+  then the vectors.
+
 ## 0.5.8 — 2026-11-01
 
 A base installed without a command line, for a colleague who has LM Studio only.
