@@ -117,15 +117,33 @@ def _copy(src, dst, budget):
         dst.write(block)
 
 
-def _zip(archive, dest, budget):
+def _count(n, max_files):
+    if max_files is not None and n > max_files:
+        raise Refused(f"the archive holds {n} files, the limit is {max_files}", "size")
+
+
+def _unique(out, seen):
+    """out, or out_2, out_3 … when a member of the same name but for the case was written already (Windows keeps one
+    file of the two: the first would be lost without a word)."""
+    key, n, stem = str(out).casefold(), 1, out
+    while key in seen:
+        n += 1
+        out = stem.with_name(f"{stem.stem}_{n}{stem.suffix}")
+        key = str(out).casefold()
+    seen.add(key)
+    return out
+
+
+def _zip(archive, dest, budget, max_files=None):
     with zipfile.ZipFile(archive) as z:
         items = [(i, safe_name(zip_name(i))) for i in z.infolist()]
+        _count(sum(not i.is_dir() for i, _ in items), max_files)
         total = sum(i.file_size for i, _ in items)
         if total > budget:
             raise Refused(f"the archive holds {total / GB:.1f} GB, the limit is {budget / GB:.1f} GB", "size")
         if any(i.flag_bits & 0x1 for i, _ in items):
             raise Refused("the archive is protected by a password", PASSWORD)
-        written = 0
+        written, seen = 0, set()
         for i, parts in items:
             if not parts:
                 continue
@@ -133,15 +151,17 @@ def _zip(archive, dest, budget):
             if i.is_dir():
                 out.mkdir(parents=True, exist_ok=True)
                 continue
+            out = _unique(out, seen)
             out.parent.mkdir(parents=True, exist_ok=True)
             with z.open(i) as src, open(out, "wb") as dst:
                 written += _copy(src, dst, budget - written)
         return written
 
 
-def _tar(archive, dest, budget):
+def _tar(archive, dest, budget, max_files=None):
     with tarfile.open(archive) as t:
         items = t.getmembers()
+        _count(sum(m.isfile() for m in items), max_files)
         for m in items:
             safe_name(m.name)
             if not (m.isfile() or m.isdir()):
@@ -149,12 +169,13 @@ def _tar(archive, dest, budget):
         total = sum(m.size for m in items if m.isfile())
         if total > budget:
             raise Refused(f"the archive holds {total / GB:.1f} GB, the limit is {budget / GB:.1f} GB", "size")
-        written = 0
+        written, seen = 0, set()
         for m in items:
             out = dest.joinpath(*safe_name(m.name))
             if m.isdir():
                 out.mkdir(parents=True, exist_ok=True)
                 continue
+            out = _unique(out, seen)
             out.parent.mkdir(parents=True, exist_ok=True)
             with t.extractfile(m) as src, open(out, "wb") as dst:
                 written += _copy(src, dst, budget - written)
@@ -195,7 +216,7 @@ def _7z_list(sevenzip, archive):
     return items
 
 
-def _7z(archive, dest, budget, sevenzip, timeout):
+def _7z(archive, dest, budget, sevenzip, timeout, max_files=None):
     if not sevenzip:
         if archive_ext(archive) == ".7z":
             try:
@@ -206,6 +227,7 @@ def _7z(archive, dest, budget, sevenzip, timeout):
                 if z.needs_password():
                     raise Refused("the archive is protected by a password", PASSWORD)
                 infos = z.list()
+                _count(sum(not i.is_directory for i in infos), max_files)
                 for i in infos:
                     safe_name(i.filename)
                 total = sum(i.uncompressed or 0 for i in infos)
@@ -215,6 +237,7 @@ def _7z(archive, dest, budget, sevenzip, timeout):
                 return total
         raise Refused("no 7-Zip: a .rar archive cannot be unpacked", "tool")
     items = _7z_list(sevenzip, archive)
+    _count(sum(not (i.get("Folder") == "+" or "D" in (i.get("Attributes") or "")[:1]) for i in items), max_files)
     for i in items:
         safe_name(i["Path"])
         if i.get("Encrypted") == "+":
@@ -224,7 +247,7 @@ def _7z(archive, dest, budget, sevenzip, timeout):
         raise Refused(f"the archive holds {total / GB:.1f} GB, the limit is {budget / GB:.1f} GB", "size")
     dest.mkdir(parents=True, exist_ok=True)
     p = proc.run(
-        [sevenzip, "x", "-y", "-p-", "-snl-", f"-o{dest}", str(archive)],
+        [sevenzip, "x", "-y", "-aou", "-p-", "-snl-", f"-o{dest}", str(archive)],  # -aou: a name twice, both kept
         capture_output=True,
         timeout=timeout,
         encoding="utf-8",
@@ -253,20 +276,20 @@ def _remove_tree(d):
         os.rmdir(dp)
 
 
-def unpack_one(archive, dest, budget, sevenzip=None, timeout=TIMEOUT):
+def unpack_one(archive, dest, budget, sevenzip=None, timeout=TIMEOUT, max_files=None):
     """Bytes written into dest; Refused leaves nothing behind."""
     ext = archive_ext(archive)
     dest = Path(dest)
     fresh = not dest.exists()  # a folder that was there before is never cleaned up
     try:
         if ext == ".zip" and zipfile.is_zipfile(archive):
-            n = _zip(archive, dest, budget)
+            n = _zip(archive, dest, budget, max_files)
         elif ext in (".tar", ".tgz", ".tar.gz", ".tar.bz2", ".tar.xz"):
-            n = _tar(archive, dest, budget)
+            n = _tar(archive, dest, budget, max_files)
         elif ext == ".gz":
             n = _gz(archive, dest, budget)
         else:  # .7z, .rar, a .zip Python cannot read
-            n = _7z(archive, dest, budget, sevenzip, timeout)
+            n = _7z(archive, dest, budget, sevenzip, timeout, max_files)
         if dest.exists():
             _inside(dest)
         return n
@@ -277,7 +300,13 @@ def unpack_one(archive, dest, budget, sevenzip=None, timeout=TIMEOUT):
 
 
 def unpack(
-    archive, dest=None, max_total=LIMITS["max_total_gb"] * GB, max_depth=LIMITS["max_depth"], sevenzip=None, timeout=TIMEOUT
+    archive,
+    dest=None,
+    max_total=LIMITS["max_total_gb"] * GB,
+    max_depth=LIMITS["max_depth"],
+    sevenzip=None,
+    timeout=TIMEOUT,
+    max_files=LIMITS["max_files"],
 ):
     """Unpack an archive and the archives in it. Report dict; error is set when the archive itself was refused."""
     archive = Path(archive)
@@ -293,7 +322,7 @@ def unpack(
         "kind": None,
     }
     try:
-        rep["bytes"] = unpack_one(archive, dest, max_total, sevenzip, timeout)
+        rep["bytes"] = unpack_one(archive, dest, max_total, sevenzip, timeout, max_files)
     except Refused as e:
         rep["error"], rep["kind"] = str(e), e.kind
         return rep
@@ -310,7 +339,8 @@ def unpack(
                     continue
                 d = target_dir(p)
                 try:
-                    rep["bytes"] += unpack_one(p, d, max_total - rep["bytes"], sevenzip, timeout)
+                    made = sum(len(fns) for _, _, fns in os.walk(dest))  # every nested archive counts with the outer one
+                    rep["bytes"] += unpack_one(p, d, max_total - rep["bytes"], sevenzip, timeout, max_files - made + 1)
                 except Refused as e:
                     rep["left"].append({"path": str(p), "why": str(e), "kind": e.kind})
                     continue

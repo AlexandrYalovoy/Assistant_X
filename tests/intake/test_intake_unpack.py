@@ -146,3 +146,41 @@ def test_an_archive_split_in_volumes_is_unpacked_from_its_first_one(tmp_path):
         pytest.skip("no 7-Zip on this PC")
     rep = unpack.unpack(tmp_path / "X.zip.001", sevenzip=str(sevenzip))
     assert rep["error"] is None and files_under(rep["dest"]) == ["b/two.txt", "doc.txt"]
+
+
+def test_an_archive_of_too_many_files_is_refused(tmp_path):
+    """Audit 9 S-02: 20 000 empty members (a zip of 2 MB) gave 20 000 files of the batch; the count is limited now
+    ([intake.unpack] max_files), for the archive and its nested ones together, and nothing is left behind."""
+    import io, zipfile
+
+    many = tmp_path / "many.zip"
+    with zipfile.ZipFile(many, "w") as z:
+        for i in range(30):
+            z.writestr(f"d/{i}.txt", b"")
+    rep = unpack.unpack(many, max_files=20)
+    assert rep["error"] and rep["kind"] == "size" and "30 files" in rep["error"] and not (tmp_path / "many").exists()
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        for i in range(15):
+            z.writestr(f"{i}.txt", b"")
+    outer = tmp_path / "outer.zip"
+    with zipfile.ZipFile(outer, "w") as z:
+        for i in range(10):
+            z.writestr(f"{i}.txt", b"")
+        z.writestr("inner.zip", inner.getvalue())
+    rep = unpack.unpack(outer, max_files=20)
+    assert not rep["error"] and rep["left"] and rep["left"][0]["kind"] == "size"  # the nested one is left whole
+    assert unpack.LIMITS["max_files"] >= 10000
+
+
+def test_two_members_whose_names_differ_in_case_are_both_kept(tmp_path):
+    """Audit 9 S-03: Report.pdf and REPORT.PDF in one zip: Windows keeps one file of the two, the first was lost."""
+    import zipfile
+
+    z = tmp_path / "c.zip"
+    with zipfile.ZipFile(z, "w") as f:
+        f.writestr("Report.pdf", b"first")
+        f.writestr("REPORT.PDF", b"second")
+    rep = unpack.unpack(z)
+    got = sorted(p.read_bytes() for p in (tmp_path / "c").iterdir())
+    assert not rep["error"] and got == [b"first", b"second"]

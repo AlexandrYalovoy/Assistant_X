@@ -64,7 +64,7 @@ INTAKE = {
     # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
     # without a text layer are then read from their images)
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},
-    "unpack": {"max_total_gb": 5, "max_depth": 3},
+    "unpack": {"max_total_gb": 5, "max_depth": 3, "max_files": 20000},  # max_files: of an archive and all its nested ones
     "disk": {"factor": 3, "min_free_gb": 10},
     # the files the intake cannot read and that are no documents: prepare moves them (never deletes) to
     # inbox\_to_delete\<folder>\, loose or out of an archive; [intake] to_delete_ext extends or changes the table, an

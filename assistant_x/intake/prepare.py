@@ -122,6 +122,7 @@ def prepare(cfg, state, dry=False):
                 full,
                 max_total=float(lim["max_total_gb"]) * unpack.GB,
                 max_depth=int(lim["max_depth"]),
+                max_files=int(lim.get("max_files") or unpack.LIMITS["max_files"]),
                 sevenzip=cfg.sevenzip,
                 timeout=cfg.timeouts["unpack"],
             )

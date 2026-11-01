@@ -59,6 +59,9 @@ The trial intake of a big real folder in batches, continued.
 - MCP server: the closest words of a page (verify_quote), the names of the files of inbox (intake_list,
   intake_status) and the plans of intake_apply and library_remove get the "Suspect text" mark too when they speak to
   an AI assistant, as the search hits, the pages and the cards did.
+- Intake: an archive (with its nested ones) of more than [intake.unpack] max_files files (20 000) is refused like one
+  past its size, and two members whose names differ only in case are both kept (the second as name_2); before, a
+  small zip of 20 000 empty files gave 20 000 files of the batch, and Windows kept one of the two names.
 
 ## 0.5.6 — 2026-10-30
 
