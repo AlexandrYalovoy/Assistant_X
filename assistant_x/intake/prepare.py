@@ -225,6 +225,9 @@ PAGE_IMAGES = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".gif")
 PAGES_MIN = 8  # page pictures a folder needs
 PAGE_SHORT = 800  # pixels of the shorter side of a page scan at least (an icon or a picture of a site is smaller)
 PAGES_SHARE = 0.8  # share of the pictures of the folder that are page scans
+# a short document photographed page by page (a vessel passport of 6-10 phone photos, M-138): from PORTRAIT_MIN
+# pictures when PAGES_SHARE of them stand upright like pages; the photos of a site lie across mostly
+PORTRAIT_MIN = 4
 
 
 def page_size(path):
@@ -249,11 +252,13 @@ def page_folders(cfg, st, events, problems, dry=False):
         if "/" in rel and Path(rel).suffix.lower() in PAGE_IMAGES and not personal(cfg, rel):
             folders[rel.rsplit("/", 1)[0]].append((full, rel))
     for folder, pics in sorted(folders.items()):
-        if len(pics) < PAGES_MIN:
+        if len(pics) < PORTRAIT_MIN:
             continue
         sizes = [page_size(full) for full, _ in pics]
         pages = [(f, r) for (f, r), s in zip(pics, sizes) if s and min(s) >= PAGE_SHORT]
-        if len(pages) < PAGES_MIN or len(pages) < PAGES_SHARE * len(pics):
+        upright = sum(1 for s in sizes if s and min(s) >= PAGE_SHORT and s[1] > s[0])
+        enough = len(pages) >= PAGES_MIN or upright >= max(PORTRAIT_MIN, PAGES_SHARE * len(pics))
+        if not enough or len(pages) < PAGES_SHARE * len(pics):
             continue
         name = intake_cfg.safe_name(folder.rsplit("/", 1)[-1]) or "pages"
         pdf = free_target(cfg.inbox / folder / f"{name}.pdf")

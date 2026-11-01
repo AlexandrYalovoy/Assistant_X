@@ -78,6 +78,9 @@ The trial intake of a big real folder in batches, continued.
   before, the medium said the models carried their own license files, which they do not.
 - Intake: a TIFF of several pages, or of a sheet of 2 000 pixels and more, is a scanned document and is read; it is
   no loose picture set aside (the sheets of an assembly drawing went to inbox\_rejected\pictures).
+- Intake: a folder of 4 pictures and more that stand upright like pages (a vessel passport of 6-10 phone photos) is
+  joined into one PDF like a book of 8 scans and more; photos of a site, lying across, stay pictures. Before, such
+  passports were set aside photo by photo and 51 of them were joined by hand.
 
 ## 0.5.6 — 2026-10-30
 

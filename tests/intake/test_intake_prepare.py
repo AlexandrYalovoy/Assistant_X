@@ -267,3 +267,22 @@ def test_a_gif_scan_and_a_bak_of_a_document_stay(project, tmp_path):
     assert (cfg.inbox / "_to_delete" / "cad" / "Чертежи" / "план.bak").exists()
     assert (cfg.inbox / "_to_delete" / "cad" / "Чертежи" / "план.dwg").exists()
     assert (cfg.inbox / "Отчёты" / "отчёт.bak").exists()
+
+
+def test_a_short_document_photographed_page_by_page_becomes_one_pdf(project, tmp_path):
+    """M-138, the vessel passports of the clean intake: 6-10 phone photos of pages a folder, fewer than the 8 page
+    scans of a book, were set aside one by one and joined by hand (51 PDFs). From 4 pictures that stand upright like
+    pages a folder is joined; 5 photos of a site, lying across, stay pictures."""
+    import pymupdf
+
+    root, cfg = project
+    passport = cfg.inbox / "Паспорта" / "(3) Паспорт сосуда"
+    for i in range(1, 7):
+        _picture(passport / f"IMG_{i:04d}.png", 900, 1200)
+    site = cfg.inbox / "Фото объекта"
+    for i in range(1, 6):
+        _picture(site / f"IMG_{i:04d}.png", 1600, 1200)
+    state, counts, events, problems = run_prepare(cfg, tmp_path)
+    assert not problems and counts["page_folders"] == 1 and counts["page_scans"] == 6
+    assert pymupdf.open(passport / "(3) Паспорт сосуда.pdf").page_count == 6
+    assert len(list(site.glob("*.png"))) == 5
