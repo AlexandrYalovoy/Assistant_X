@@ -8,24 +8,28 @@
   "dialog_filter": "Base packages (*.axbase)|*.axbase|All files (*.*)|*.*",
   "no_base": "No base installed: put the .axbase file beside Setup.bat, or double-click Install-Base.bat later.",
   "plan": "The plan of the installation is above. Install the base? [Y/N] ",
+  "interrupted": "The last installation of this base was interrupted (the PC switched off, a file held by another program). Continue it? [Y/N] ",
   "done": "Base installed: {documents} documents. Restart LM Studio (or start a new chat) and the other apps.",
   "cancelled": "Nothing installed.",
   "no_program": "Assistant X is not installed on this PC yet: double-click Setup.bat first.",
   "failed": "The base was not installed (see the messages above). The program and the library are as they were.",
+  "stopped": "The installation of the base stopped (see the messages above). Double-click Install-Base.bat again: it continues from where it stopped.",
   "press": "Press Enter to close this window."
  },
  "ru": {
   "found": "Найдена база «{name}» ({documents} документов), {file}. Установить? [Д/Н] ",
-  "yes": ["д", "да", "y", "yes", "l"],
+  "yes": ["д", "да", "y", "yes", "l", "lf"],
   "dialog_title": "Выберите файл базы (.axbase). Отмена — продолжить без базы",
   "dialog_title_alone": "Выберите файл базы (.axbase)",
   "dialog_filter": "Пакеты баз (*.axbase)|*.axbase|Все файлы (*.*)|*.*",
   "no_base": "База не установлена: положите файл .axbase рядом с Setup.bat или позже дважды щёлкните Install-Base.bat.",
   "plan": "План установки — выше. Установить базу? [Д/Н] ",
+  "interrupted": "Прошлая установка этой базы прервалась (выключился компьютер, файл был занят другой программой). Продолжить её? [Д/Н] ",
   "done": "База установлена: {documents} документов. Перезапустите LM Studio (или начните новый чат) и другие приложения.",
   "cancelled": "Ничего не установлено.",
   "no_program": "Assistant X ещё не установлен на этом ПК: сначала дважды щёлкните Setup.bat.",
   "failed": "База не установлена (см. сообщения выше). Программа и библиотека остались как были.",
+  "stopped": "Установка базы остановилась (см. сообщения выше). Дважды щёлкните Install-Base.bat ещё раз: установка продолжится с места остановки.",
   "press": "Нажмите Enter, чтобы закрыть окно."
  }
 }

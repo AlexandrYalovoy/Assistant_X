@@ -100,11 +100,25 @@ def move(src, dst):
             time.sleep(RETRY_S)
 
 
+SAVE_EVERY_S = 2.0  # the journal of a step of moves written this often, not after each move
+
+
 def run_moves(jr, key, moves, root):
-    """The moves [(src, dst)] (workspace paths with '/') of a step; each noted in jr.data[key] when done. A move whose
-    source is gone and whose target is there counts as done (a power cut between the move and the note)."""
+    """The moves [(src, dst)] (workspace paths with '/') of a step; each noted in jr.data[key] when done, the journal
+    written every few seconds. A move whose source is gone and whose target is there counts as done (a power cut
+    between the move and the note): a resume and an undo read the disk the same way."""
     done = set(jr.data.setdefault(key, []))
     made = jr.data.setdefault("made_dirs", [])  # the folders the moves make: a rollback removes these, no other
+    known, new = set(made), []
+    for k, (_, dst) in enumerate(moves):  # all noted before the first move: a power cut still knows the folders
+        if k not in done:
+            for p in new_folders(root, dst):
+                if p not in known:
+                    known.add(p)
+                    new.append(p)
+    if new:
+        made.extend(new)
+        jr.save()
     for k, (src, dst) in enumerate(moves):
         if k in done:
             continue
@@ -112,15 +126,12 @@ def run_moves(jr, key, moves, root):
         if exists(s):
             if exists(d):
                 raise Stop(f"{dst} is taken already")
-            new = [p for p in new_folders(root, dst) if p not in made]
-            if new:
-                made.extend(new)
-                jr.save()  # noted before the move: a power cut after it still knows the folders
             move(s, d)
         elif not exists(d):
             raise Stop(f"{src} is gone and {dst} is not there")
         jr.data[key].append(k)
-        jr.save()
+        jr.save(every=SAVE_EVERY_S)
+    jr.save()
 
 
 def new_folders(root, rel):
@@ -519,7 +530,7 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
     if step("package"):  # the package side renumbered, inside the work folder (nothing holds it)
         prepare_package(pkg_dir, pcards, plan.get("package_mapping") or {}, set(plan["skip"]), ident, version)
         jr.mark("package")
-    if step("place"):
+    if step("place") and "placed" not in jr.data:  # a resume keeps the list: its indexes are the moves done
         placed, src_rel = [], _rel(pkg_dir, root)
         for dp, _, fns in os.walk(lp(pkg_dir)):
             for f in fns:
@@ -530,6 +541,7 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
                     placed.append((f"{src_rel}/{rel}", lib_rel + rel[len("library") :]))
         jr.data["placed"] = sorted(placed)
         jr.save()
+    if step("place"):
         run_moves(jr, "placed_done", [tuple(m) for m in jr.data["placed"]], root)
         jr.mark("place")
     if step("tables"):
@@ -855,8 +867,7 @@ def undo(w, cfg, jr, stage, say):
         ("one_done", one),
         ("aside_done", [tuple(m) for m in d.get("out_moves") or []]),
     ):
-        for k in sorted(d.get(key) or [], reverse=True):
-            src, dst = moves[k]
+        for src, dst in reversed(moves):  # a move done but not yet noted is undone too (target there, source gone)
             s, t = within(root, src), within(root, dst)
             if exists(t) and not exists(s):
                 move(t, s)

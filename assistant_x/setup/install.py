@@ -654,7 +654,10 @@ def install_base(py, path, keep, dry):
         ["--keep", keep] if keep else []
     )
     if run(cmd, dry, env=dict(os.environ, AX_WORKSPACE=P.ROOT, PYTHONUTF8="1")):
-        return [f"The base package {path} was not installed (see the messages above): assistant-x base inspect shows why"]
+        return [
+            f"The base package {path} was not installed (see the messages above): double-click Install-Base.bat, it continues the installation "
+            "or shows why it cannot"
+        ]
     return []
 
 

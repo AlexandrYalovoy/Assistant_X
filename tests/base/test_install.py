@@ -203,7 +203,7 @@ def test_the_same_content_keeps_the_better_recognition(tmp_path):
     assert "L-00001_Package-Pump-Handbook.pdf" in merged
 
 
-@pytest.mark.parametrize("fail", ["renames two", "place", "base"])
+@pytest.mark.parametrize("fail", ["renames two", "place", "place unnoted", "base"])
 def test_interrupted_and_rolled_back(packages, tmp_path, monkeypatch, fail):
     from assistant_x.intake import manifest
 
@@ -214,9 +214,14 @@ def test_interrupted_and_rolled_back(packages, tmp_path, monkeypatch, fail):
     tables = {f: open(os.path.join(root, "index", f), encoding="utf-8").read() for f in ("manifest.tsv", "CATALOG.md")}
     real = B.run_moves
 
-    def moves(jr, key, todo, root_):  # one move of the step done, then the PC goes off
+    def moves(jr, key, todo, root_):  # one move of the step done (or three, two not noted yet), then the PC goes off
         if (fail, key) in (("renames two", "two_done"), ("place", "placed_done")):
             real(jr, key, todo[:1], root_)
+            raise B.Stop("the PC was switched off")
+        if (fail, key) == ("place unnoted", "placed_done"):
+            real(jr, key, todo[:3], root_)
+            del jr.data[key][1:]
+            jr.save()
             raise B.Stop("the PC was switched off")
         return real(jr, key, todo, root_)
 
@@ -233,6 +238,69 @@ def test_interrupted_and_rolled_back(packages, tmp_path, monkeypatch, fail):
         assert open(os.path.join(root, "index", f), encoding="utf-8").read() == text
     assert not maintenance(load_config(path)["index_dir"]) and registry.load(os.path.join(root, "index")) == []
     assert install(path, packages["a"], keep="package") == 0  # and it installs afterwards
+
+
+def test_a_place_interrupted_midway_is_resumed_to_the_end(packages, tmp_path, monkeypatch):
+    """A resume moves the files the interrupted step left: the list of the moves stays the one of the start (listed
+    again from the files left, its indexes no longer matched the moves noted done and those were skipped)."""
+    whole = str(tmp_path / "whole")
+    assert install(empty(whole), packages["a"]) == 0
+    root = str(tmp_path / "ws")
+    path = empty(root)
+    real = B.run_moves
+
+    def moves(jr, key, todo, root_):
+        if key == "placed_done":
+            real(jr, key, todo[:3], root_)
+            raise PermissionError(5, "Access is denied")  # the journal held by another program, as on a real PC
+        return real(jr, key, todo, root_)
+
+    monkeypatch.setattr(B, "run_moves", moves)
+    with pytest.raises(PermissionError):
+        install(path, packages["a"])
+    monkeypatch.undo()
+    assert install(path, packages["a"], resume=True) == 0
+    assert state(root, originals=False) == state(whole, originals=False)
+
+
+def test_a_step_of_many_moves_writes_its_journal_a_few_times(tmp_path, monkeypatch):
+    """The journal is written every few seconds, not after each move (a package of 22 000 files rewrote a journal of
+    megabytes 22 000 times: 90 GB written); a resume after it moves the rest."""
+    from assistant_x.core import txn
+
+    root = tmp_path / "ws"
+    for i in range(300):
+        write(str(root / "src" / f"d{i % 30}" / f"f{i}.txt"), "x")
+    todo = [(f"src/d{i % 30}/f{i}.txt", f"dst/d{i % 30}/f{i}.txt") for i in range(300)]
+    writes = []
+    real = txn.write_whole
+    monkeypatch.setattr(txn, "write_whole", lambda p, t: (writes.append(p), real(p, t)))
+    jr = txn.Journal(tmp_path / "journal.json")
+    jr.start("2026-11-01")
+    B.run_moves(jr, "placed_done", todo[:200], str(root))
+    assert len(writes) <= 4 and sorted(jr.data["placed_done"]) == list(range(200))
+    assert {f"dst/d{i}" for i in range(30)} <= set(jr.data["made_dirs"])
+    jr = txn.Journal(tmp_path / "journal.json")  # resumed: the first 200 noted, the rest moved now
+    B.run_moves(jr, "placed_done", todo, str(root))
+    assert all((root / d).exists() for _, d in todo) and not any((root / s).exists() for s, _ in todo)
+
+
+def test_a_journal_held_by_another_program_for_a_moment_is_written(tmp_path, monkeypatch):
+    """Windows refuses to replace a file an antivirus or an indexer reads at that moment: tried again, not stopped."""
+    from assistant_x.core import txn
+
+    real, tries = os.replace, []
+
+    def replace(a, b):
+        tries.append(a)
+        if len(tries) < 3:
+            raise PermissionError(5, "Access is denied")
+        return real(a, b)
+
+    monkeypatch.setattr(txn, "HELD_S", 0)
+    monkeypatch.setattr(txn.os, "replace", replace)
+    txn.write_whole(tmp_path / "j.json", "{}")
+    assert len(tries) == 3 and (tmp_path / "j.json").read_text(encoding="utf-8") == "{}"
 
 
 def malicious(path, name, data=b"x", compress=zipfile.ZIP_STORED, link=False):

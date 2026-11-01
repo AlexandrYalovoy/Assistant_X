@@ -5,7 +5,7 @@ beside Setup.bat is offered with its title and its count of documents, with none
 one (Cancel goes on without a base), --yes asks nothing and opens no window; Install-Base.bat shows the plan, asks
 once and says how many documents went in. The messages follow the language of Windows (en, ru)."""
 
-import json, os, types, zipfile
+import inspect, json, os, types, zipfile
 from pathlib import Path
 
 import pytest
@@ -52,6 +52,20 @@ def test_a_found_package_is_offered_with_its_title_and_count(tmp_path, lang):
     assert B.choose([tmp_path], ask=lambda q: pytest.fail("asked"), pick=no_dialog, yes=True) == str(p)
 
 
+@pytest.mark.parametrize("answer", ["Д", "д", " да ", "Y", "y", "l", "LF"])
+def test_a_russian_yes_in_either_layout_installs(tmp_path, monkeypatch, answer):
+    monkeypatch.setattr(B, "language", lambda: "ru")
+    p = package(tmp_path / "lib.axbase")
+    assert B.choose([tmp_path], ask=lambda q: answer, pick=lambda *a: pytest.fail("a window")) == str(p)
+
+
+@pytest.mark.parametrize("answer", ["Н", "н", "нет", "n", "", "y-"])
+def test_a_russian_no_or_anything_else_installs_nothing(tmp_path, monkeypatch, answer):
+    monkeypatch.setattr(B, "language", lambda: "ru")
+    package(tmp_path / "lib.axbase")
+    assert B.choose([tmp_path], ask=lambda q: answer, pick=lambda *a: pytest.fail("a window")) is None
+
+
 def test_with_no_package_the_dialog_asks_and_cancel_goes_on(tmp_path, lang):
     said, titles = [], []
     chosen = str(package(tmp_path / "elsewhere.axbase"))
@@ -82,6 +96,38 @@ def test_install_base_shows_the_plan_asks_once_and_counts(tmp_path, monkeypatch,
     assert said[-1].startswith("Base installed: 12 documents")
     runs.clear()
     assert not B.install(p, "PY", ask=lambda q: "n", say=said.append) and len(runs) == 1 and said[-1] == "Nothing installed."
+
+
+def test_an_interrupted_install_is_continued_with_a_double_click(tmp_path, monkeypatch, lang):
+    """Install-Base.bat again after an install stopped midway: it asks to continue and runs --resume (a colleague has
+    no command line for it); a failed run says that the next double click goes on."""
+    from assistant_x.base import install as I
+    from assistant_x.core import proc
+
+    assert B.INTERRUPTED in inspect.getsource(I.install)  # the answer it recognizes is the one base install gives
+    p = package(tmp_path / "lib.axbase")
+    runs, said, asked = [], [], []
+    open_ = f"An install of lib {B.INTERRUPTED} 2026-11-01T19:25:00, done: marker): assistant-x base install …"
+
+    def run(cmd, **kw):
+        runs.append(cmd)
+        if cmd[-1] == "--resume":
+            return types.SimpleNamespace(returncode=0, stdout="Installed.", stderr="")
+        return types.SimpleNamespace(returncode=1, stdout=open_, stderr="")
+
+    monkeypatch.setattr(proc, "run", run)
+    assert B.install(p, "PY", ask=lambda q: asked.append(q) or "y", say=said.append)
+    assert "was interrupted" in asked[0] and runs[1][-1] == "--resume" and said[-1].startswith("Base installed")
+    monkeypatch.setattr(proc, "run", lambda cmd, **kw: types.SimpleNamespace(returncode=1, stdout="x", stderr=""))
+    assert not B.install(p, "PY", ask=lambda q: "y", say=said.append) and said[-1].startswith("The base was not")
+    calls = iter(
+        [
+            types.SimpleNamespace(returncode=0, stdout="plan", stderr=""),
+            types.SimpleNamespace(returncode=1, stdout="", stderr=""),
+        ]
+    )
+    monkeypatch.setattr(proc, "run", lambda cmd, **kw: next(calls))
+    assert not B.install(p, "PY", ask=lambda q: "y", say=said.append) and "Install-Base.bat again" in said[-1]
 
 
 def test_the_python_of_the_program_in_use(tmp_path, monkeypatch):

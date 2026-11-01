@@ -290,7 +290,7 @@ def run_update(w, cfg, path, jr, stage, date, say):
         pcards = {c: C.load(p) for c, p in C.paths(pkg_dir / "cards").items()}
         B.prepare_package(pkg_dir, pcards, plan["mapping"], set(plan["skip"]), ident, version)
         jr.mark("package")
-    if step("place"):
+    if step("place") and "placed" not in jr.data:  # a resume keeps the list: its indexes are the moves done
         placed, src_rel = [], B._rel(pkg_dir, root)
         for dp, _, fns in os.walk(lp(pkg_dir)):
             for f in fns:
@@ -301,6 +301,7 @@ def run_update(w, cfg, path, jr, stage, date, say):
                     placed.append((f"{src_rel}/{rel}", lib_rel + rel[len("library") :]))
         jr.data["placed"] = sorted(placed)
         jr.save()
+    if step("place"):
         B.run_moves(jr, "placed_done", [tuple(m) for m in jr.data["placed"]], root)
         jr.mark("place")
     if step("tables"):

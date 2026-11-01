@@ -133,6 +133,9 @@ def installed_python():
     return str(py) if py.is_file() else None
 
 
+INTERRUPTED = "was interrupted (started"  # the answer of base install when an install of the package is open
+
+
 def install(path, py, ask=input, say=print):
     """The plan of the installation shown, one confirmation, the install; True when it is in."""
     from assistant_x.core import proc
@@ -142,21 +145,24 @@ def install(path, py, ask=input, say=print):
     env = dict(os.environ, PYTHONUTF8="1")
     plan = proc.run(base, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     # the plan without its hint for the command line ("the same command with --confirm"): the question below is it
-    say("\n".join(ln for ln in (plan.stdout + plan.stderr).splitlines() if not ln.startswith("Nothing changed.")))
-    if plan.returncode:
+    said = plan.stdout + plan.stderr
+    say("\n".join(ln for ln in said.splitlines() if not ln.startswith("Nothing changed.")))
+    resume = bool(plan.returncode) and INTERRUPTED in said  # an install of this package stopped midway: it goes on
+    if plan.returncode and not resume:
         say(msgs["failed"])
         return False
     try:
-        if ask(msgs["plan"]).strip().lower() not in msgs["yes"]:
+        if ask(msgs["interrupted" if resume else "plan"]).strip().lower() not in msgs["yes"]:
             say(msgs["cancelled"])
             return False
     except (EOFError, KeyboardInterrupt):
         say(msgs["cancelled"])
         return False
-    done = proc.run(base + ["--confirm"], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    more = ["--resume"] if resume else ["--confirm"]
+    done = proc.run(base + more, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     say(done.stdout + done.stderr)
-    if done.returncode:
-        say(msgs["failed"])
+    if done.returncode:  # stopped before its start or midway: the next double click shows the plan or goes on
+        say(msgs["stopped"])
         return False
     say(msgs["done"].format(documents=describe(path)[1]))
     return True

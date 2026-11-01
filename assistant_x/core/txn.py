@@ -15,8 +15,10 @@ them alike.
     inside(path, root)     path (resolved) is root or under it: the last guard before a move or a removal
 """
 
-import datetime, json, os, re, shutil, unicodedata
+import datetime, json, os, re, shutil, time, unicodedata
 from pathlib import Path
+
+HELD_TRIES, HELD_S = 20, 0.5  # a file read by another program at the moment of a replace (an antivirus, an indexer)
 
 
 def lp(path):
@@ -43,7 +45,13 @@ def write_whole(path, text):
     """A file written at once: a reader (or a switched-off PC) sees the old text or the new one, never half."""
     tmp = Path(str(path) + ".tmp")
     tmp.write_text(text, encoding="utf-8", newline="\n")
-    os.replace(tmp, path)
+    for i in range(HELD_TRIES):  # Windows refuses to replace a file another program has open for a moment
+        try:
+            return os.replace(tmp, path)
+        except PermissionError:
+            if i == HELD_TRIES - 1:
+                raise
+            time.sleep(HELD_S)
 
 
 class Journal:
@@ -52,6 +60,7 @@ class Journal:
     def __init__(self, path):
         self.path = Path(path)
         self.data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else None
+        self.saved = 0.0
 
     def start(self, date, **extra):
         self.data = {
@@ -63,8 +72,13 @@ class Journal:
         }
         self.save()
 
-    def save(self):
+    def save(self, every=0.0):
+        """every: seconds; a save sooner than that after the last one is skipped (a step of thousands of moves would
+        write the whole journal after each one: gigabytes for a big package)."""
+        if every and time.monotonic() - self.saved < every:
+            return
         write_whole(self.path, json.dumps(self.data, ensure_ascii=False, indent=0))
+        self.saved = time.monotonic()
 
     def done(self, step):
         return step in self.data["steps"]
