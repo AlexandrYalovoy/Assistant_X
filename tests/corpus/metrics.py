@@ -71,6 +71,7 @@ def workspace(root):
                     "priority": "normal",
                     "affinity": "all",
                     "regulate": False,
+                    "order": "all",  # every case in one batch (by cost the scans would wait for the next one)
                 },
             }
         )
