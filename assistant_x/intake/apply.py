@@ -18,7 +18,7 @@ with its card and text (index\cards, index\texts beside it), the new one takes i
 both, the card of the old one gets the code of the new one in doc.other_versions.
 Usage: assistant-x intake apply [--work DIR] [--dry-run | --resume]"""
 
-import datetime, json, os, shutil
+import datetime, json, os, shutil, stat
 from pathlib import Path
 
 from assistant_x.core import card as C
@@ -65,7 +65,8 @@ def new_events(path, events):
 
 
 def remove_empty_dirs(inbox):
-    """Empty folders of inbox, bottom up (os.rmdir only: a folder with files stays); never the service ones."""
+    """Empty folders of inbox, bottom up (os.rmdir only: a folder with files stays); never the service ones. A folder
+    marked read-only (copied from a CD, a network share) loses the mark first: Windows does not remove it else."""
     top = intake_cfg.lp(inbox)
     removed = []
     for dp, dns, fns in os.walk(top, topdown=False):
@@ -75,7 +76,13 @@ def remove_empty_dirs(inbox):
         if rel.split(os.sep)[0] in intake_cfg.SERVICE:
             continue
         try:
-            os.rmdir(dp)
+            try:
+                os.rmdir(dp)
+            except PermissionError:
+                if os.listdir(dp):
+                    raise
+                os.chmod(dp, stat.S_IREAD | stat.S_IWRITE)
+                os.rmdir(dp)
             removed.append(rel)
         except OSError:
             pass

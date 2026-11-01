@@ -41,6 +41,8 @@ The trial intake of a big real folder in batches, continued.
   PDF with a text layer, office files, text), the next one the medium ones (a scan of up to 100 pages, a .chm), then
   the slow ones (DjVu, a longer scan) [intake] slow_batch at a time; the other files wait in inbox untouched and the
   summary counts them. order = "all" (or intake run --order all) takes everything at once as before.
+- Intake: an empty folder of inbox marked read-only (copied from a share or a disc) is removed after a batch too; before,
+  Windows refused it and such folders were left (the service folders stay as always).
 
 ## 0.5.6 — 2026-10-30
 

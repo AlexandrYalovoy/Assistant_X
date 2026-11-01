@@ -73,3 +73,24 @@ def test_a_word_in_small_caps_is_one_case():
     assert assemble_md.tidy("| ИНгИбИТОРЫ КОРРОЗИИ | ДЛЯ НЕФТЕПРОМЫСЛОВОгО ОбОРУДОВАНИЯ |") == (
         "| ИНГИБИТОРЫ КОРРОЗИИ | ДЛЯ НЕФТЕПРОМЫСЛОВОГО ОБОРУДОВАНИЯ |"
     )
+
+
+def test_an_empty_read_only_folder_of_inbox_is_removed(tmp_path):
+    """The author, 2026-10-31: no empty folders in inbox after a batch; a folder copied from a share is read-only, and
+    Windows refuses to remove it until the mark is cleared (they had to be cleared by hand). The service folders and a
+    folder that still holds a file stay."""
+    import os, stat
+
+    from assistant_x.intake.apply import remove_empty_dirs
+
+    for d in ("a/b", "_rejected/x", "_duplicates/y", "_to_delete/z", "c", "keep"):
+        (tmp_path / d).mkdir(parents=True)
+    (tmp_path / "keep" / "file.pdf").write_bytes(b"%PDF")
+    os.chmod(tmp_path / "a" / "b", stat.S_IREAD)
+    os.chmod(tmp_path / "c", stat.S_IREAD)
+    os.chmod(tmp_path / "keep", stat.S_IREAD)
+    removed = remove_empty_dirs(tmp_path)
+    assert sorted(removed) == sorted([os.path.join("a", "b"), "a", "c"])
+    assert sorted(os.listdir(tmp_path)) == ["_duplicates", "_rejected", "_to_delete", "keep"]
+    assert (tmp_path / "_rejected" / "x").is_dir() and (tmp_path / "keep" / "file.pdf").exists()
+    os.chmod(tmp_path / "keep", stat.S_IREAD | stat.S_IWRITE)
