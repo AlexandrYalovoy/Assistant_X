@@ -341,10 +341,21 @@ def test_read_pages_is_the_page_of_the_text(server, mini):
 
     with open(os.path.join(mini["root"], "index", "texts", "N-00001.md"), encoding="utf-8") as f:
         text = f.read()
-    assert server.read_pages("N-00001", 2, 2) == text[text.index("=== page 2 ===") : text.index("=== page 3 ===")].rstrip(
-        "\n"
-    )
-    assert server.read_pages("N-00001", 1, 3) == text.rstrip("\n")
+    head, body = server.read_pages("N-00001", 2, 2).split("\n\n", 1)
+    assert head.startswith("Cite: [N-00001, PDF 2] ")  # the reference ready to copy, on top
+    assert body == text[text.index("=== page 2 ===") : text.index("=== page 3 ===")].rstrip("\n")
+    head, body = server.read_pages("N-00001", 1, 3).split("\n\n", 1)
+    assert "[N-00001, PDF 1], [N-00001, PDF 2], [N-00001, PDF 3]" in head and body == text.rstrip("\n")
+
+
+def test_a_hit_carries_its_reference_and_the_guide_its_answer_form(server):
+    """A small local model copies a reference it sees whole: every page hit has a "Cite:" line; the guide starts
+    with the mandatory form of the answer (the compact mode keeps the top of it)."""
+    out = server.search_library("обводнённости газового фактора")
+    assert "\nCite: [" in out
+    guide = server.library_guide()
+    assert guide.index("The form of every answer (mandatory)") < guide.index("## How to answer")
+    assert "Never answer a question about the library without references" in guide
 
 
 def test_printed_pages_and_page_notes(rich, monkeypatch):

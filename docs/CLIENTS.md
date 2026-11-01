@@ -96,8 +96,8 @@ The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC
 | Tool | What it does | Set | Changes the library |
 | --- | --- | --- | --- |
 | `library_guide` | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | reader | no |
-| `search_library` | Find fragments of the library for a question (words + meaning). | reader | no |
-| `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it. | reader | no |
+| `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
+| `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
 | `book_map` | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | reader | no |
 | `page_image` | Image of a page of the original (PDF page number) to check figures, tables, formulas and charts. | reader | no |
 | `verify_quote` | Check a quote before citing it word for word, or a number taken from a table: is the text on that PDF page of the document (or the page before or after it)? | reader | no |
