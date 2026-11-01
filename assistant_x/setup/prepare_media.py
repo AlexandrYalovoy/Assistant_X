@@ -137,20 +137,14 @@ MODEL_LICENSES = {
         "Beijing Academy of Artificial Intelligence (BAAI)",
     ),
 }
-APACHE_FROM = ("transformers", "sentence-transformers", "huggingface-hub")  # installed packages that ship its full text
+APACHE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates", "licenses", "Apache-2.0.txt")
 
 
 def apache_text():
-    """The full text of the Apache License 2.0, from the license file of an installed package under it."""
-    for name in APACHE_FROM:
-        try:
-            dist = metadata.distribution(name)
-        except metadata.PackageNotFoundError:
-            continue
-        for _, text in license_texts(dist):
-            if "Apache License" in text and "Version 2.0" in text and "TERMS AND CONDITIONS" in text:
-                return text
-    return None
+    """The full text of the Apache License 2.0, shipped with the program (templates/licenses): a medium never depends
+    on another package being installed for it."""
+    with open(APACHE, encoding="utf-8") as f:
+        return f.read()
 
 
 def model_licenses(models):
@@ -164,7 +158,7 @@ def model_licenses(models):
             continue
         text = MIT.format(holder=holder) if lic == "MIT" else apache_text()
         if not text:
-            raise SystemExit(f"No text of the {lic} license here (install {APACHE_FROM[0]}): {name} not put on a medium")
+            raise SystemExit(f"No text of the {lic} license here: {name} not put on a medium")
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, f"{name}.LICENSE.txt")
         head = f"The model {name} ({page}), in models\\{name} and its ONNX export: {lic}.\n\n"

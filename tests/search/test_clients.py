@@ -43,7 +43,7 @@ def home(tmp_path, monkeypatch):
     h = tmp_path / "home"
     h.mkdir()
     monkeypatch.setattr(K, "home", lambda: h)
-    for var in ("CODEX_HOME", "DSH_HOME"):
+    for var in ("CODEX_HOME", "DSH_HOME", "XDG_CONFIG_HOME"):  # XDG: Cline on Linux, never the real ~/.config
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("APPDATA", str(h / "AppData" / "Roaming"))
     monkeypatch.setenv("LOCALAPPDATA", str(h / "AppData" / "Local"))
