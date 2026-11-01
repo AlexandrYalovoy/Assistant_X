@@ -20,7 +20,7 @@ students, doctors, lawyers, economists.
   found, every document gets a card and a shelf, every step is journaled.
 - **Search by words and by meaning**, with reranking, tables of contents of books and a warning when a scan is weak.
   Measured on a real library of 7 208 documents (945 262 fragments), 25 questions: 0.63 s a question (median), 0.89 s
-  for 95 % of them on an NVIDIA RTX 5080; 2.1 s and 3.7 s on its processor (Intel Core Ultra 9 275HX). The first
+  for 95 % of them on a laptop NVIDIA RTX 5080; 2.1 s and 3.7 s on its processor (Intel Core Ultra 9 275HX). The first
   question after a start waits about 20 s for the models; meanwhile the search answers by words.
 - **One library for all your AI apps.** A single local service loads the models once (an NVIDIA, AMD or Intel video
   card, or the processor) and serves every connected app at the same time.
