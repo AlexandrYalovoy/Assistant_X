@@ -10,7 +10,8 @@ library_guide once: it gives the rules of the answers and the shelves of this li
 tools of this server are not in your list of tools (some apps keep the tools of a server behind a search of tools),
 search the tools for "assistant-x library_guide search_library" first; the server has no resources: never look for
 the library there. Search with search_library (it
-already reranks the results); rephrase with other terms only if the first results do not answer; read the pages you
+already reranks the results) 2–3 times: rephrase with other terms, and search the norms apart (sections=["N"]) for
+the standards and company documents of the object of the question; read the pages you
 need with read_pages;
 the "References" line of a found fragment says on which PDF page the table, formula or clause it refers to lies:
 read those too; book_map shows the table of contents of a book with its pages and what lies in a section;

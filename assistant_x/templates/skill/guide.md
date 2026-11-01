@@ -5,9 +5,10 @@ with a reference to the document and the page. Answer in the language of the use
 
 ## How to answer
 
-1. `search_library(query)` — fragments by words and by meaning, already reranked. Rephrase with other terms (synonyms,
-   designations, the terms in English) only if the first results do not answer. A narrow topic: first
-   `list_documents(text=…)`, then `search_library(query, codes=[…])`.
+1. `search_library(query)` — fragments by words and by meaning, already reranked. Search 2–3 times, even when the
+   first results look enough: rephrase with other terms (synonyms, designations, the terms in English), and search the
+   norms apart (`sections=["N"]`) for the standards and company documents of the object of the question. A narrow
+   topic: first `list_documents(text=…)`, then `search_library(query, codes=[…])`.
 2. Read the found pages with `read_pages(code, start_page, end_page)` before you answer: never from one fragment alone.
    A "References" line names the PDF page of a table, formula or clause: read it too. `book_map(code)` shows the
    contents of a book with its pages; `document_info(code)` gives the card (title, year, printed page numbering).
