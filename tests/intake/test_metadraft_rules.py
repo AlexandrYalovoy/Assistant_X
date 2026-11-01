@@ -251,6 +251,24 @@ def test_the_file_name_gives_the_year():
     assert metadraft.same_number("ГОСТ 33000", "ГОСТ 33000-2014") and not metadraft.same_number("ГОСТ 3300", "ГОСТ 33000")
 
 
+def test_the_draft_year_is_no_figure_of_a_table_nor_a_number():
+    """M-136: the draft year of 9 cards of a real batch was a column of an economic model (2027), a number of a
+    certificate (No 1928) or a year the document only mentions (founded in 1941): such years are no year of issue."""
+    now = metadraft.datetime.date.today().year
+    years = " | ".join(str(y) for y in range(now - 1, now + 3))
+    assert metadraft.year_of(f"Показатель | {years}\nNPV | 1 | 2 | 3 | 4") == ""  # a row of a table of years
+    column = "\n".join(f"{y}\n0" for y in range(now - 5, now))  # a column of years, a year on a line
+    assert metadraft.year_of(f"Вариант 1\n{column}\nВыручка {now - 5}") == ""
+    assert metadraft.year_of(f"Поставки начиная с {now + 1} года") == ""  # a year to come is no year of issue
+    assert metadraft.year_of("Изделие рег. № 1928; паспорт") == ""  # a number after the number sign
+    certificate = "Сертификат соответствия\nрег. № 1928\nвыдан в 2024 году"
+    assert metadraft.year_of(certificate) == "2024"
+    model = page(1, "Модель | Вариант 1\n" + "".join(f"| {y} |\n| 0 |\n" for y in range(now - 4, now + 3)))
+    assert metadraft.draft(model, "Модель.pdf").get("year") is None
+    assert metadraft.year_of("Москва Стандартинформ 2015") == "2015"  # the imprint as before
+    assert metadraft.year_of("Издание 2009 года\nпереработанное 2010") == "2010"  # the latest year of the title pages
+
+
 def test_an_amendment_is_no_version_of_its_base():
     from assistant_x.intake import versions
 

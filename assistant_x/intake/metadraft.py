@@ -32,6 +32,12 @@ PUBLISHER = re.compile(rf"(?i)({lang.alt('publisher_words')})\s*[«\"]?([^»\"\n
 ORG = re.compile(rf"((?:{lang.alt('company_forms')})\s*[«\"][^»\"\n]{{2,60}}[»\"])")
 FOREIGN_ORG = re.compile(rf"\b({lang.alt('known_publishers')})\b")
 YEAR = re.compile(r"(?<![\d.])((?:19|20)\d{2})(?![\d])")
+FIRST_YEAR = 1900  # the earliest year of issue a draft proposes
+YEAR_ROW = 3  # this many years one after another are the heads of the columns of a table, not a date of the document
+LONE_YEAR = re.compile(r"(?:19|20)\d{2}")  # a line of a year alone: a cell of a column of a table of years
+LETTER = re.compile(r"[^\W\d_]")
+ROW_LETTERS = 40  # letters a row of a table of years has at most (its head words: "Indicator, unit")
+NUMBER_SIGN = re.compile(r"(?:№|No\.?|#)\s*$")  # a year right after it is a number (reg. No 1928)
 # "replaces GOST …" on the title page: the designation of the document this one supersedes (a version hint)
 SUPERSEDES = re.compile(f"(?i){lang.alt('supersedes')}")
 SKIP_TITLE = re.compile(rf"(?i)^({lang.alt('not_title')})")
@@ -399,7 +405,16 @@ def en_title_line(pages, desig):
     return ""
 
 
+def in_a_run(years):
+    """The years of a set that are YEAR_ROW years one after another with others of it (2024, 2025, 2026)."""
+    k = YEAR_ROW - 1
+    return {y for y in years if any(all(y - s + i in years for i in range(k + 1)) for s in range(k + 1))}
+
+
 def year_of(text, desig=None):
+    """The year of issue: of the designation, of the imprint, else of the bare years of the text. A year to come, a
+    number after the number sign, the years of a line that names several (a row of a table of years) and the lines of
+    a lone year when there are several (a column of one) are no year of issue (M-136)."""
     now = datetime.date.today().year
     if desig:
         m = re.search(r"[-–—:.](\d{4})$|[-–—](\d{2})$", desig)
@@ -414,7 +429,20 @@ def year_of(text, desig=None):
     m = IMPRINT.search(text)
     if m:
         return m.group(2)
-    years = [int(y) for y in YEAR.findall(text) if 1900 <= int(y) <= now + 1]
+    lines = text.splitlines()
+    # a row of a table of years: years one after another and hardly a word (a legal citation lists years with words)
+    rows = {ln for ln in lines if in_a_run({int(y) for y in YEAR.findall(ln)}) and len(LETTER.findall(ln)) <= ROW_LETTERS}
+    heads = {int(ln.strip(" |*")) for ln in lines if LONE_YEAR.fullmatch(ln.strip(" |*"))}  # a column of lone years
+    # years one after another (2024, 2025, 2026) are the heads of the columns of a table: no year of issue anywhere
+    # ("Revenue 2025" beside the table); a list of other years (the references of a standard) stays
+    run = in_a_run(heads) | {y for ln in rows for y in in_a_run({int(x) for x in YEAR.findall(ln)})}
+    years = [
+        int(m.group(1))
+        for line in lines
+        if line not in rows
+        for m in YEAR.finditer(line)
+        if FIRST_YEAR <= int(m.group(1)) <= now and int(m.group(1)) not in run and not NUMBER_SIGN.search(line, 0, m.start())
+    ]
     if not years:
         return ""
     # the edition year is usually the latest year on the title pages (later reprints aside)
