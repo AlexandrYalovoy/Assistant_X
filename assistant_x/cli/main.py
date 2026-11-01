@@ -48,7 +48,10 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
         "connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline",
     ),
     "disconnect": ("assistant_x.clients.disconnect", "take the library out of the settings of an app"),
-    "update": ("assistant_x.clients.update", "connect every connected app again, its skill refreshed; --from URL: a newer release"),
+    "update": (
+        "assistant_x.clients.update",
+        "connect every connected app again, its skill refreshed; --from URL: a newer release",
+    ),
     "gen-docs": ("assistant_x.setup.gen_docs", "make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin"),
     "base": ("assistant_x.base.cli", "base packages: export, inspect, install, update, remove"),
     "remove": ("assistant_x.intake.remove", "take documents of the library aside (inbox\\_to_delete), codes reserved"),
