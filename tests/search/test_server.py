@@ -478,3 +478,12 @@ def test_a_server_of_the_same_window_is_no_other_window(monkeypatch):
     monkeypatch.setattr(mcp_server, "holder_alive", lambda: True)
     monkeypatch.setattr(mcp_server, "same_window", lambda pid: True)
     assert mcp_server.SAME_WINDOW in mcp_server.cpu_pending() and mcp_server.OTHER_HOLDER not in mcp_server.cpu_pending()
+
+
+def test_a_weak_match_of_the_reranker_says_the_library_may_lack_the_subject():
+    """The reranker scores the questions the real library answers 0.96-1.00, a neighbouring subject it has no document
+    on (fuel rods of a reactor, a rocket engine) 0.74-0.83: below RERANK_UNSURE the answer starts with a note that the
+    fragments may be only near the question, so that a small model stops searching and says so."""
+    assert mcp_server.near_only({"rerank_top": 0.74}).startswith("Weak match (0.74)")
+    assert mcp_server.near_only({"rerank_top": 0.97}) == ""
+    assert mcp_server.near_only({}) == ""  # no reranker (the processor of a second window): no guess

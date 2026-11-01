@@ -70,6 +70,12 @@ WEAK = 0.5  # the closeness of the best fragment below which the library may not
 CALIBRATE_MIN, WEAK_BOUNDS, WEAK_PERCENTILE = 30, (0.35, 0.6), 0.1
 MISSING_SHARE = 0.5  # the share of the content words of a question none of the best results has: the library lacks it
 MISSING_TOP = 5  # the results looked at for the words of the question
+RERANK_UNSURE = 0.9  # the reranker's certainty of its best fragment below which the fragments may be only near the question ([search] rerank_unsure)
+WEAK_MATCH = (
+    "Weak match ({top:.2f}): the best fragments may be only near the question, not about it. If none of them is about "
+    "its subject, tell the user first that the library has no document on it, then answer from general knowledge "
+    'marked "not from the library"; do not search on.'
+)
 UNSURE_MARGIN = 0.08  # above the weak threshold by less than this, the meaning search does not vouch for its results
 RERANK_WEAK = 0.3  # the reranker's certainty of its best fragment below which it agrees ([search] rerank_weak)
 LOW_CLOSENESS = (
@@ -488,7 +494,18 @@ def search_note(stats, light, query="", res=None):
     else:
         why = ""
     words = missing_note(query, res) if meaning_unsure(stats) else ""  # a word missing alone says little
-    return "\n".join(x for x in (why, low_closeness(stats) or words, gap) if x)
+    return "\n".join(x for x in (why, low_closeness(stats) or words or near_only(stats), gap) if x)
+
+
+def near_only(stats):
+    """WEAK_MATCH when the reranker ran and is not sure of its best fragment: the fragments are near the question
+    (the same field) but may not be about it. Measured on the real library: the questions it answers score 0.96-1.00,
+    a neighbouring subject it has no document on 0.74-0.83, an unrelated one below 0.2."""
+    top = stats.get("rerank_top")
+    cfg = lib().cfg if _lib is not None else {}
+    if top is None or top >= float(cfg.get("rerank_unsure", RERANK_UNSURE)):
+        return ""
+    return WEAK_MATCH.format(top=top)
 
 
 def _synonyms():
