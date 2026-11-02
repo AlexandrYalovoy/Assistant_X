@@ -22,7 +22,7 @@ PER_TOPIC = 5  # verified pages kept for a topic
 PER_DOC = 2  # of one document
 MAX_LEVEL = 8  # the organization standards and higher: methodical documents and books are not key norms
 FIRST = 4  # key norm pages put first in an answer
-CANDIDATES = 12  # pages of shelf N looked at per search of a topic
+CANDIDATES = 20  # pages of shelf N looked at per search of a topic
 
 
 def topics_of(cfg):
