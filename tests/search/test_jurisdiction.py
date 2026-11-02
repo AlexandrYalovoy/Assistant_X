@@ -15,7 +15,8 @@ def test_the_designation_decides_and_the_card_field_wins():
     j = J.load("oil-gas-ru")
     assert j.of(hit("N-1", "API RP 14E")) == "US"
     assert j.of(hit("N-2", "GOST R 58367-2019 / ГОСТ Р 58367-2019")) == "RU"
-    assert j.of(hit("N-3", "ГОСТ 34068-2017")) == "EAEU"
+    assert j.of(hit("N-3", "ГОСТ 34068-2017")) == "CIS" and j.of(hit("N-7", "ТР ТС 032/2013")) == "EAEU"
+    assert {"RU", "CIS", "EAEU", "KZ", "INT"} == j.home and "CIS" not in j.extra  # interstate GOST: primary
     assert j.of(hit("N-4", "СТ РК 1916-2009")) == "KZ" and j.of(hit("N-5", "ISO 13703")) == "INT"
     assert j.of(hit("N-6", "API 6D", jurisdiction="KZ")) == "KZ"
     assert J.load("general") is None  # a profile without the file changes nothing
