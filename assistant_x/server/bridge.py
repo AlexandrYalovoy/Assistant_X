@@ -49,6 +49,7 @@ class Bridge:
         self.lists = set()  # ids of tools/list requests in work
         self.weak = 0  # search_library answers with the weak-match note in a row (the compact mode)
         self.budget = (0, None)  # searches of the question in work, time of the last call (toolsets.search_budget)
+        self.first = (None, None)  # the first search of the question in work and the time of the last call
         self.trace = None  # AX_LOG_LEVEL=DEBUG: bridge-<id>.log beside the service log, a line per message
         if service.log_level() == "DEBUG":
             self.trace = service.files(root)["log"].replace("service-", "bridge-")
@@ -356,7 +357,12 @@ class Bridge:
                 return self.error(msg.get("id"), -32602, f"Unknown tool: {name}")
             self.calls[msg.get("id")] = name
             if self.compact:
-                msg = dict(msg, params=dict(params, arguments=toolsets.compact_arguments(name, params.get("arguments"))))
+                args = toolsets.compact_arguments(name, params.get("arguments"))
+                if name == "search_library" and isinstance(args, dict):
+                    self.first, context = toolsets.first_search(self.first, args.get("query"), time.monotonic())
+                    if context:
+                        args = dict(args, context=context)
+                msg = dict(msg, params=dict(params, arguments=args))
         if method and method.startswith("notifications/") and self.upstream is not True:
             return  # nothing to tell a service that has not started yet
         self.forward(msg)

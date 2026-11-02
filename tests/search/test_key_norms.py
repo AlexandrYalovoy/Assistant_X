@@ -133,3 +133,26 @@ def test_an_installed_base_gives_every_app_its_key_norms_and_hierarchy(tmp_path,
     hits = mcp_server.find_fragments("обводнённости газового фактора", 3, {})
     assert (hits[0]["code"], hits[0]["page"], hits[0].get("key")) == ("N-00001", 2, True)
     assert mcp_server._lib.hierarchy.source == os.path.join(root, "hierarchy.json")
+
+
+def test_a_reworded_question_still_finds_its_topic():
+    """A small model drops a word of the user's question: a topic of three groups or more is still found when the
+    first group (what is asked) is there and only one other is missing."""
+    data = {"topics": [dict(TOPIC, entries=[dict(code="N-00001", pdf_page=36, level=5, quote="q")])]}
+    assert K.match(data, "допустимая скорость газа")  # no pipeline word, the velocity and the gas are there
+    assert not K.match(data, "газопровод для газа")  # what is asked (the velocity) is missing
+    assert not K.match({"topics": [dict(TOPIC, ask=[["скорост"], ["газ"]], entries=[{}])]}, "скорость нефти")
+
+
+def test_the_bridge_gives_the_first_search_of_a_question_as_the_context_of_the_next():
+    from assistant_x.server import toolsets as T
+
+    state, ctx = T.first_search((None, None), "скорость газа в газопроводе", 0)
+    assert ctx is None
+    state, ctx = T.first_search(state, "gas velocity table", 10)
+    assert ctx == "скорость газа в газопроводе"
+    state, ctx = T.first_search(state, "сепаратор", 10 + T.QUESTION_GAP + 1)  # a new question
+    assert ctx is None and state[0] == "сепаратор"
+    assert T.compact_tools([{"name": "search_library", "inputSchema": {"properties": {"query": {}, "context": {}}}}])[0][
+        "inputSchema"
+    ]["properties"] == {"query": {}}

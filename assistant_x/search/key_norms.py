@@ -129,10 +129,18 @@ def load(cfg):
     return _cache[p][1]
 
 
+def asks(groups, ws):
+    """Is a question of a topic: every group of its 'ask' in the words ws, or, for a topic of three groups or more,
+    all but the last (the object or the place: a pipeline, a site) — a small model rewords the question of the user
+    and drops that word; what is asked and of what medium (a velocity of gas, not of oil) must stay."""
+    hit = [any(any(w.startswith(s) for w in ws) for s in g) for g in groups]
+    return all(hit) or (len(groups) >= 3 and all(hit[:-1]))
+
+
 def match(data, query):
-    """The topics of the key norms a question is about: every group of its 'ask' in the words of the question."""
+    """The topics of the key norms a question is about (asks)."""
     ws = words(query)
-    return [t for t in (data or {}).get("topics", []) if t.get("entries") and has(t["ask"], ws)]
+    return [t for t in (data or {}).get("topics", []) if t.get("entries") and asks(t["ask"], ws)]
 
 
 def entries_for(data, query, n=FIRST):

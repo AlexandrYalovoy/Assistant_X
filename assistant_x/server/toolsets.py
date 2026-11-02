@@ -25,7 +25,7 @@ TOOLSETS = ("reader", "all")
 # the compact mode is the reference mode of a small local model (LM Studio): it finds and quotes, nothing else; the
 # other tools are hidden, their descriptions would only take its context
 REFERENCE = ("library_guide", "search_library", "read_pages")
-HIDDEN_ARGS = ("quotes", "reference")  # set by the bridge in the compact mode, not shown to the model
+HIDDEN_ARGS = ("quotes", "reference", "context")  # set by the bridge in the compact mode, not shown to the model
 COMPACT_CHARS = 6000  # about 1 500–2 000 tokens of an answer
 COMPACT_K = 3  # search_library results in the compact mode, at most: the best of the library
 COMPACT_NORMS = 3  # and the best of shelf N (standards, company documents) after them
@@ -122,6 +122,16 @@ ANSWER_NOW = (
     "Searched {n} times: answer the user now with the lines you already have (copied exactly, with their references), "
     'or, if none is about the question, "The library has no documents on this question". Do not search again.'
 )
+
+
+def first_search(state, query, now):
+    """((first query, now), context) for one more search_library of the compact bridge: the first search of a question
+    (after QUESTION_GAP without a call a new question begins) goes with every later one as its context, so the key
+    norms of its topic come first though the small model rewords the next searches; no context for the first one."""
+    first, last = state
+    if first is None or last is None or now - last > QUESTION_GAP:
+        return (query, now), None
+    return (first, now), (first if first != query else None)
 
 
 def search_budget(state, name, content, now):

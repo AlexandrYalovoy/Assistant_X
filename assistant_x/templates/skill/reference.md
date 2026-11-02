@@ -18,7 +18,7 @@ from outside the library.
 
 ## How to search
 
-1. `search_library(query)` with the words of the question; a second time with other terms (the terms of the
+1. `search_library(query)` with the user's own words first, as they wrote them; a second time with other terms (the terms of the
    documents: "permissible … table", a designation such as "GOST R 58367") when the first lines are not about it.
    At most 3 searches.
 2. `read_pages(code, page, page)` only when a line is cut and the user needs the rest: quote the page as it is.
