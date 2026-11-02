@@ -115,7 +115,8 @@
   "update": "заново подключить все подключённые приложения и обновить их навыки; --from URL: новый релиз",
   "gen-docs": "создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин",
   "base": "базовые пакеты: export, inspect, install, update, remove",
-  "remove": "отложить документы библиотеки в сторону (inbox\\_to_delete), шифры остаются занятыми"
+  "remove": "отложить документы библиотеки в сторону (inbox\\_to_delete), шифры остаются занятыми",
+  "key-norms": "ключевые нормы проектных тем: найти, проверить по тексту страниц, записать"
  },
  "problems": {
   "workspace-missing": [

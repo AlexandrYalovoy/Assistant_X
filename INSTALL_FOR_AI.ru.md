@@ -184,3 +184,4 @@ Setup.bat с `--yes` ничего не спрашивает и не открыв
 | `gen-docs` | создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин |
 | `base` | базовые пакеты: export, inspect, install, update, remove |
 | `remove` | отложить документы библиотеки в сторону (inbox\_to_delete), шифры остаются занятыми |
+| `key-norms` | ключевые нормы проектных тем: найти, проверить по тексту страниц, записать |

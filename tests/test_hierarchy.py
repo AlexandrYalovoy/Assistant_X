@@ -15,7 +15,7 @@ def test_the_profile_places_the_documents_by_their_designation():
     assert h.rank("ТТР-01.02.04-13", code="N-00390") == 5.5  # the company: with the national standards, after them
     assert h.rank("СП 231.1311500.2015", code="N-00357") == 6
     assert h.rank("РД 39-135-94", code="N-00763") == 7
-    assert h.rank("СТО Газпром НТП 1.8-001-2004", code="N-00580") == 8
+    assert h.rank("СТО 00220256-005-2005", code="N-00580") == 8
     assert h.rank("Федеральный закон от 21.07.1997 N 116-ФЗ", code="R-00001") == 2
     assert h.rank("", "Справочник инженера-нефтяника", code="L-00013") == 10  # a book: by its shelf
     assert h.rank("", "Без обозначения", code="N-09999") == H.UNPLACED

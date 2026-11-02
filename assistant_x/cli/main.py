@@ -55,6 +55,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "gen-docs": ("assistant_x.setup.gen_docs", "make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin"),
     "base": ("assistant_x.base.cli", "base packages: export, inspect, install, update, remove"),
     "remove": ("assistant_x.intake.remove", "take documents of the library aside (inbox\\_to_delete), codes reserved"),
+    "key-norms": ("assistant_x.search.key_norms", "the key norms of the design topics: searched, verified, written"),
 }
 MODEL_COMMANDS = ("search", "embed", "eval")  # they load the models: torch and transformers kept quiet
 

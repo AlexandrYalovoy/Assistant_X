@@ -443,7 +443,58 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
         seen = {(r["code"], r.get("page")) for r in res}
         extra = lib().search(query, k=min(norms, 10), sections=["N"], **kw)
         res = res + [r for r in extra if (r["code"], r.get("page")) not in seen]
+    if not codes and (not sections or "N" in sections):  # the key norms of the topic of a design question first
+        first = key_hits(query)
+        seen = {(r["code"], r["page"]) for r in first}
+        res = first + [r for r in res if (r["code"], r.get("page")) not in seen]
     return res
+
+
+def key_hits(query):
+    """The key norm pages of the topic of a question (search/key_norms.py) as hits: their verified quote and the page
+    text around it; [] when the library has no key norms or the question is of no topic."""
+    from assistant_x.search import key_norms
+
+    out = []
+    for e in key_norms.entries_for(key_norms.load(lib().cfg), query):
+        row = (
+            lib()
+            .con.execute(
+                "SELECT p.text, p.label, d.title, d.section, d.year, d.doc_type, d.designation, d.quality, d.issue, "
+                "d.page_offset, d.personal FROM pages p JOIN docs d ON d.code=p.code WHERE p.code=? AND p.page=?",
+                (e["code"], e["pdf_page"]),
+            )
+            .fetchone()
+        )
+        if not row:
+            continue  # a document taken out since the list was built
+        text = row["text"] or ""
+        at = text.find(e["quote"][:40])
+        part = text[max(0, at - 300) : at + 900] if at >= 0 else e["quote"]
+        out.append(
+            dict(
+                code=e["code"],
+                page=e["pdf_page"],
+                title=row["title"],
+                section=row["section"],
+                year=row["year"],
+                page_numbering=row["page_offset"],
+                heading="key norm of the topic",
+                text=part.strip(),
+                quality=row["quality"] or "",
+                issue=row["issue"] or "",
+                kind="text",
+                doc_type=row["doc_type"] or "",
+                personal=bool(row["personal"]),
+                named=False,
+                label=row["label"],
+                page_note="",
+                level=e.get("level"),
+                quote=e["quote"],
+                key=True,
+            )
+        )
+    return out
 
 
 _noticed = False  # the start notice was given once in this server

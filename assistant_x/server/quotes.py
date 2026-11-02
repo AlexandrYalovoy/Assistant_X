@@ -110,7 +110,7 @@ def line(query, r):
     """«quote» — [code, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
     if r.get("kind") in ("card", "card_q") or not r.get("page"):
         return None
-    quote = pick(query, r.get("text") or "").replace("«", '"').replace("»", '"')
+    quote = (r.get("quote") or pick(query, r.get("text") or "")).replace("«", '"').replace("»", '"')
     if not quote:
         return None
     at = f"p. {r['label']}, PDF {r['page']}" if r.get("label") else f"PDF {r['page']}"

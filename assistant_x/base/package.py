@@ -11,6 +11,8 @@ a FAT32 flash drive, which takes no file over 4 GB).
     vectors/           meta.json {dim, fingerprint, table_rows}, keys.bin, vectors.f16: the vector cache of its fragments
     events.tsv         date, code and status of the intake events of its documents (no file names, no folders)
     ocr_quality.tsv    the recognition scores of its texts
+    key_norms.json     the key norms of the design topics among its documents (search/key_norms.py)
+    hierarchy.json     the hierarchy of documents of the library it was made of, when that library had its own
     CHECKSUMS.sha256   "sha256  path" of every other file
 
 Package(path) reads either form: names(), read(name), open(name), size(name), manifest, verify()."""
@@ -228,7 +230,7 @@ class Package:
 
 DAMAGED = (zipfile.BadZipFile, zlib.error, EOFError, OSError)  # what reading a damaged entry of a zip raises
 TOP = ("cards/", "texts/", "library/", "vectors/")
-TOP_FILES = (MANIFEST, CHECKSUMS, README, "events.tsv", "ocr_quality.tsv")
+TOP_FILES = (MANIFEST, CHECKSUMS, README, "events.tsv", "ocr_quality.tsv", "key_norms.json", "hierarchy.json")
 
 
 def bad_name(name):

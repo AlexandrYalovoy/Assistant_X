@@ -547,6 +547,9 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
     if step("tables"):
         tables(w, cfg, raw, pkg_dir, jr, date)
         jr.mark("tables")
+    if step("key norms"):
+        key_norms(w, pkg_dir, plan)
+        jr.mark("key norms")
     if step("build"):
         jr.data["full"] = build_only(config_path(w))
         jr.mark("build")
@@ -560,6 +563,29 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
     write_report(w, jr, say)
     shutil.rmtree(stage)  # the work folder of this install: extracted package and journal
     say(f"Installed {ident} {version}: {jr.data['base'].get('documents', '?')} documents in the library.")
+
+
+def key_norms(w, pkg_dir, plan):
+    """index/key_norms.json of the library with the key norms of the package (its codes as installed) merged in: a topic
+    of both keeps the pages of both, the highest level first; the library's own codes renumbered by the install too."""
+    from assistant_x.search import key_norms as K
+
+    from assistant_x.core import hierarchy
+
+    given, mine = os.path.join(pkg_dir, hierarchy.FILE), w.root / hierarchy.FILE
+    if os.path.exists(given) and not mine.exists() and not hierarchy.check(hierarchy.read(given) or {}):
+        shutil.copyfile(given, mine)  # the hierarchy the package was made with; the user's own one stays
+    src = os.path.join(pkg_dir, K.FILE)
+    dst = w.index / K.FILE
+    own = K.read(dst)
+    if own and plan.get("renumbered") == "own":
+        own = K.remap(own, plan["mapping"])
+    if not os.path.exists(src):
+        if own:
+            K.write(dst, own)
+        return
+    got = K.remap(K.read(src) or {}, plan.get("package_mapping") or {})
+    K.write(dst, K.merge(own or {}, got, skip=set(plan.get("skip") or ())))
 
 
 def config_path(w):

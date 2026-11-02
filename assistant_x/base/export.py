@@ -75,6 +75,20 @@ def exported_card(card, chosen, ident, version, strip_names=False):
     return card, dropped
 
 
+def key_norms_of(path, codes):
+    """The key norms of the library (search/key_norms.py) with the entries of the exported documents only; None when
+    the library has none or none of them is exported."""
+    try:
+        data = json.loads(open(path, encoding="utf-8").read())
+    except (OSError, ValueError):
+        return None
+    topics = [
+        dict(t, entries=[e for e in t.get("entries", []) if C.main_code(e["code"]) in codes]) for t in data.get("topics", [])
+    ]
+    topics = [t for t in topics if t["entries"]]
+    return dict(data, topics=topics) if topics else None
+
+
 def file_entries(card):
     """[(code of the document or the part, the entry of the file)] of a card."""
     file = card.get("file") or {}
@@ -287,6 +301,12 @@ def export(
         lines = open(os.path.join(idx, "ocr_quality.tsv"), encoding="utf-8").read().splitlines()
         keep = [lines[0]] + [ln for ln in lines[1:] if ln.split("\t")[0] in subs]
         w.add_bytes("ocr_quality.tsv", ("\n".join(keep) + "\n").encode("utf-8"))
+    key = key_norms_of(os.path.join(idx, "key_norms.json"), set(chosen))
+    if key:
+        w.add_bytes("key_norms.json", json.dumps(key, ensure_ascii=False, indent=1).encode("utf-8"))
+    own = os.path.join(cfg["workspace"], "hierarchy.json")  # the user's own hierarchy of documents (core/hierarchy.py)
+    if os.path.exists(own):
+        w.add_file("hierarchy.json", own)
     events = [
         [r[0], "—", "—", "—", r[4], "—", r[6]]
         for r in journal.read_events(os.path.join(idx, "intake_events.tsv"))

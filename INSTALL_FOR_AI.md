@@ -184,3 +184,4 @@ changes the library asks for the user's yes to a plan first.
 | `gen-docs` | make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin |
 | `base` | base packages: export, inspect, install, update, remove |
 | `remove` | take documents of the library aside (inbox\_to_delete), codes reserved |
+| `key-norms` | the key norms of the design topics: searched, verified, written |

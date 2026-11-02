@@ -307,6 +307,9 @@ def run_update(w, cfg, path, jr, stage, date, say):
     if step("tables"):
         update_tables(w, pkg_dir, jr, date)
         jr.mark("tables")
+    if step("key norms"):  # the key norms of the new version merged in (a removed document is skipped by the search)
+        B.key_norms(w, pkg_dir, {"package_mapping": plan["mapping"], "skip": plan["skip"]})
+        jr.mark("key norms")
     if step("build"):
         jr.data["full"] = B.build_only(str(w.config))
         jr.mark("build")
