@@ -107,6 +107,7 @@
     "adopts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1},
                "description": "the foreign standards a national one adopts (ISO 10424-2:2007), as its title page names them"},
     "amends": {"type": "string", "minLength": 1, "description": "the designation of the standard an amendment changes"},
+    "jurisdiction": {"type": "string", "pattern": "^([A-Z]{2}|EAEU|CIS|EU|INT)$", "description": "the state or the union whose norm the document is: ISO 3166-1 alpha-2 (KZ, RU, US), EAEU (TR CU, TR EAEU), CIS (interstate GOST), EU (EN), INT (ISO, IEC); core/jurisdiction.py"},
     "page_offset": {
      "type": "object", "additionalProperties": false, "required": ["checked", "value"],
      "properties": {"checked": {"type": "boolean"}, "value": {"type": "integer"}},

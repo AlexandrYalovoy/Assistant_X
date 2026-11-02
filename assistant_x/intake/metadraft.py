@@ -12,7 +12,7 @@ The words of the documents come from the language packs (lang/<code>/documents.j
 import datetime, json, re, sys
 from pathlib import Path
 
-from assistant_x.core import config, lang
+from assistant_x.core import config, jurisdiction, lang
 from assistant_x.core.formats import PAGE_WORDS, extensions, pages_path, read_outline
 
 # designations of standards and norms: one alternation (the longer forms of a pack first), never inside a word
@@ -748,6 +748,9 @@ def draft(md, rel="", profile=None, given=None):
         out["code_hint"] = desig
         out["designation"] = {lg: desig, **({"en": latin} if lg != "en" else {})}
         out["au"] = re.sub(r"[^A-Za-z0-9]+", "-", latin).strip("-")
+    j, _ = jurisdiction.detect(out, doc_type, Path(rel).name, text)
+    if j:
+        out["jurisdiction"] = j
     m = SUPERSEDES.search(text) if doc_type in ("standard", "regulation") else None
     if m:
         out["supersedes"] = next(g for g in m.groups() if g).strip()  # the group of the pack whose phrase matched

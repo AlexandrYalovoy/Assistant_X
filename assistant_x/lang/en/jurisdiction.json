@@ -1,0 +1,20 @@
+{
+  "_comment": "The jurisdiction of English-language documents (core/jurisdiction.py): [value, pattern] pairs, the first match wins, after the packs of the other languages. jurisdiction_designations match the start of the designation (else of the title): international bodies (ISO, IEC, ITU, IMO, register rules: INT) apart from the national ones of the United States (API, ASME, ANSI, ASTM, NFPA, UL, FM, IEEE, ISA, MSS, AGA, GPA, NACE …: US), European standards (EN: EU) and a few national ones (BS: GB, DIN: DE, NORSOK: NO, CSA: CA, AS: AU). A dual designation goes by its first body (IEC/IEEE 80005: INT; ANSI/ISA: US). jurisdiction_words: the names of a state, a union or an international body in the title, the publisher or the source name of a normative document, and (when they say nothing) in the start of its text; a document they give two values is left unsure.",
+  "jurisdiction_designations": [
+    ["INT", "^(?:ISO|IEC|ISO/IEC|IEC/IEEE|ISO/IEEE|ITU|IMO|IALA|OIML|CIE|ICAO|IAEA|DNV|ABS|IACS|LR|BV)\\b"],
+    ["US", "^(?:API|ASME|ANSI|ASTM|NFPA|UL|FM|IEEE|ISA|ANSI/ISA|MSS|AGA|GPA|AWS|CGA|NACE|AMPP|SSPC|AISC|ACI|AWWA|ASCE|TEMA|HI|AMCA|ASHRAE|NEMA|AISI|SAE|NIST|OSHA|CFR|EPA|PFI|FCI|ICEA|NETA|NERC|ASNT|ARI|AHRI|CSA\\s+B51|STI|PIP|EJMA)\\b"],
+    ["EU", "^(?:EN|CEN|CENELEC|CEN/TS|CLC)\\b"],
+    ["GB", "^(?:BS|PD|BSI)\\b"],
+    ["DE", "^(?:DIN|VDI|VDE|AD\\s*2000)\\b"],
+    ["NO", "^NORSOK\\b"],
+    ["CA", "^(?:CSA|CAN/CSA)\\b"],
+    ["AU", "^(?:AS|AS/NZS)\\s*\\d"]
+  ],
+  "jurisdiction_words": [
+    ["KZ", "Republic\\s+of\\s+Kazakhstan|Kazakhstan"],
+    ["EAEU", "Eurasian\\s+Economic\\s+(?:Union|Commission)|Customs\\s+Union"],
+    ["RU", "Russian\\s+Federation"],
+    ["INT", "International\\s+(?:Organization\\s+for\\s+Standardization|Electrotechnical\\s+Commission|Maritime\\s+Organization)"],
+    ["US", "American\\s+(?:Petroleum\\s+Institute|Society\\s+of\\s+Mechanical\\s+Engineers|National\\s+Standards\\s+Institute|Society\\s+for\\s+Testing|Gas\\s+Association|Welding\\s+Society)|National\\s+Fire\\s+Protection\\s+Association|Underwriters\\s+Laboratories|United\\s+States"]
+  ]
+}

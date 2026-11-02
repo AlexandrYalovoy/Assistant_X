@@ -1,0 +1,23 @@
+{
+  "_comment": "The jurisdiction of Russian-language documents (core/jurisdiction.py): [value, pattern] pairs, the first match wins, this pack before the English one. jurisdiction_designations match the start of the designation (else of the title): the national designations of Kazakhstan (СН РК, СП РК, СТ РК, НП к СП РК EN …) before the Russian ones that share their letters (СП, СНиП), the acts of the Customs Union and the Eurasian Economic Union (ТР ТС, ТР ЕАЭС), the interstate standards (ГОСТ without Р, МСН, МСП: CIS), the Russian ones (ГОСТ Р, СП, СНиП, РД, ПБ, СТО, federal laws), ISO and IEC in Russian letters (INT). jurisdiction_words: the names of a state or a union in the title, the publisher or the source name of a normative document, and (when they say nothing) in the start of its text (the legal form that starts the name of the publisher: ПАО, ООО … a Russian organization, ТОО one of Kazakhstan); a document they give two values is left unsure.",
+  "jurisdiction_designations": [
+    ["KZ", "^(?:НП\\s+к\\s+)?(?:СН|СП|СТ|СНиП|РДС|НТП|МСН|МСП|РНТП|ПР|Р|МУ|МДС|ТК|ТКСН|ЕНиР|СЦ|ССЦ|ЭСН|НДЗ)\\s*РК\\b"],
+    ["KZ", "^(?:СТ|ГОСТ)\\s+РК\\b"],
+    ["KZ", "^(?:Кодекс|Закон|Указ|Постановление|Приказ)\\s+(?:Республики\\s+Казахстан|РК)\\b"],
+    ["EAEU", "^ТР\\s*(?:ТС|ЕАЭС|ЕЭК)\\b"],
+    ["EAEU", "^(?:О\\s+принятии\\s+|Об\\s+утверждении\\s+|О\\s+)?[Тт]ехническ(?:ий|ого|ом)\\s+регламент\\w*\\s+(?:Таможенного\\s+союза|Евразийского\\s+экономического\\s+союза)"],
+    ["CIS", "^ГОСТ\\s+(?!Р\\b)(?:ISO|IEC|ИСО|МЭК|EN|IEC/TS|ISO/TS)?\\s*/?\\s*\\d"],
+    ["CIS", "^(?:МСН|МСП|МГСН\\s+СНГ)\\s*\\d"],
+    ["RU", "^ГОСТ\\s+Р\\b"],
+    ["RU", "^(?:СП|СНиП|СН|СО|РД|РДИ|ПБ|НПБ|ПОТ|ВСН|ВНТП|ВППБ|ОСТ|СТО|ТУ|СанПиН|ГН|МДС|ПУЭ|ПТЭЭП|ПТЭ|ППБ|ППР|ФНП|ТСН|ОНТП|НП|МУ|МР|Р)\\b(?!\\s*РК)"],
+    ["RU", "^\\d+-ФЗ\\b"],
+    ["RU", "^(?:Федеральный\\s+закон|Кодекс\\s+Российской\\s+Федерации|Постановление\\s+Правительства\\s+(?:РФ|Российской\\s+Федерации)|Приказ\\s+(?:Ростехнадзора|Минэнерго\\s+России|МЧС\\s+России|Минтруда\\s+России|Минстроя\\s+России))"],
+    ["INT", "^(?:ИСО|МЭК|ИСО\\s*/\\s*МЭК)\\b"]
+  ],
+  "jurisdiction_words": [
+    ["KZ", "Республик[аеиу]\\s+Казахстан|Казахстанск|\\bРК\\b(?!\\s*EN)|adilet\\.zan\\.kz|ksm\\.kz|Әділет|КазСтандарт|Казахстанский\\s+институт\\s+стандартизации|^ТОО\\s*[«\"]"],
+    ["EAEU", "Евразийск\\w*\\s+экономическ\\w*\\s+(?:союз|комисси)|Таможенного\\s+союза|eaeunion\\.org|\\bЕАЭС\\b|\\bЕЭК\\b"],
+    ["RU", "Российской\\s+Федерации|\\bРФ\\b|Ростехнадзор|Росстандарт|Минстрой\\s+России|Минэнерго\\s+России|МЧС\\s+России|^(?:ПАО|ОАО|ЗАО|ООО|ФГУП|ФГБУ|ФАУ|АНО)\\s*[«\"]"],
+    ["CIS", "Межгосударственн\\w+\\s+(?:стандарт|совет|строительн)|\\bМГС\\b|Содружества\\s+Независимых\\s+Государств"]
+  ]
+}

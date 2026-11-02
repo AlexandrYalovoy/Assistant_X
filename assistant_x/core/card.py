@@ -23,6 +23,7 @@ FORMAT_KINDS = ("pdf_text", "pdf_mixed", "pdf_scan", "pdf_no_ocr", "doc", "prese
 # fields of `doc` brief() shows by default, in this order; toc and the file only when asked
 BRIEF_FIELDS = (
     "designation",
+    "jurisdiction",
     "adopts",
     "amends",
     "title",
@@ -630,6 +631,7 @@ LABELS = {
     "other_versions": "Other versions",
     "page_offset": "Page numbering",
     "lang": "Language",
+    "jurisdiction": "Jurisdiction",
     "toc": "Contents",
     "units": "Contents (units)",
 }

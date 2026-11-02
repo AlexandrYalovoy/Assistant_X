@@ -222,7 +222,10 @@ class Library:
 
     SCOPES = ("all", "own", "package", "personal")
 
-    def _filter_sql(self, sections=None, codes=None, year_from=None, year_to=None, doc_types=None, langs=None, scope=None):
+    def _filter_sql(
+        self, sections=None, codes=None, year_from=None, year_to=None, doc_types=None, langs=None, scope=None,
+        jurisdictions=None,
+    ):
         where, args = [], []
         if scope and scope not in self.SCOPES:
             raise ValueError(f"scope {scope!r}: one of {', '.join(self.SCOPES)}")
@@ -236,6 +239,9 @@ class Library:
         if langs:  # a document in any of these languages
             where.append("(" + " OR ".join("(',' || coalesce(d.lang, '') || ',') LIKE ?" for _ in langs) + ")")
             args += [f"%,{x.strip().lower()},%" for x in langs]
+        if jurisdictions:  # doc.jurisdiction of the card (core/jurisdiction.py): KZ, RU, US, EAEU, CIS, EU, INT
+            where.append(f"json_extract(d.card, '$.doc.jurisdiction') IN ({','.join('?' * len(jurisdictions))})")
+            args += [x.strip().upper() for x in jurisdictions]
         if sections:  # by the letter of the code: the catalog may name a section "Datasheets and catalogs"
             letters = [section_letter(s, self.cfg) for s in sections]
             where.append(f"substr(d.code, 1, 1) IN ({','.join('?' * len(letters))})")
@@ -1076,6 +1082,7 @@ def main():
     ap.add_argument("--code", action="append")
     ap.add_argument("--doc-type", action="append")
     ap.add_argument("--lang", action="append")
+    ap.add_argument("--jurisdiction", action="append", help="KZ, RU, US, EAEU, CIS, EU, INT")
     ap.add_argument("--no-dense", action="store_true")
     ap.add_argument("--rerank", action="store_true")
     ap.add_argument("--no-rerank", action="store_true")
@@ -1096,6 +1103,7 @@ def main():
         codes=a.code,
         doc_types=a.doc_type,
         langs=a.lang,
+        jurisdictions=a.jurisdiction,
     )
     for r in res:
         snip = re.sub(r"\s+", " ", r["text"])[:300]

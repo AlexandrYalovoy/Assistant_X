@@ -360,6 +360,7 @@ def search_library(
     year_to: int | None = None,
     scope: str = "all",
     norms: int = 0,
+    jurisdictions: list[str] | None = None,
     quotes: bool | None = None,
     context: str | None = None,
     ctx: Context | None = None,
@@ -372,6 +373,8 @@ def search_library(
     sections: shelves of the library by name or letter (the letter is the first one of a code: N-00012 is on shelf N).
     codes: search only these documents, e.g. ['L-00015'] (together with their parts E-00006-02…).
     doc_types: genres, e.g. ['standard', 'handbook', 'serial_issue']; langs: languages of the documents, e.g. ['ru'].
+    jurisdictions: whose norms, e.g. ['KZ', 'EAEU'] (a country ISO 3166-1 alpha-2: KZ, RU, US; EAEU for TR CU and
+    TR EAEU, CIS for interstate GOST, EU for EN, INT for ISO and IEC); a document without one is left out.
     norms: that many best fragments of shelf N (standards, company documents) added after the k best, without repeats.
     quotes: every hit as one line «quote» — [code, PDF N], title (the reference mode of a small model; the compact
     mode turns it on). context: the first search of the question (the compact bridge gives it): its topic counts too.
@@ -389,6 +392,7 @@ def search_library(
         codes=codes,
         doc_types=doc_types,
         langs=langs,
+        jurisdictions=jurisdictions,
         year_from=year_from,
         year_to=year_to,
         scope=scope,
@@ -879,15 +883,18 @@ def list_documents(
     year_from: int | None = None,
     year_to: int | None = None,
     scope: str = "all",
+    jurisdictions: list[str] | None = None,
 ) -> str:
     """List of the documents of the library with filters; text searches the titles, designations and topics.
     doc_types: genres (standard, book, handbook, serial_issue…); langs: languages of the documents (ru, en…);
+    jurisdictions: whose norms (KZ, RU, US, EAEU, CIS, EU, INT);
     scope: "all", "own" (the user's), "package" (of installed base packages), "personal"."""
     rows = lib().list_docs(
         text,
         sections=sections,
         doc_types=doc_types,
         langs=langs,
+        jurisdictions=jurisdictions,
         year_from=year_from,
         year_to=year_to,
         scope=None if scope == "all" else scope,

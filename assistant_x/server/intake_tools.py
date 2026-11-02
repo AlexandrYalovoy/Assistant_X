@@ -648,7 +648,7 @@ def card(tids=None):
         f"Batch {os.path.basename(work)}; lines in meta.jsonl so far: {have}.\n"
         "Check the draft of every file against its text (intake_card with tids shows the start of the text and the "
         f"headings) and save the result with intake_save_meta: document {{tid, sec, doc_type, en, au, {fields}, "
-        "issues; keep the adopts, amends and page_offset of the draft}, part {tid, part, what}, attachment "
+        "issues; keep the adopts, amends, jurisdiction and page_offset of the draft}, part {tid, part, what}, attachment "
         "{tid, attach, what} "
         "(a workbook of appendices or a calculation of a document of the batch: kept beside it, not searched), "
         "duplicate {tid, dupof, why}, rejected {tid, drop}.\n" + classification()

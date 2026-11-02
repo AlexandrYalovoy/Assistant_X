@@ -14,7 +14,7 @@ Usage: assistant-x intake build [--work DIR] [--personal]"""
 import json, os, re
 from pathlib import Path
 
-from assistant_x.core import card as C
+from assistant_x.core import card as C, jurisdiction
 from assistant_x.intake import ledger, meta_schema
 from assistant_x.intake.prepare import sha256 as hash_file
 from assistant_x.core.formats import (
@@ -330,6 +330,12 @@ def build(cfg, work, date=None, personal=False):
                 ]
             )
         doc = meta_schema.doc_of(m)
+        if not doc.get("jurisdiction"):  # Claude's meta without it: the rules of core/jurisdiction.py decide
+            mp = md_path(t)
+            head = mp.read_text(encoding="utf-8", errors="replace")[: jurisdiction.TEXT_HEAD] if mp.exists() else ""
+            j, _ = jurisdiction.detect(doc, m.get("doc_type") or "", Path(r["rel"]).name, head)
+            if j:
+                doc["jurisdiction"] = j
         if m.get("other_version"):
             doc["other_versions"] = sorted(set(doc.get("other_versions") or []) | {m["other_version"]})
             versions["linked"].append({"code": code, "other": m["other_version"]})
