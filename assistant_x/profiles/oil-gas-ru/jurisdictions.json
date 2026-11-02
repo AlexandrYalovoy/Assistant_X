@@ -1,7 +1,7 @@
 {
   "_comment": "The jurisdictions of the documents (search/jurisdiction.py): a document takes the first jurisdiction whose pattern matches its designation (else the start of its title), else 'default'; its card field 'jurisdiction' wins when it has one. The 'home' ones answer (Russian, interstate CIS, EAEU, Kazakh and international documents); the 'extra' ones (American standards) come after them as a supplement, in places of their own, never instead of them. A question with the words of a jurisdiction ('ask') puts its documents first.",
   "default": "RU",
-  "home": ["RU", "CIS", "EAEU", "KZ", "INT"],
+  "home": ["RU", "CIS", "EAEU", "KZ", "INT", "EU", "GB", "DE"],
   "extra": {"US": 2},
   "jurisdictions": [
     {"id": "KZ", "patterns": ["^(СТ РК|СН РК|СП РК|РДС РК|МСН РК|НТП РК|ПР РК)\\b", "Республики Казахстан"], "ask": ["казахст", "рк"]},

@@ -479,7 +479,8 @@ def key_hits(query):
             lib()
             .con.execute(
                 "SELECT p.text, p.label, d.title, d.section, d.year, d.doc_type, d.designation, d.quality, d.issue, "
-                "d.page_offset, d.personal FROM pages p JOIN docs d ON d.code=p.code WHERE p.code=? AND p.page=?",
+                "d.page_offset, d.personal, json_extract(d.card, '$.doc.jurisdiction') AS jurisdiction "
+                "FROM pages p JOIN docs d ON d.code=p.code WHERE p.code=? AND p.page=?",
                 (e["code"], e["pdf_page"]),
             )
             .fetchone()
@@ -508,6 +509,8 @@ def key_hits(query):
                 label=row["label"],
                 page_note="",
                 level=e.get("level"),
+                designation=row["designation"] or "",
+                jurisdiction=row["jurisdiction"] or "",
                 quote=e["quote"],
                 key=True,
             )
