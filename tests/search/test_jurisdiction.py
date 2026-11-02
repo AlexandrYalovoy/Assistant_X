@@ -35,4 +35,6 @@ def test_a_question_naming_a_jurisdiction_puts_it_first():
     res = [hit("N-1", "ГОСТ Р 55990-2014"), hit("N-2", "СН РК 3.05-01-2013"), hit("N-3", "API RP 14E")]
     assert [r["code"] for r in j.arrange(res, "что говорят казахстанские нормы о трубопроводах", 3)][0] == "N-2"
     assert [r["code"] for r in j.arrange(res, "требования API к скорости", 3)][0] == "N-3"
+    assert [r["code"] for r in j.arrange(res, "что говорят американские нормы о скорости газа", 3)][0] == "N-3"
+    assert j.asked("по ASME B31.3 какая толщина стенки") == ["US"]
     assert j.asked("нормы РК по факелам") == ["KZ"] and j.asked("скорость газа") == []
