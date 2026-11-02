@@ -185,6 +185,22 @@ def exclusive(path):
     return None
 
 
+def server_running():
+    """Does a search server of Assistant X hold its models lock (Claude Desktop or Claude Code is open)? Standard
+    library only: the installer asks it before the packages are installed; no lock file (a new PC): no server."""
+    path = server_lock_path()
+    if not os.path.exists(path):
+        return False
+    try:
+        f = exclusive(path)
+    except OSError:
+        return False
+    if f is None:
+        return True
+    f.close()  # closing frees the byte lock taken just now
+    return False
+
+
 def hold_for_process(task, wait=False):
     """The machine lock until this process ends. Busy: says who holds it and exits with code 3 (wait: waits)."""
     import atexit

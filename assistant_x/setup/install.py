@@ -635,7 +635,9 @@ def copy_programs(dry):
 
 
 def remember_python(py):
-    """The python of the program in use, in python.txt of the machine folder (setup/self_update.py writes it too)."""
+    """The python of the program in use, in python.txt of the machine folder (setup/self_update.py writes it too); the
+    folder is made first: on a new PC nothing made it yet."""
+    os.makedirs(LOCAL, exist_ok=True)
     with open(os.path.join(LOCAL, CURRENT_PYTHON), "w", encoding="utf-8", newline="\n") as f:
         f.write(py + "\n")
 
@@ -662,10 +664,11 @@ def install_base(py, path, keep, dry):
 
 
 def server_running():
-    """Does a search server of Assistant X hold its models lock (Claude Desktop or Claude Code runs it)?"""
-    from assistant_x.base.inspection import server_running as running
+    """Does a search server of Assistant X hold its models lock (Claude Desktop or Claude Code runs it)? core/lock.py:
+    no numpy and no other package yet, the packages are installed later."""
+    from assistant_x.core import lock
 
-    return running()
+    return lock.server_running()
 
 
 def check_intake(py, dry):

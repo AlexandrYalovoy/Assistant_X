@@ -86,14 +86,7 @@ def server_running():
     """Does a search server of Assistant X hold its models lock (Claude Desktop or Claude Code is open)?"""
     from assistant_x.core import lock
 
-    try:
-        f = lock.exclusive(lock.server_lock_path())
-    except OSError:
-        return False
-    if f is None:
-        return True
-    f.close()  # closing frees the byte lock taken just now
-    return False
+    return lock.server_running()
 
 
 def package_cards(pkg):

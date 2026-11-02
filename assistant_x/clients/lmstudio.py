@@ -88,6 +88,8 @@ def write_preset(dry):
     if not dry:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
+    if dry:
+        return (str(path), "would write")
     return (str(path), "preset written: pick «Assistant X» in a chat of LM Studio")
 
 
