@@ -1,11 +1,14 @@
 {
-  "_comment": "The jurisdictions of the documents (search/jurisdiction.py): a document takes the first jurisdiction whose pattern matches its designation (else the start of its title), else 'default'; its card field 'jurisdiction' wins when it has one. The 'home' ones answer (Russian, interstate CIS, EAEU, Kazakh and international documents); the 'extra' ones (American standards) come after them as a supplement, in places of their own, never instead of them. A question with the words of a jurisdiction ('ask') puts its documents first.",
+  "_comment": "The jurisdictions of the documents (search/jurisdiction.py): a document takes the jurisdiction of its card (doc.jurisdiction) when it has one, else the first jurisdiction whose pattern matches its designation (else the start of its title), else 'default'. The Russian-language norms (RU, interstate CIS, EAEU, KZ) and the international ones (ISO, IEC, register rules) answer ('home'); the foreign national norms (American, European, British, German) come after them as a supplement, in places of their own ('extra'), never instead of them. A question with the words of a jurisdiction ('ask') puts its documents first.",
   "default": "RU",
-  "home": ["RU", "CIS", "EAEU", "KZ", "INT", "EU", "GB", "DE"],
-  "extra": {"US": 2},
+  "home": ["RU", "CIS", "EAEU", "KZ", "INT"],
+  "extra": {"US": 2, "EU": 1, "GB": 1, "DE": 1},
   "jurisdictions": [
     {"id": "KZ", "patterns": ["^(СТ РК|СН РК|СП РК|РДС РК|МСН РК|НТП РК|ПР РК)\\b", "Республики Казахстан"], "ask": ["казахст", "рк"]},
     {"id": "US", "patterns": ["^(API|ASME|ASTM|NACE|AGA|GPA|MSS|ANSI|NFPA|IEEE|UL|AMPP)\\b"], "ask": ["американ", "сша", "api", "asme", "astm", "nace", "american"]},
+    {"id": "EU", "patterns": ["^EN\\b"], "ask": ["европ", "en", "евронорм"]},
+    {"id": "GB", "patterns": ["^BS\\b"], "ask": ["британ", "англий", "bs"]},
+    {"id": "DE", "patterns": ["^DIN\\b"], "ask": ["немецк", "германи", "din"]},
     {"id": "INT", "patterns": ["^(ISO|IEC|ISO/IEC|IMO|DNV|ABS|BV|LR|ИСО|МЭК|РМРС|Правила РС)\\b"], "ask": ["международн", "iso", "iec", "dnv"]},
     {"id": "RU", "patterns": ["^(ГОСТ Р|GOST R|СП|СНиП|РД|ТТР|ТТТ|ТПР|СТО|ВСН|ОСТ|П\\d-|М-\\d|ФНП|ПБ|ПУЭ|Федеральный закон)"], "ask": ["росси", "рф"]},
     {"id": "CIS", "patterns": ["^(ГОСТ|GOST)\\b"], "ask": ["снг", "межгосударствен"]},

@@ -61,3 +61,15 @@ def test_the_card_field_of_the_search_rows_decides(lib):
         con.execute("UPDATE docs SET card=? WHERE code='N-00001'", (before,))
         con.commit()
         con.close()
+
+
+def test_foreign_national_norms_are_a_supplement_and_first_when_named():
+    """Russian-language and international norms govern; the American, European, British and German national norms
+    come after them as a supplement, and first when the question names them."""
+    j = J.load("oil-gas-ru")
+    assert j.home == {"RU", "CIS", "EAEU", "KZ", "INT"} and {"US", "EU", "GB", "DE"} <= set(j.extra)
+    assert [j.of(hit("N", d)) for d in ("EN 13480-3", "BS 7910", "DIN 2413", "СТ РК EN 1990")] == ["EU", "GB", "DE", "KZ"]
+    res = [hit("N-1", "EN 13480-3"), hit("N-2", "ГОСТ Р 55990-2014"), hit("N-3", "DIN 2413"), hit("N-4", "ISO 13623")]
+    assert [r["code"] for r in j.arrange(res, "толщина стенки трубопровода", 2)] == ["N-2", "N-4", "N-1", "N-3"]
+    assert [r["code"] for r in j.arrange(res, "что требуют европейские нормы к толщине стенки", 2)][0] == "N-1"
+    assert [r["code"] for r in j.arrange(res, "толщина стенки по DIN", 2)][0] == "N-3"
