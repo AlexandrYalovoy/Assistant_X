@@ -99,6 +99,44 @@ def pick(query, text):
     return cut(quote, QUOTE_CHARS)
 
 
+WINDOW = 900  # the characters of a search hit shown around its best line
+
+
+def window(query, text, n=WINDOW):
+    """The lines of a fragment around the one with the most words of the question (a value counts a little more),
+    n characters at most, a table row with the header row of its table; the fragment itself when it is short.
+    read_pages gives the whole page."""
+    text = text or ""
+    if len(text) <= n:
+        return text
+    lines = text.splitlines()
+    want = stems(query)
+    best = max(
+        range(len(lines)),
+        key=lambda i: (len(found(want, lines[i])) + (0.5 if any(c.isdigit() for c in lines[i]) else 0), -i),
+    )
+    lo = hi = best
+    size = len(lines[best])
+    while True:  # the neighbours, after it first, while they fit
+        grown = False
+        for j in (hi + 1, lo - 1):
+            if 0 <= j < len(lines) and size + len(lines[j]) + 1 <= n and (j > hi or j < lo):
+                size += len(lines[j]) + 1
+                lo, hi = min(lo, j), max(hi, j)
+                grown = True
+        if not grown:
+            break
+    shown, before = lines[lo : hi + 1], lo > 0
+    if lines[best].lstrip().startswith("|"):  # the header row of its table, when it is above the lines shown
+        top = best
+        while top > 0 and lines[top - 1].lstrip().startswith("|"):
+            top -= 1
+        if top < lo:
+            shown, before = [lines[top], "…"] + shown, top > 0
+    out = ("…\n" if before else "") + "\n".join(shown) + ("\n…" if hi < len(lines) - 1 else "")
+    return out if len(out) <= 2 * n else cut(out, n)  # one long line of a recognized page
+
+
 def cut(text, n):
     if len(text) <= n:
         return text

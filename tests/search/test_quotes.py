@@ -78,3 +78,31 @@ def test_table_of_contents_lines_are_not_quoted_and_weigh_less():
     assert quotes.pick("время пребывания сепаратор", text) == "Время пребывания в сепараторе 2-3 мин."
     assert toc_like("Введение 3\nОбласть применения 5\nСепараторы 285\nНасосы 300\nОбщие положения ....... 7")
     assert not toc_like("|Газ|5-20|\n|Нефть|3|\nТаблица 1") and not toc_like("Скорость газа 5-20 м/с.")
+
+
+def test_a_long_hit_is_shown_around_its_best_line_with_the_table_header():
+    rows = "\n".join(f"|Поток {i}|{i}|" for i in range(60))
+    text = (
+        "Вступление.\n|Наименование потоков|Скорость, м/с|\n|---|---|\n"
+        + rows
+        + "\n|Газ углеводородный в трубопроводах|5-20|\n"
+        + rows
+    )
+    got = quotes.window("скорость газа в трубопроводах", text, n=300)
+    assert len(got) < 400 and "|Газ углеводородный в трубопроводах|5-20|" in got
+    assert got.startswith("…\n|Наименование потоков|Скорость, м/с|\n…") and quotes.window("x", "short") == "short"
+
+
+def test_the_source_warning_keeps_what_matters_for_a_citation():
+    from assistant_x.server import mcp_server
+
+    d = {
+        "quality": "a scan, the text was recognized: check figures against the page image",
+        "issue": "the English part of the card is not written yet — write the English title (priority: low) | "
+        "3 pages with garbled recognition — improve the text: recognize those pages again (priority: low)",
+    }
+    assert mcp_server._warn(d) == (
+        "\nSource quality: a scan, the text was recognized: check figures against the page image; "
+        "3 pages with garbled recognition"
+    )
+    assert mcp_server._warn({"issue": "the English part of the card is not written yet — write it"}) == ""

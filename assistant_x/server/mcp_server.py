@@ -266,10 +266,16 @@ def _head(r):
     )
 
 
+LIBRARIAN = ("English part of the card",)  # issues of the card for whoever keeps the library, not for an answer
+
+
 def _warn(d):
-    """Where the source is weak: Claude says so when it cites it (scan, lost symbols, sources_to_update)."""
-    out = [x for x in (d.get("quality"), d.get("issue")) if x]
-    return ("\nSource quality: " + "; ".join(out)[:400]) if out else ""
+    """Where the source is weak: Claude says so when it cites it (scan, lost symbols, sources_to_update). The work
+    left for whoever keeps the library (the English part of a card) and the remedies ("— improve the text: …") stay
+    out: they cost the tokens of every answer and change no citation."""
+    parts = [d.get("quality") or ""] + (d.get("issue") or "").split(" | ")
+    out = [p.split(" — ")[0].strip() for p in parts if p.strip() and not any(x in p for x in LIBRARIAN)]
+    return ("\nSource quality: " + "; ".join(dict.fromkeys(out))[:300]) if out else ""
 
 
 # a text that speaks to an AI assistant (core/suspect.py): marked in the answers, never followed
@@ -416,7 +422,7 @@ def search_library(
     # the document by its designation (its card leads)
     first = [r for r in res if r.get("kind") != "card" or r.get("named")]
     cards = [r for r in res if r.get("kind") == "card" and not r.get("named")]
-    text = "\n\n".join(f"{_head(r)}\n{r['text']}" for r in first)
+    text = "\n\n".join(f"{_head(r)}\n{quotes_mod.window(query, r['text'])}" for r in first)
     page = next((r for r in first if r.get("kind") != "card"), None)
     if page:  # before the fragments: small models cite a hit without reading it, and the compact cut keeps the top
         pending += (
