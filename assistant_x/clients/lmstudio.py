@@ -61,8 +61,9 @@ def preset_path():
 
 
 def preset():
-    """The preset of LM Studio (the format of its config-presets): the guide of the library as the system prompt and
-    the thinking of the model off (a small model thinking at length leaves no tokens for the answer)."""
+    """The preset of LM Studio (the format of its config-presets): the rules of the reference mode as the system
+    prompt (a small local model quotes the library with its references, the engineering answer is for Claude or
+    Codex) and the thinking of the model off (a small model thinking at length leaves no tokens for the answer)."""
     from assistant_x.setup import skill
 
     return {
@@ -71,7 +72,7 @@ def preset():
         "changed": False,
         "operation": {
             "fields": [
-                {"key": "llm.prediction.systemPrompt", "value": skill.guide()},
+                {"key": "llm.prediction.systemPrompt", "value": skill.reference_guide()},
                 {"key": "llm.prediction.reasoning.enableThinking", "value": False},
             ]
         },

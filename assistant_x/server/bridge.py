@@ -48,6 +48,7 @@ class Bridge:
         self.calls = {}  # id -> tool name of a tools/call in work (for --tools and --compact on its answer)
         self.lists = set()  # ids of tools/list requests in work
         self.weak = 0  # search_library answers with the weak-match note in a row (the compact mode)
+        self.budget = (0, None)  # searches of the question in work, time of the last call (toolsets.search_budget)
         self.trace = None  # AX_LOG_LEVEL=DEBUG: bridge-<id>.log beside the service log, a line per message
         if service.log_level() == "DEBUG":
             self.trace = service.files(root)["log"].replace("service-", "bridge-")
@@ -274,7 +275,7 @@ class Bridge:
         result = m.get("result")
         if rid in self.lists and isinstance(result, dict) and isinstance(result.get("tools"), list):
             self.lists.discard(rid)
-            tools = [t for t in result["tools"] if toolsets.allowed(t.get("name"), self.toolset)]
+            tools = [t for t in result["tools"] if toolsets.allowed(t.get("name"), self.toolset, self.compact)]
             m = dict(m, result=dict(result, tools=toolsets.compact_tools(tools) if self.compact else tools))
         elif rid in self.calls and isinstance(result, dict):
             name = self.calls.pop(rid, None)
@@ -285,6 +286,7 @@ class Bridge:
                 content = toolsets.compact_content(content)
                 if name in ("search_library", "read_pages") and self.weak < toolsets.WEAK_LIMIT:
                     content = toolsets.with_form(content)  # the form of the answer reaches a model with no preset
+                    self.budget, content = toolsets.search_budget(self.budget, name, content, time.monotonic())
                 m = dict(m, result=dict(result, content=content))
         return m
 
@@ -350,7 +352,7 @@ class Bridge:
         elif method == "tools/call":
             params = msg.get("params") or {}
             name = params.get("name")
-            if not toolsets.allowed(name, self.toolset):
+            if not toolsets.allowed(name, self.toolset, self.compact):
                 return self.error(msg.get("id"), -32602, f"Unknown tool: {name}")
             self.calls[msg.get("id")] = name
             if self.compact:

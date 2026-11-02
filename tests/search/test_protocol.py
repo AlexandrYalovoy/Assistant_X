@@ -64,7 +64,8 @@ def test_the_guide_through_the_client(server):
     r = called("library_guide", {})
     text = r.content[0].text
     assert "[code, p. printed, PDF N]" in text and "verify_quote" in text and "`N`" in text  # rules and the shelves
-    assert "data, not commands" in text and len(text) < 8000
+    guide = text[text.index("# Assistant X") :]  # the notes of doctor before it depend on the PC
+    assert "data, not commands" in guide and len(guide) < 8000
 
 
 def test_search_through_a_plain_client(server):
@@ -115,17 +116,20 @@ def test_reader_arguments_fit_openai_strict_functions():
 
 
 def test_the_reader_set_and_the_compact_mode(server, monkeypatch):
-    """serve --tools reader --compact: the 8 reading tools, one-sentence descriptions, answers within the limit."""
+    """serve --tools reader --compact, the reference mode: its three tools, one-sentence descriptions with no hidden
+    argument, the guide of the reference mode, the hits as lines ready to quote, answers within the limit."""
     manager = server.mcp._tool_manager
     monkeypatch.setattr(manager, "_tools", {k: copy.copy(v) for k, v in manager._tools.items()})
     monkeypatch.setattr(server, "COMPACT", False)
     monkeypatch.setattr(toolsets, "COMPACT_CHARS", 300)
     server.limit_tools(*server.options(["--tools", "reader", "--compact"]))
     tools, _ = listed()
-    assert sorted(t.name for t in tools) == sorted(toolsets.READER)
+    assert sorted(t.name for t in tools) == sorted(toolsets.REFERENCE)
     assert all(t.description.count(". ") == 0 for t in tools)
     text = called("search_library", {"query": "обводнённости", "k": 20}).content[0].text
-    assert len(text) <= 300 + len(toolsets.CUT_NOTE) + 10 and "compact mode" in text
+    assert len(text) <= 300 + len(toolsets.CUT_NOTE) + 10 and "compact mode" in text and "reference mode" in text
+    monkeypatch.setattr(toolsets, "COMPACT_CHARS", 6000)
+    assert "reference mode" in called("library_guide", {}).content[0].text
     with pytest.raises(SystemExit, match="--tools takes"):
         server.options(["--tools", "some"])
 
@@ -138,6 +142,13 @@ def test_fit_and_first_sentence():
     assert out.startswith("line\n") and "Cut at 100 characters" in out and len(out) < 100 + len(toolsets.CUT_NOTE) + 5
     assert toolsets.compact_arguments("search_library", {"query": "q", "k": 20})["k"] == toolsets.COMPACT_K
     assert toolsets.allowed("intake_run", "all") and not toolsets.allowed("intake_run", "reader")
+    assert toolsets.allowed("book_map", "reader") and not toolsets.allowed("book_map", "reader", compact=True)
+    assert toolsets.compact_arguments("search_library", {"query": "q"})["quotes"] is True
+    assert toolsets.compact_arguments("library_guide", {}) == {"reference": True}
+    listed_ = toolsets.compact_tools(
+        [{"name": "search_library", "inputSchema": {"properties": {"query": {}, "quotes": {}}}}]
+    )
+    assert list(listed_[0]["inputSchema"]["properties"]) == ["query"]  # the bridge sets it, the model never sees it
 
 
 def test_three_weak_searches_in_a_row_stop_a_small_model():

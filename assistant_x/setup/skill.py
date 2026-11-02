@@ -24,6 +24,7 @@ from assistant_x.core import config, workspace
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "skill"
 TEMPLATE = TEMPLATES / "SKILL.md"
 GUIDE = TEMPLATES / "guide.md"
+REFERENCE = TEMPLATES / "reference.md"  # the reference mode of a small local model (LM Studio): quotes only
 PARTS = ("safety",)  # templates/skill/<part>.md put into {{<part>}} of every variant: one text for all
 WRAPPERS = {
     "claude": {
@@ -101,6 +102,12 @@ def render(profile=None, app="claude"):
 def guide(profile=None):
     """The short rules of the answers with the shelves of the library (the tool library_guide)."""
     return fill(GUIDE.read_text(encoding="utf-8"), profile, "agent").strip()
+
+
+def reference_guide(profile=None):
+    """The rules of the reference mode with the shelves of the library: the system prompt of LM Studio and the tool
+    library_guide in the compact mode (only quotes with their references, nothing from the model itself)."""
+    return fill(REFERENCE.read_text(encoding="utf-8"), profile, "agent").strip()
 
 
 def main(argv=None):

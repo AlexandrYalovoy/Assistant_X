@@ -22,6 +22,10 @@ READER = (
     "list_documents",
 )
 TOOLSETS = ("reader", "all")
+# the compact mode is the reference mode of a small local model (LM Studio): it finds and quotes, nothing else; the
+# other tools are hidden, their descriptions would only take its context
+REFERENCE = ("library_guide", "search_library", "read_pages")
+HIDDEN_ARGS = ("quotes", "reference")  # set by the bridge in the compact mode, not shown to the model
 COMPACT_CHARS = 6000  # about 1 500–2 000 tokens of an answer
 COMPACT_K = 3  # search_library results in the compact mode, at most: the best of the library
 COMPACT_NORMS = 3  # and the best of shelf N (standards, company documents) after them
@@ -30,9 +34,9 @@ CUT_NOTE = (
 )
 
 
-def allowed(name, toolset):
-    """Is the tool name in the set ("reader" | "all")?"""
-    return toolset == "all" or name in READER
+def allowed(name, toolset, compact=False):
+    """Is the tool name in the set ("reader" | "all"), and in the compact mode one of the reference mode?"""
+    return (toolset == "all" or name in READER) and (not compact or name in REFERENCE)
 
 
 def check(toolset):
@@ -66,7 +70,11 @@ def compact_tools(tools):
         t["description"] = first_sentence(t.get("description"))
         schema = t.get("inputSchema")
         if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
-            props = {k: {x: y for x, y in v.items() if x != "description"} for k, v in schema["properties"].items()}
+            props = {
+                k: {x: y for x, y in v.items() if x != "description"}
+                for k, v in schema["properties"].items()
+                if k not in HIDDEN_ARGS
+            }
             t["inputSchema"] = dict(schema, properties=props)
         out.append(t)
     return out
@@ -74,11 +82,14 @@ def compact_tools(tools):
 
 def compact_arguments(name, args):
     """The arguments of a call in the compact mode: search_library asks for COMPACT_K results at most and, unless the
-    model chose shelves or documents itself, COMPACT_NORMS of shelf N after them."""
+    model chose shelves or documents itself, COMPACT_NORMS of shelf N after them, every hit as a line ready to quote;
+    library_guide gives the rules of the reference mode."""
     if name == "search_library" and isinstance(args, dict):
-        args = dict(args, k=min(int(args.get("k") or COMPACT_K), COMPACT_K))
+        args = dict(args, k=min(int(args.get("k") or COMPACT_K), COMPACT_K), quotes=True)
         if not args.get("sections") and not args.get("codes"):
             args["norms"] = COMPACT_NORMS
+    elif name == "library_guide":
+        args = dict(args or {}, reference=True)
     return args
 
 
@@ -92,11 +103,10 @@ WEAK_STOP = (
 
 
 FORM_HINT = (
-    "Answer form (mandatory), in the user's language, only from the library: 1) short answer; 2) requirements from "
-    "the library, standards (GOST) first, then company documents (TTR, STO), then books: every fact with its reference "
-    "right after it, as the Cite: line gives it, e.g. [N-00001, PDF 36], numbers with their quote; 3) engineering "
-    "procedure from the documents found only; 4) what the library lacks; 5) sources: code, title, pages. No knowledge "
-    "from outside the library; never answer without references."
+    "Reference mode, answer in the user's language: 1) one line: what was found; 2) three to six of the lines below, "
+    "copied exactly: «quote» — [code, PDF N], title; 3) Sources: code, title. No explanation, no calculation, no "
+    'advice, nothing from yourself. If no line is about the question, answer only "The library has no documents on '
+    "this question\" in the user's language."
 )
 
 
@@ -104,6 +114,28 @@ def with_form(content):
     """The content of a search_library or read_pages answer with FORM_HINT before it: a small local model that got
     no system prompt (LM Studio without the preset) sees the form of the answer at every result."""
     return [{"type": "text", "text": FORM_HINT}] + list(content)
+
+
+SEARCH_LIMIT = 3  # searches of one question after which the reference mode tells a small model to answer
+QUESTION_GAP = 120  # seconds without a call: the next call starts a new question
+ANSWER_NOW = (
+    "Searched {n} times: answer the user now with the lines you already have (copied exactly, with their references), "
+    'or, if none is about the question, "The library has no documents on this question". Do not search again.'
+)
+
+
+def search_budget(state, name, content, now):
+    """(state, content) after one more answer of a tool in the reference mode; state is (searches, time of the last
+    call). A pause of QUESTION_GAP starts a new question; from the SEARCH_LIMIT-th search on, ANSWER_NOW comes before
+    the result (a small model with no system prompt searched six times and read pages, and never answered)."""
+    count, last = state
+    if last is None or now - last > QUESTION_GAP:
+        count = 0
+    if name == "search_library":
+        count += 1
+    if count >= SEARCH_LIMIT and name in ("search_library", "read_pages"):
+        content = [{"type": "text", "text": ANSWER_NOW.format(n=count)}] + list(content)
+    return (count, now), content
 
 
 def weak_guard(count, content):
