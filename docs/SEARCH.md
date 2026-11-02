@@ -222,7 +222,10 @@ per server start); else 0.5.
   groups; a fragment inside a chapter of the contents of its card (the table `toc`, with the last page of every entry)
   whose title shares half of the words of the question is raised by a quarter (`[search] toc_boost`).
 - Filters: section (the shelf, by its letter, its folder or its name in English or Russian, so "Datasheets" also finds
-  "Datasheets and catalogs"), codes, genres (`doc_types`), languages of the documents (`langs`), years.
+  "Datasheets and catalogs"), codes, genres (`doc_types`), languages of the documents (`langs`), years, jurisdictions
+  (`jurisdictions`: `doc.jurisdiction` of the cards, `KZ`, `RU`, `US`, `EAEU`, `CIS`, `EU`, `INT`; a document without
+  one is left out; `python -m assistant_x.core.jurisdiction <cards> --texts <texts>` counts what the rules would give
+  the cards without one, `--write --backup <folder>` writes it).
   Whether a document is in force is not the matter of the search: the library holds the versions the user chose (a
   card names the other versions kept beside it).
 - The designations a card refers to go into the table `links` with the code of the document of the library that has

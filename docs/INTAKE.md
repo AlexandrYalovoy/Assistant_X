@@ -264,7 +264,10 @@ table of the base are made from the cards, nobody edits the first two by hand.
   next one starts), `tables` (≤ 100), `references` (designations only: the base resolves them to codes), `units` and
   `serial` of a journal issue or proceedings, `other_versions`, `adopts` (the foreign standards a national one adopts,
   as its title page names them: `ISO 10424-2:2007`; searched with the designation), `amends` (the designation of the
-  standard an amendment changes), `page_offset`, `note`.
+  standard an amendment changes), `jurisdiction` (whose norm the document is: a country as ISO 3166-1 alpha-2, `KZ`,
+  `RU`, `US`; `EAEU` for the technical regulations of the Customs Union and the Eurasian union, `CIS` for interstate
+  GOST, `EU` for EN, `INT` for ISO and IEC; the draft and the build set it by the rules of `core/jurisdiction.py` when
+  the meta has none, and leave it out when they are not sure), `page_offset`, `note`.
 - `file` — what the code knows of the file: `format` (`kind`, pages, recognized pages, the score 0–1), `library`
   (the place, `/` between folders), `source_name`, `sha256`, `size`, `text`, `pdf_copy`, `hidden_text`, `issues` (what
   is wrong with the source: the sources to update are made from them), `parts`.
