@@ -142,7 +142,12 @@ def main(argv=None):
     if a.write and not a.backup:
         ap.error("--write needs --backup")
     res = backfill(a.cards, a.texts, a.write, a.backup)
-    print(json.dumps({"counts": res["counts"], "kept": res["kept"], "set": len(res["set"]), "unsure": len(res["unsure"])}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"counts": res["counts"], "kept": res["kept"], "set": len(res["set"]), "unsure": len(res["unsure"])},
+            ensure_ascii=False,
+        )
+    )
     if a.json:
         Path(a.json).write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     return 0

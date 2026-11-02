@@ -49,14 +49,20 @@ def test_by_designation(designation, value):
 
 def test_a_dual_designation_and_an_amendment():
     """Each of "A / B" is read; an amendment goes by the standard it amends."""
-    assert J.detect({"designation": {"en": "Amendment No. 1 to GOST 4666-2015", "ru": "Изменение № 1 к ГОСТ 4666-2015"}})[0] == "CIS"
+    assert (
+        J.detect({"designation": {"en": "Amendment No. 1 to GOST 4666-2015", "ru": "Изменение № 1 к ГОСТ 4666-2015"}})[0]
+        == "CIS"
+    )
     assert J.detect({"designation": {"ru": "Поправка к ГОСТ Р 51858-2002"}})[0] == "RU"
     assert J.detect({"designation": {"ru": "СТ РК ISO 9001-2016 / ISO 9001:2015"}})[0] == "KZ"
 
 
 def test_by_words_of_a_normative_document():
     """No designation: the name of the state in the title, the publisher or the source name; then in the text."""
-    kz = {"title": {"ru": "Об утверждении Правил устройства электроустановок"}, "publisher": "Министерство юстиции Республики Казахстан"}
+    kz = {
+        "title": {"ru": "Об утверждении Правил устройства электроустановок"},
+        "publisher": "Министерство юстиции Республики Казахстан",
+    }
     assert J.detect(kz, "regulation") == ("KZ", "words")
     adilet = {"title": {"ru": "Правила пожарной безопасности"}}
     assert J.detect(adilet, "regulation", text="Источник: ИПС «Әділет» (adilet.zan.kz)") == ("KZ", "text")
@@ -64,7 +70,10 @@ def test_by_words_of_a_normative_document():
     assert J.detect(union, "law") == ("EAEU", "designation")  # the title of the act names the union
     both = {"title": {"ru": "Решение Евразийской экономической комиссии"}, "publisher": "ИПС «Әділет»"}
     assert J.detect(both, "regulation")[0] == "EAEU"  # an act of the union as Kazakhstan publishes it
-    assert J.detect({"title": {"en": "Recommended practice"}, "publisher": "American Petroleum Institute"}, "standard") == ("US", "words")
+    assert J.detect({"title": {"en": "Recommended practice"}, "publisher": "American Petroleum Institute"}, "standard") == (
+        "US",
+        "words",
+    )
     assert J.detect({"title": {"ru": "Методика"}, "publisher": "ПАО «Нефтяная компания»"}, "guideline") == ("RU", "words")
 
 
@@ -78,8 +87,15 @@ def test_a_doubt_is_left_empty():
 
 
 def test_the_schema_field():
-    good = C.complete({"schema": 1, "code": "N-00001", "section": "N", "doc_type": "standard",
-                       "doc": {"title": {"en": "T", "ru": "Т"}, "summary": "s", "jurisdiction": "KZ"}})
+    good = C.complete(
+        {
+            "schema": 1,
+            "code": "N-00001",
+            "section": "N",
+            "doc_type": "standard",
+            "doc": {"title": {"en": "T", "ru": "Т"}, "summary": "s", "jurisdiction": "KZ"},
+        }
+    )
     assert not [e for e in C.validate(good, ("en",)) if "jurisdiction" in e]
     for bad in ("kz", "KAZ", "EAU", ""):
         card = {**good, "doc": {**good["doc"], "jurisdiction": bad}}
@@ -107,8 +123,14 @@ def test_backfill(tmp_path):
         "N-00004": ("standard", {"designation": {"ru": "ГОСТ Р 1-2000"}, "jurisdiction": "RU"}),
     }
     for code, (dt, doc) in rows.items():
-        c = {"schema": 1, "code": code, "section": code[0], "doc_type": dt,
-             "doc": {"title": {"en": "T", "ru": "Т"}, **doc}, "file": {"source_name": f"{code}.pdf"}}
+        c = {
+            "schema": 1,
+            "code": code,
+            "section": code[0],
+            "doc_type": dt,
+            "doc": {"title": {"en": "T", "ru": "Т"}, **doc},
+            "file": {"source_name": f"{code}.pdf"},
+        }
         (cards / f"{code}.json").write_text(json.dumps(c, ensure_ascii=False), encoding="utf-8")
     res = J.backfill(cards)
     assert res["counts"] == {"KZ": 1, "RU": 2, "(none)": 2} and res["unsure"] == ["N-00003"] and res["kept"] == 1
@@ -117,4 +139,3 @@ def test_backfill(tmp_path):
     assert json.loads((cards / "N-00001.json").read_text(encoding="utf-8"))["doc"]["jurisdiction"] == "KZ"
     assert sorted(p.name for p in backup.iterdir()) == ["N-00001.json", "N-00002.json"]
     assert "jurisdiction" not in json.loads((backup / "N-00001.json").read_text(encoding="utf-8"))["doc"]
-

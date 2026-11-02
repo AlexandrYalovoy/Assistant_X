@@ -223,7 +223,14 @@ class Library:
     SCOPES = ("all", "own", "package", "personal")
 
     def _filter_sql(
-        self, sections=None, codes=None, year_from=None, year_to=None, doc_types=None, langs=None, scope=None,
+        self,
+        sections=None,
+        codes=None,
+        year_from=None,
+        year_to=None,
+        doc_types=None,
+        langs=None,
+        scope=None,
         jurisdictions=None,
     ):
         where, args = [], []
