@@ -232,6 +232,8 @@ def needs_base(fn):
 
 def _head(r):
     flags = [r.get("doc_type") or "", r["section"], str(r["year"] or "")]
+    if r.get("level") is not None and r.get("kind") != "card":
+        flags.append(f"level {r['level']:g}")  # the hierarchy of documents: the answer lists the highest first
     if r.get("personal"):
         flags.append("personal document")
     if r.get("named"):
@@ -296,8 +298,27 @@ def library_guide(reference: bool | None = None) -> str:
 
     notes = setup_notes()  # first: the compact cut keeps the top
     rules = skill.reference_guide() if (COMPACT if reference is None else reference) else skill.guide()
-    text = (notes + "\n\n" if notes else "") + rules
+    text = (notes + "\n\n" if notes else "") + rules + "\n\n" + hierarchy_note()
     return toolsets.fit(text) if COMPACT else text
+
+
+def hierarchy_note():
+    """The levels of the hierarchy of documents in force, one short line each, for the guide ("" when the settings do
+    not read: the guide is given anyway). Without a search base yet, from the settings of the workspace."""
+    from assistant_x.core import config, hierarchy
+
+    try:
+        if _lib is not None:
+            h, profile = _lib.hierarchy, _lib.cfg.get("profile") or ""
+        else:
+            w, raw = config.load()
+            profile = raw.get("profile") or ""
+            h = hierarchy.load(w.root, config.profile_dir(profile) if profile else None)
+    except (OSError, ValueError, SystemExit, KeyError) as e:
+        debuglog.log_error("hierarchy note", e)
+        return ""
+    lang = "ru" if "ru" in profile else "en"
+    return "## The hierarchy of documents (level: the highest first)\n\n" + "; ".join(f"{r:g} {n}" for r, n in h.table(lang))
 
 
 def setup_notes():
@@ -881,6 +902,43 @@ def intake_apply(confirm: bool = False, personal: bool = False, token: str | Non
     whose check finds no error is applied at once, unless it replaces, links or duplicates a document of the library,
     rejects a file or holds hidden text addressed to an AI: then the plan and the token, as always."""
     return intake_tools.apply(confirm=confirm, personal=personal, token=token, ask=_asker(ctx))
+
+
+@tool("Document hierarchy", read=False)
+@logged
+def library_hierarchy(levels: list | None = None, confirm: bool = False) -> str:
+    """The hierarchy of the documents the answers follow (which kind rules over which; a higher level wins a
+    conflict): without levels, the levels in force and where they come from. When the user names their own hierarchy
+    ("my hierarchy is: …"), show it as levels [{"rank": 1, "name": {"en", "ru"}, "patterns": ["^DESIGNATION"]}, …] (rank
+    1 the highest, patterns: regular expressions of the designations), and only after their explicit yes call again
+    with confirm=True: it is written to hierarchy.json of the workspace; levels=[] with confirm=True goes back to the
+    default of the profile."""
+    from assistant_x.core import hierarchy, workspace
+
+    path = workspace.current().root / hierarchy.FILE
+    if levels is not None and confirm:
+        if not levels:
+            if path.exists():
+                path.unlink()
+        else:
+            data = {"levels": levels}
+            why = hierarchy.check(data)
+            if why:
+                return f"Not written: {why}"
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        lib().hierarchy = hierarchy.load(lib().cfg.get("workspace"), _profile_dir())
+    elif levels is not None:
+        why = hierarchy.check({"levels": levels})
+        return f"Not valid: {why}" if why else "Valid. Show it to the user and call again with confirm=True on their yes."
+    h = lib().hierarchy
+    rows = "\n".join(f"{r:g}. {n}" for r, n in h.table("ru" if "ru" in lib().cfg.get("profile", "") else "en"))
+    return f"The hierarchy in force ({h.source or 'none'}), the highest first:\n{rows}"
+
+
+def _profile_dir():
+    from assistant_x.core import config
+
+    return config.profile_dir(lib().cfg.get("profile")) if lib().cfg.get("profile") else None
 
 
 @tool("Take documents out", read=False, destructive=True)

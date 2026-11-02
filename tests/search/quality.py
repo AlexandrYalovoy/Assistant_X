@@ -86,6 +86,9 @@ def make_base(root, **search):
                     questions.append(("loose", loose(ph), code, page))
     catalog.write(idx, "2026-10-25", {"profile": "oil-gas-ru"})
     path = os.path.join(lib, "assistant_x.toml")
+    # the hierarchy of the documents is a policy (norms before books), measured on tests/golden; this set measures how
+    # well the search finds a page, and its fake reranker would leave the order to the hierarchy alone
+    search = {"hierarchy_weight": 0.0, **search}
     more = "".join(f"{k} = {json.dumps(v)}\n" for k, v in search.items())
     write(
         path,

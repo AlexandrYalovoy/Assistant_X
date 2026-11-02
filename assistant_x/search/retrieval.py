@@ -68,6 +68,9 @@ MAX_PER_DOC = 3  # pages of one document in an answer, unless the other document
 # MRR 0.705 -> 0.801; on a processor (the first 8 reranked) 44 -> 54; the questions of 87 cards, MRR of the document
 # 0.484 -> 0.512. The reranker orders; the hybrid score keeps the order of what it did not read and breaks ties.
 RERANK_WEIGHT = 100.0
+# the lift of the highest level of the hierarchy among the reranked candidates (on the scale of RERANK_WEIGHT: a
+# sure answer of a handbook still beats an unsure one of a standard; [search] hierarchy_weight)
+HIERARCHY_WEIGHT = 20.0  # tests/golden: 4 -> 6 of 11 pages found (5: 5, 10: 5-6, 40: 6)
 RERANK_CHARS = 2000  # what the reranker reads of a fragment at most (it truncates at its max_length anyway)
 RERANK_CPU_TOP = 8  # candidates the reranker reads on a processor (Q3: the whole pool takes seconds there)
 EXACT_ROWS = 100_000  # a filter letting fewer fragments through: exact search over them, even with a FAISS index
@@ -82,7 +85,7 @@ CLOSEST_CHARS = 400  # verify_quote: the longest closest place shown
 PUNCT = ".,;:!?()[]\"'"  # the punctuation around a word word_diff does not count
 
 
-DOC_SQL = "d.doc_type, d.personal"
+DOC_SQL = "d.doc_type, d.personal, d.designation"
 QUALITY_SQL = "d.quality, d.issue"  # warnings about the source: scan, lost symbols, a row of sources_to_update
 PAGE_SQL = "p.label, p.ocr_score AS page_score, p.flags AS page_flags"
 
@@ -96,6 +99,11 @@ class Library:
         self.cfg = cfg or load_config()
         self._local = threading.local()
         self.syn_profile = load_synonyms(self.cfg.get("synonyms"))
+        from assistant_x.core import config as settings, hierarchy
+
+        # the hierarchy of the documents: the user's own in the workspace, else the profile's (core/hierarchy.py)
+        prof = settings.profile_dir(self.cfg.get("profile")) if self.cfg.get("profile") else None
+        self.hierarchy = hierarchy.load(self.cfg.get("workspace"), prof)
         self.syn = list(self.syn_profile)
         self._embedder = self._reranker = None
         self._init_lock = threading.RLock()  # the MCP server may load models from two threads at once
@@ -529,10 +537,19 @@ class Library:
             logits = np.asarray(model.predict(pairs), dtype=np.float64).reshape(-1)
         top = max(fused[i] for i in order) or 1.0
         weight = float(self.cfg.get("rerank_weight", RERANK_WEIGHT))
-        final = {i: fused[i] / top + weight / (1 + np.exp(-x)) for i, x in zip(order, logits)}
+        lift = float(self.cfg.get("hierarchy_weight", HIERARCHY_WEIGHT))
+        final = {i: fused[i] / top + weight / (1 + np.exp(-x)) + lift * self.lift(rows[i]) for i, x in zip(order, logits)}
         if stats is not None and len(logits):  # how sure the reranker is of its best fragment (the low closeness note)
             stats["rerank_top"] = round(float(1 / (1 + np.exp(-logits.max()))), 3)
         return sorted(order, key=lambda i: -final[i]) + rest
+
+    def level(self, r):
+        """The level of the document of a row in the hierarchy (1 the highest)."""
+        return self.hierarchy.rank(r.get("designation"), r.get("title"), r.get("code"))
+
+    def lift(self, r):
+        """0..1: 1 for the highest level, 0 for the books (level 10 and below)."""
+        return max(0.0, (10 - self.level(r)) / 9)
 
     # ---------- all together ----------
     def search(self, query, k=10, dense=None, rerank=None, max_per_doc=None, stats=None, max_cards=None, **flt):
@@ -621,6 +638,7 @@ class Library:
                     doc_type=r["doc_type"] or "",
                     personal=bool(r["personal"]),
                     named=r["code"] in named,
+                    level=self.level(r),
                     label=None if card else r["label"],
                     page_note="" if card else page_note(r["page_score"], r["page_flags"]),
                 )

@@ -118,5 +118,7 @@ def line(query, r):
 
 
 def lines(query, res):
-    """The lines of the page hits, one per hit, in their order; [] when no hit has a page."""
-    return [x for x in (line(query, r) for r in res) if x]
+    """The lines of the page hits, one per hit, the highest level of the hierarchy of documents first (the order of
+    the search within a level); [] when no hit has a page."""
+    ranked = sorted(res, key=lambda r: r.get("level") if r.get("level") is not None else 99)
+    return [x for x in (line(query, r) for r in ranked) if x]

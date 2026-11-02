@@ -1,0 +1,18 @@
+{
+  "_comment": "The default hierarchy of the documents (core/hierarchy.py): rank 1 is the highest; a document takes the first level whose pattern matches its designation (else the start of its title), else its shelf, else 'unplaced'. A profile may give its own hierarchy.json; the user's own one in the workspace is above both (the tool library_hierarchy writes it).",
+  "levels": [
+    {"rank": 1, "name": {"en": "Constitution", "ru": "Конституция"}, "patterns": ["(?i)^constitution"]},
+    {"rank": 2, "name": {"en": "Codes and laws, decrees and government resolutions", "ru": "Кодексы и законы, указы и постановления правительства"}, "patterns": ["(?i)^(code|act|law|decree|regulation \\(eu\\)|directive)\\b"]},
+    {"rank": 3, "name": {"en": "Technical regulations", "ru": "Технические регламенты"}, "patterns": ["(?i)^technical regulation"]},
+    {"rank": 4, "name": {"en": "International standards and register rules", "ru": "Международные стандарты и правила регистров"}, "patterns": ["^(ISO|IEC|ISO/IEC|IMO|DNV|ABS|BV|LR)\\b"]},
+    {"rank": 5, "name": {"en": "National standards", "ru": "Национальные стандарты"}, "patterns": ["^(GOST|API|ASME|ASTM|DIN|NACE|ANSI|BS|EN|NFPA|IEEE|UL)\\b"]},
+    {"rank": 5.5, "name": {"en": "Company documents", "ru": "Документы компании"}, "patterns": []},
+    {"rank": 6, "name": {"en": "Sets of rules and safety rules", "ru": "Своды правил и правила безопасности"}, "patterns": ["(?i)^(code of practice|safety rules)\\b"]},
+    {"rank": 7, "name": {"en": "Industry documents", "ru": "Отраслевые документы"}, "patterns": []},
+    {"rank": 8, "name": {"en": "Organization standards", "ru": "Стандарты организаций"}, "patterns": []},
+    {"rank": 9, "name": {"en": "Methodical documents", "ru": "Методические документы"}, "patterns": []},
+    {"rank": 10, "name": {"en": "Handbooks, books and articles", "ru": "Справочники, книги и статьи"}, "patterns": []}
+  ],
+  "shelves": {"L": 10, "J": 10, "P": 10, "E": 10, "X": 10, "R": 6},
+  "unplaced": 9
+}

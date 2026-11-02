@@ -170,6 +170,28 @@ papers, X Other ([`assistant_x/schemas/shelves.json`](assistant_x/schemas/shelve
 brings Russian oil-and-gas synonyms and the role of a process engineer in the skill (`assistant-x init --profile
 oil-gas-ru`).
 
+### Document hierarchy (default)
+
+Answers list the requirements level by level, the highest first, and on a conflict the higher level wins; the search
+lifts a higher level a little among close results. A document gets its level from its designation.
+
+| Level | Documents |
+|---|---|
+| 1 | Constitution |
+| 2 | Codes and laws, decrees, government resolutions |
+| 3 | Technical regulations |
+| 4 | International standards and register rules (ISO, IEC, DNV…) |
+| 5 | National standards (GOST, API, ASME, ASTM…); then the company's own documents |
+| 6 | Sets of rules and safety rules |
+| 7 | Industry documents |
+| 8 | Organization standards |
+| 9 | Methodical documents |
+| 10 | Handbooks, books and articles |
+
+The levels and their designation patterns are data (`hierarchy.json` of the profile). To set your own, tell the
+assistant "my hierarchy is: …": it shows the levels and, on your yes, writes `hierarchy.json` into the workspace
+(the tool `library_hierarchy`), which is then used instead of the profile's.
+
 ## Your workspace (not in the repository)
 
 All your data lives in one folder, `Documents\Assistant X` by default (`assistant-x init [FOLDER]` makes it; another

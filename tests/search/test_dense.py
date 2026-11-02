@@ -190,7 +190,13 @@ def test_rerank_refines_the_fused_order(dense, monkeypatch):
     q = "газового фактора сепаратора"
     plain = [(r["code"], r["page"]) for r in dense.search(q, k=6, rerank=False)]
     monkeypatch.setitem(dense.cfg, "rerank_weight", 0.0)
+    monkeypatch.setitem(dense.cfg, "hierarchy_weight", 0.0)
     assert [(r["code"], r["page"]) for r in dense.search(q, k=6, rerank=True)] == plain
+    # the hierarchy alone: a higher level (a standard) before a book among the reranked candidates
+    monkeypatch.setitem(dense.cfg, "hierarchy_weight", 100.0)
+    lifted = dense.search(q, k=6, rerank=True)
+    assert [r["level"] for r in lifted] == sorted(r["level"] for r in lifted)
+    monkeypatch.setitem(dense.cfg, "hierarchy_weight", 0.0)
     seen, title = [], dense.doc("N-00002")["title"]
     monkeypatch.setattr(
         dense._reranker,

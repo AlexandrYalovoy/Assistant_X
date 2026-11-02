@@ -140,6 +140,7 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | `intake_card` | Card drafts of the processed files (T0001…): pages, OCR score, section, designation, title; with tids — also the headings and the start of the text. | all | no |
 | `intake_save_meta` | Save lines of the meta.jsonl of the batch (cards, parts, duplicates, rejected) and check them. | all | writes its own work files |
 | `intake_apply` | Build the cards and move the documents into the library. | all | yes, after the user's yes to a plan |
+| `library_hierarchy` | The hierarchy of the documents the answers follow (which kind rules over which; a higher level wins a conflict): without levels, the levels in force and where they come from. | all | writes its own work files |
 | `library_remove` | Take documents out of the library (a document that got in by mistake): nothing is deleted, the originals, the cards and the texts go to inbox\_to_delete\removed_<code>_<date>, the codes stay reserved and the base by words is rebuilt. | all | yes, after the user's yes to a plan |
 | `intake_reindex` | Finish the search base for new documents. | all | writes its own work files |
 | `base_export` | The library as a base package file (out: a path ending in .axbase). | all | writes its own work files |
