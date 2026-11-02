@@ -639,6 +639,7 @@ class Library:
                     personal=bool(r["personal"]),
                     named=r["code"] in named,
                     level=self.level(r),
+                    designation=r.get("designation") or "",
                     label=None if card else r["label"],
                     page_note="" if card else page_note(r["page_score"], r["page_flags"]),
                 )

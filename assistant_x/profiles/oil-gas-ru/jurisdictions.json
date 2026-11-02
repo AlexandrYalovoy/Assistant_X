@@ -1,0 +1,13 @@
+{
+  "_comment": "The jurisdictions of the documents (search/jurisdiction.py): a document takes the first jurisdiction whose pattern matches its designation (else the start of its title), else 'default'; its card field 'jurisdiction' wins when it has one. The 'home' ones answer (Russian, EAEU, Kazakh and international documents); the 'extra' ones (American standards) come after them as a supplement, in places of their own, never instead of them. A question with the words of a jurisdiction ('ask') puts its documents first.",
+  "default": "RU",
+  "home": ["RU", "EAEU", "KZ", "INT"],
+  "extra": {"US": 2},
+  "jurisdictions": [
+    {"id": "KZ", "patterns": ["^(СТ РК|СН РК|СП РК|РДС РК|МСН РК|НТП РК|ПР РК)\\b", "Республики Казахстан"], "ask": ["казахст", "рк"]},
+    {"id": "US", "patterns": ["^(API|ASME|ASTM|NACE|AGA|GPA|MSS|ANSI|NFPA|IEEE|UL|AMPP)\\b"], "ask": ["американ", "сша", "api", "asme", "astm", "nace", "american"]},
+    {"id": "INT", "patterns": ["^(ISO|IEC|ISO/IEC|IMO|DNV|ABS|BV|LR|ИСО|МЭК|РМРС|Правила РС)\\b"], "ask": ["международн", "iso", "iec", "dnv"]},
+    {"id": "RU", "patterns": ["^(ГОСТ Р|СП|СНиП|РД|ТТР|ТТТ|ТПР|СТО|ВСН|ОСТ|П\\d-|М-\\d|ФНП|ПБ|ПУЭ|Федеральный закон)"], "ask": ["росси", "рф"]},
+    {"id": "EAEU", "patterns": ["^(ТР ТС|ТР ЕАЭС|ГОСТ)\\b"], "ask": ["еаэс", "таможен"]}
+  ]
+}

@@ -443,8 +443,14 @@ def search_library(
 def find_fragments(query, k, stats, light=False, sections=None, codes=None, norms=0, scope="all", **flt):
     """The hits of search_library (dicts of retrieval.Library.search): the k best, then the norms best of shelf N
     without repeats when the question names no shelf and no document; tests/golden measures them."""
+    from assistant_x.search import jurisdiction
+
     kw = dict(flt, scope=None if scope == "all" else scope, **({"rerank": False} if light else {}))
-    res = lib().search(query, k=min(k, 25), sections=sections, codes=codes, stats=stats, **kw)
+    jur = jurisdiction.load(lib().cfg.get("profile"))  # the home documents answer, the supplements come after them
+    room = jur.room() if jur and not codes else 0
+    res = lib().search(query, k=min(k + room, 25), sections=sections, codes=codes, stats=stats, **kw)
+    if jur and not codes:
+        res = jur.arrange(res, query, k)
     if norms and not sections and not codes:  # the norms of the object as well (a small model seldom asks for them)
         seen = {(r["code"], r.get("page")) for r in res}
         extra = lib().search(query, k=min(norms, 10), sections=["N"], **kw)
