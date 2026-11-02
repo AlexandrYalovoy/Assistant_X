@@ -50,7 +50,8 @@ def has(groups, ws):
 def evidence(topic, text):
     """The quote of a page that proves the topic: the sentence or table row with a value (topic["value"]) and the most
     words of the topic's searches; "" when the page shows no value or lacks the words of the topic."""
-    if not has(topic["verify"], words(text)):
+    ws = words(text)
+    if not has(topic["verify"], ws) or not has(topic["ask"], ws):  # the object of the topic too, not only its value
         return ""
     value = re.compile(topic["value"], re.I)
     want = quotes.stems(" ".join(topic["queries"]))

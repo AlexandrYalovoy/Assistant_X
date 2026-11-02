@@ -8,7 +8,8 @@ workspace (AX_WORKSPACE, else Documents\\Assistant X), by the path of search_lib
     pool     k=50 over the whole library and k=50 on shelf N: where the page is before the cut
 
 A rank is the place of the first hit of an expected page (the document alone in brackets), "-" when absent.
-python tests/golden/measure.py [OUT.json]: one line per question and a summary; OUT.json keeps the numbers."""
+python tests/golden/measure.py [OUT.json] [--set blind]: one line per question and a summary; OUT.json keeps the
+numbers; --set blind measures blind_questions.json (questions the key norms were not built for)."""
 
 import json, os, sys, time
 from pathlib import Path
@@ -26,10 +27,14 @@ def rank(res, code, pages):
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
+    name = "norms"
+    if "--set" in argv:
+        i = argv.index("--set")
+        name, argv = argv[i + 1], argv[:i] + argv[i + 2 :]
     from assistant_x.server import mcp_server as m
 
     m.lib().warm_up()
-    data = json.loads((HERE / "norms_questions.json").read_text(encoding="utf-8"))
+    data = json.loads((HERE / f"{name}_questions.json").read_text(encoding="utf-8"))
     rows, hits = [], {"full": 0, "compact": 0, "total": 0}
     for item in data["questions"]:
         t0 = time.monotonic()

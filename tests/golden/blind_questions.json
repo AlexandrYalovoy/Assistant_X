@@ -1,0 +1,13 @@
+{
+  "about": "A blind set: design questions in everyday wording, unlike norms_questions.json and the words of the key topics, with the norm pages that answer them, every page read by hand (2026-11-02). It measures the key norms honestly: they were not built for these questions.",
+  "questions": [
+    {"id": "b-pressure-test", "q": "на какое давление опрессовывать промысловый трубопровод после монтажа", "expect": [["N-00421", [76, 77, 78]], ["N-00420", [11]]]},
+    {"id": "b-spare-pumps", "q": "сколько запасных насосов надо ставить на КНС", "expect": [["N-01076", [23]], ["N-00540", [16]]]},
+    {"id": "b-burial", "q": "на какую глубину закапывать нефтепровод на промысле", "expect": [["N-00421", [34]], ["N-00473", [19]]]},
+    {"id": "b-cp-potential", "q": "какой потенциал держать на трубе при катодной защите", "expect": [["N-00278", [24, 25, 26, 29]], ["N-01285", [19]]]},
+    {"id": "b-flare-room", "q": "можно ли ставить операторную рядом с факелом, какое расстояние", "expect": [["N-01492", [103]], ["N-00357", [8]]]},
+    {"id": "b-water-settle", "q": "сколько по времени отстаивать пластовую воду в аппаратах", "expect": [["N-00001", [102]]]},
+    {"id": "b-oil-speed", "q": "с какой скоростью гнать нефть по напорному нефтепроводу", "expect": [["N-01072", [19]], ["N-00390", [131]], ["N-00752", [54]]]},
+    {"id": "b-power-dns", "q": "к какой категории надежности электроснабжения относится ДНС", "expect": [["N-00499", [105]], ["N-00498", [94]]]}
+  ]
+}
