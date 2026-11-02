@@ -51,6 +51,12 @@ SHOWN_KIND = {"card_q": "card"}
 # score (a score added to the fused one would also flatten the normalized fused scores of everything else)
 TOC_BOOST = 0.25  # a fragment in a chapter whose title shares words of the question (toc_match)
 TOC_MIN_SHARED, TOC_MIN_SHARE = 2, 0.4  # toc_match: two stems of the question, or 40 % of them
+# the clusters of the FAISS index looked into and the PQ candidates rescored exactly ([search] ann_nprobe): measured on
+# tests/golden (945 000 fragments, 4 096 clusters): 64 clusters and 4x kept 58-96 % of the 200 closest fragments and
+# lost the table of permissible velocities of GOST R 58367 (the 18th closest of all); 1 024 and 16x keep 95-98 % in
+# about 40 ms a search
+ANN_NPROBE = 1024
+ANN_RESCORE = 16
 POOL = 50  # the candidates before the merging of pages and documents (and the reranking): max(POOL, 4 k)
 MAX_PER_DOC = 3  # pages of one document in an answer, unless the other documents leave places free (M-080)
 # final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight. Q4 (2026-10-29, 80
@@ -320,7 +326,7 @@ class Library:
             index = ann.load_index(path)
         except ImportError:
             return None
-        index.nprobe = self.cfg.get("ann_nprobe", 64)
+        index.nprobe = min(int(self.cfg.get("ann_nprobe", ANN_NPROBE)), index.nlist)
         return index
 
     def embedder(self):
@@ -892,23 +898,23 @@ def score_rows(vecs, rows, q):
 
 
 def ann_rows(index, q, want, allowed, total):
-    """Candidate rows from the FAISS index (PQ scores are rough: 4x more, rescored exactly by the caller) and the rows
-    added after it was built. allowed: only among these rows (a filter) — an IDSelectorBatch inside the index, or
-    20x more candidates kept when allowed where this FAISS build lacks the selector."""
+    """Candidate rows from the FAISS index (PQ scores are rough: ANN_RESCORE times more, rescored exactly by the
+    caller) and the rows added after it was built. allowed: only among these rows (a filter) — an IDSelectorBatch
+    inside the index, or 5x more candidates again kept when allowed where this FAISS build lacks the selector."""
     import numpy as np
 
     tail = np.arange(index.ntotal, total)
     if allowed is None:
-        _, found = index.search(q[None], want * 4)
+        _, found = index.search(q[None], want * ANN_RESCORE)
         return np.unique(np.concatenate([found[0][found[0] >= 0], tail]))
     try:
         import faiss
 
         params = faiss.SearchParametersIVF(sel=faiss.IDSelectorBatch(allowed), nprobe=index.nprobe)
-        _, found = index.search(q[None], want * 4, params=params)
+        _, found = index.search(q[None], want * ANN_RESCORE, params=params)
         found = found[0][found[0] >= 0]
     except (AttributeError, TypeError):  # an older FAISS: no search parameters
-        _, found = index.search(q[None], want * 20)
+        _, found = index.search(q[None], want * ANN_RESCORE * 5)
         found = found[0][np.isin(found[0], allowed)]
     return np.unique(np.concatenate([found, tail[np.isin(tail, allowed)]]))
 

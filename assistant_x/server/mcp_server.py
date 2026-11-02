@@ -352,33 +352,20 @@ def search_library(
     light = not full_mode()
     if light:
         cpu_mode()
-    res = lib().search(
+    res = find_fragments(
         query,
-        k=min(k, 25),
+        k,
+        stats,
+        light,
         sections=sections,
         codes=codes,
-        stats=stats,
-        year_from=year_from,
-        year_to=year_to,
         doc_types=doc_types,
         langs=langs,
-        scope=None if scope == "all" else scope,
-        **({"rerank": False} if light else {}),
+        year_from=year_from,
+        year_to=year_to,
+        scope=scope,
+        norms=norms,
     )
-    if norms and not sections and not codes:  # the norms of the object as well (a small model seldom asks for them)
-        seen = {(r["code"], r.get("page")) for r in res}
-        extra = lib().search(
-            query,
-            k=min(norms, 10),
-            sections=["N"],
-            year_from=year_from,
-            year_to=year_to,
-            doc_types=doc_types,
-            langs=langs,
-            scope=None if scope == "all" else scope,
-            **({"rerank": False} if light else {}),
-        )
-        res = res + [r for r in extra if (r["code"], r.get("page")) not in seen]
     # the journal line shows how strong the match was: query_log.py lists the weak ones
     debuglog.note(
         f"by words {stats.get('words', 0)}"
@@ -424,6 +411,18 @@ def search_library(
             + "\n\n".join(f"{_head(r)}\n{r['text']}" for r in cards)
         )
     return pending + text
+
+
+def find_fragments(query, k, stats, light=False, sections=None, codes=None, norms=0, scope="all", **flt):
+    """The hits of search_library (dicts of retrieval.Library.search): the k best, then the norms best of shelf N
+    without repeats when the question names no shelf and no document; tests/golden measures them."""
+    kw = dict(flt, scope=None if scope == "all" else scope, **({"rerank": False} if light else {}))
+    res = lib().search(query, k=min(k, 25), sections=sections, codes=codes, stats=stats, **kw)
+    if norms and not sections and not codes:  # the norms of the object as well (a small model seldom asks for them)
+        seen = {(r["code"], r.get("page")) for r in res}
+        extra = lib().search(query, k=min(norms, 10), sections=["N"], **kw)
+        res = res + [r for r in extra if (r["code"], r.get("page")) not in seen]
+    return res
 
 
 _noticed = False  # the start notice was given once in this server
