@@ -67,3 +67,14 @@ def test_a_small_model_is_told_to_answer_after_three_searches():
     assert out[0]["text"].startswith("Searched 3 times")
     state, out = toolsets.search_budget(state, "search_library", page, 30 + toolsets.QUESTION_GAP + 1)
     assert out == page and state[0] == 1  # a new question
+
+
+def test_table_of_contents_lines_are_not_quoted_and_weigh_less():
+    """A line of a table of contents names a subject and its page («Время пребывания 285»): the quote is the
+    sentence that answers, and a fragment that is mostly such lines weighs less in the search (retrieval.toc_like)."""
+    from assistant_x.search.retrieval import toc_like
+
+    text = "Время пребывания 285 Конструирование трехфазных сепараторов 285\nВремя пребывания в сепараторе 2-3 мин."
+    assert quotes.pick("время пребывания сепаратор", text) == "Время пребывания в сепараторе 2-3 мин."
+    assert toc_like("Введение 3\nОбласть применения 5\nСепараторы 285\nНасосы 300\nОбщие положения ....... 7")
+    assert not toc_like("|Газ|5-20|\n|Нефть|3|\nТаблица 1") and not toc_like("Скорость газа 5-20 м/с.")

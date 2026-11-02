@@ -44,6 +44,10 @@ CODE_RX = re.compile(r"^[A-Z]-\d{1,6}(?:-\d{1,3})?$")  # N-00001, E-00006-02
 # the weight of the fragments of each kind in the fusion: a card says what a document is about but cites no page
 KIND_WEIGHT = {"text": 1.0, "card": 0.7, "card_q": 0.85, "unit": 1.0}
 GARBLED_WEIGHT = 0.7  # a page whose recognition is garbled (page flag): its fragments weigh less in the answer
+TOC_WEIGHT = 0.5  # a fragment of a table of contents (lines ending in page numbers): it names a subject, never answers
+TOC_LINE = re.compile(r"(\.{3,}|…{2,}|\s)\d{1,4}\s*$")
+TOC_SHARE = 0.5  # of its lines at least, and TOC_LINES lines, end in a page number: a table of contents
+TOC_LINES = 4
 MAX_CARDS = 2  # cards in one answer at most ([search] max_cards): the rest of the k are pages (audit 6, M-030)
 # the fragments of a card ('card' per language, 'card_q' its questions) are one result of kind 'card'
 SHOWN_KIND = {"card_q": "card"}
@@ -589,6 +593,8 @@ class Library:
         for i in order:  # a garbled or doubled page answers less well than a clean one of the same closeness
             if {"garbled", "doubled"} & set((rows[i].get("page_flags") or "").split(",")):
                 fused[i] *= GARBLED_WEIGHT
+            if rows[i]["kind"] == "text" and toc_like(rows[i]["text"]):
+                fused[i] *= TOC_WEIGHT
         order.sort(key=lambda i: -fused[i])
         if rerank and order:
             order = self.rerank(query, order, rows, fused, stats)
@@ -895,6 +901,14 @@ def score_rows(vecs, rows, q):
         block = vecs[part[0] : part[-1] + 1] if part[-1] - part[0] + 1 == len(part) else vecs[part]  # a run: a slice
         out[i : i + SCORE_STEP] = np.asarray(block, np.float32) @ q
     return out
+
+
+def toc_like(text):
+    """Is a fragment a table of contents: most of its lines, TOC_LINES at least, end in a page number ("Separators
+    285", "Scope ....... 3")? Table rows ("|…|5-20|") are data, not contents."""
+    lines = [x.strip() for x in (text or "").splitlines() if x.strip() and not x.lstrip().startswith("|")]
+    toc = sum(1 for x in lines if TOC_LINE.search(x) and len(x.split()) <= 12)
+    return toc >= TOC_LINES and toc >= TOC_SHARE * len(lines)
 
 
 def ann_rows(index, q, want, allowed, total):

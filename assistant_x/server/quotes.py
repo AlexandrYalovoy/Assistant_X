@@ -17,6 +17,7 @@ HEAD = (
 
 WORD = re.compile(r"\w+", re.UNICODE)
 SENTENCE = re.compile(r"(?<=[.!?;])\s+")
+TOC = re.compile(r"(\.{3,}|…{2,}|\s)\d{1,4}\s*$")  # a line of a table of contents: it ends in a page number
 PICTURE = re.compile(r"<!-- Start of picture text -->.*?<!-- End of picture text -->", re.S)
 MARKUP = re.compile(r"<br\s*/?>|\*\*|__|`|^#+\s*", re.M)
 
@@ -86,6 +87,8 @@ def pick(query, text):
             sc += 0.5  # a value
         if kind == "row" and got:
             sc += 0.25  # the data of a table before the sentence that only names it
+        if kind == "text" and len(u.split()) <= 12 and (TOC.search(u) or re.search(r"\d\s+\D+\s\d{1,4}$", u)):
+            sc -= 10  # a line of a table of contents names a subject and a page, it answers nothing
         if sc > score:
             best, score = i, sc
     kind, quote, header = us[best]
