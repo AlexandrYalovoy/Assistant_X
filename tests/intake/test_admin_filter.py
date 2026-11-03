@@ -155,3 +155,24 @@ def test_the_base_check_lists_admin_only_documents(tmp_path):
     (tmp_path / "texts" / "N-00001-02.md").write_text(text(PLAN_1, PLAN_2), encoding="utf-8")
     hits = A.scan_library(tmp_path)
     assert [c for c, _ in hits] == ["N-00001-02"]
+
+
+def test_a_schedule_of_revision_without_results_is_set_aside_an_act_with_results_kept():
+    """The author, 2026-11-03: a plan-schedule of revision, inspection or repair holds no results (E-00174-08, the
+    heaters of a treatment shop for 2020); an act or a record of a revision with its measurements is kept."""
+    schedule = (
+        "Согласовано Начальник управления подготовки и сдачи нефти Утверждаю Главный инженер "
+        "ПЛАН - ГРАФИК ревизии, осмотра и технического освидетельствования печей нагрева на 2020 год. "
+        "Подогреватель путевой ПП-4В заводской номер 19 год изготовления 2014 температура на выходе 40-50 "
+        "рабочее давление в змеевике 4-6,5 МПа гидроиспытание 03.2016 03.2024 План Факт март сентябрь "
+        "Подогреватель путевой ПП-0,63А давление 4-6,5 МПа температура 45-55 План Факт апрель октябрь"
+    )
+    v = A.classify("E-00174-08_2.pdf", text(schedule))
+    assert v["verdict"] == "reject" and v["kinds"] == ["maintenance_schedule"]
+    act = (
+        "АКТ ревизии и осмотра подогревателя путевого ПП-4В зав. № 19. Результаты: толщина стенки змеевика 7,8 мм "
+        "при номинальной 8 мм, гидроиспытание давлением 6,5 МПа выдержано, дефектов не выявлено."
+    )
+    assert A.classify("Акт ревизии.pdf", text(act, act))["verdict"] is None
+    graph = "График ППР насосного оборудования ДНС на 2021 год. Насос ЦНС 60-198 март сентябрь " * 3
+    assert A.classify("График ППР.pdf", text(graph))["verdict"] == "reject"

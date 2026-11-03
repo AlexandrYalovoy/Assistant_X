@@ -51,7 +51,8 @@
     "service_memo": "\\binternal\\s+memo(?:randum)?\\b",
     "meeting_minutes": "\\bminutes\\s+of\\s+(?:the\\s+)?meeting\\b|\\bmeeting\\s+minutes\\b",
     "explanatory_note": "\\bexplanatory\\s+note\\s+to\\s+the\\s+draft\\b",
-    "transfer_act": "\\b(?:transfer|handover)\\s+(?:act|certificate)\\b"
+    "transfer_act": "\\b(?:transfer|handover)\\s+(?:act|certificate)\\b",
+    "maintenance_schedule": "\\b(?:maintenance|inspection|overhaul|revision|turnaround)\\s+(?:plan\\s+and\\s+)?schedule\\b|\\bschedule\\s+of\\s+(?:maintenance|inspections?|overhauls?|repairs?)\\b"
   },
   "admin_whole": {
     "meeting_letter": [
@@ -66,7 +67,8 @@
     "method": "^\\W*(?:method|procedure)\\b",
     "commercial_offer": "\\bcommercial\\s+(?:offer|proposal)\\b|\\bquotation\\b",
     "change_notice": "\\b(?:amendment|addendum|errata|change\\s+notice)\\b",
-    "test_record": "\\btest\\s+(?:report|record|certificate)\\b"
+    "test_record": "\\btest\\s+(?:report|record|certificate)\\b",
+    "inspection_record": "\\b(?:inspection|survey|repair|overhaul|condition)\\s+(?:report|record|certificate|results?)\\b"
   },
   "admin_restart": [
     "(?:^|\\W)\\d+(?:\\.\\d+)*\\.?\\s+(?:scope|general|definitions|normative\\s+references)\\b",
@@ -89,6 +91,7 @@
     "transfer_act": "transfer act",
     "payment_order": "order on payments",
     "price_letter": "letter about prices",
-    "meeting_letter": "letter about a meeting"
+    "meeting_letter": "letter about a meeting",
+    "maintenance_schedule": "maintenance or inspection schedule without results"
   }
 }

@@ -32,7 +32,21 @@ TECH_KEEP = 25.0  # engineering terms and quantities per 1000 words: past it a f
 TECH_PAGE = 40.0  # ... and a page past it is real content even inside an administrative section
 WHOLE_PAGES = 12  # a letter or an order judged by its subject is short
 # the kinds whose next pages go on with them (a plan, a letter, the minutes over several pages)
-SECTIONS = {"implementation_plan", "order_in_force", "cover_letter", "service_memo", "meeting_minutes", "explanatory_note"}
+SECTIONS = {
+    "implementation_plan",
+    "order_in_force",
+    "cover_letter",
+    "service_memo",
+    "meeting_minutes",
+    "explanatory_note",
+    "maintenance_schedule",
+}
+# the kinds that are plans, administrative however much engineering words their tables carry (the equipment, its
+# pressures and temperatures): an implementation plan; a schedule of revision, inspection, repair or maintenance with
+# no results (the author, 2026-11-03: it holds no results of a repair). An act or a record with results is kept
+# (admin_keep inspection_record).
+PLANS = {"implementation_plan", "maintenance_schedule"}
+SCHEDULE_HEAD = 900  # a schedule is named under its approval block: its title is looked for further down
 
 
 def _rx(value):
@@ -80,7 +94,8 @@ def page_kind(page, R):
     head = page[:HEAD]
     # a plan under the template "approved by" is a plan: the kinds that open a section are looked for first
     for kind, rx in sorted(R["pages"].items(), key=lambda kv: kv[0] not in SECTIONS):
-        if rx.search(head) and (kind != "title_page" or len(WORD_RX.findall(page)) <= TITLE_WORDS):
+        where = page[:SCHEDULE_HEAD] if kind == "maintenance_schedule" else head
+        if rx.search(where) and (kind != "title_page" or len(WORD_RX.findall(page)) <= TITLE_WORDS):
             return kind
     return None
 
@@ -122,7 +137,7 @@ def classify(name, text, R=None):
         return out
     reason = " + ".join(R["labels"].get(k, k) for k in kinds)
     # the minutes of a meeting alone often hold the technical decisions: a doubt, taken in with a warning
-    if dens >= TECH_KEEP and set(kinds) != {"implementation_plan"} or set(kinds) == {"meeting_minutes"}:
+    if dens >= TECH_KEEP and not set(kinds) <= PLANS or set(kinds) == {"meeting_minutes"}:
         return dict(out, verdict="warn", kinds=kinds, rule="tech", reason=reason)
     return dict(out, verdict="reject", kinds=kinds, rule=kinds[0], reason=reason)
 
