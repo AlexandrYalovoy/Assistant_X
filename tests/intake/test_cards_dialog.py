@@ -61,6 +61,28 @@ def test_designation_after_ocr_or_in_the_file_name():
     assert meta_schema.text_checks(meta, {"T0001": bare}, {"T0001": "ГОСТ Р 51858-2020.pdf"})[0] == []
 
 
+def test_designation_spelled_out_or_after_a_cover():
+    """A scan of law.resource.org starts with its cover and notes: the designation comes later, the short words of it
+    spelled out ("API RP 5LT" as "API RECOMMENDED PRACTICE 5LT"); found later it is a warning, not an error."""
+    cover = "=== page 1 ===\n\nEdict of government\nThis document has been posted by Public Resource.\n\n"
+    notes = "=== page 2 ===\n\nSpecial Notes\n\n=== page 3 ===\n\nForeword\n\n"
+    body = "".join(f"=== page {p} ===\n\nText of the page.\n\n" for p in range(4, 12))
+    body = body.replace("Text of the page.", "Truck Transportation of Line Pipe", 2)  # the title page after the cover
+    pipe = "=== page 12 ===\n\n2 API RECOMMENDED PRACTICE 5LT\nTruck transportation of line pipe.\n"
+    meta = {
+        "T0001": doc_line("T0001", "N", "Truck Transportation of Line Pipe", "API-RP-5LT", designation={"en": "API RP 5LT"})
+    }
+    errors, warnings = meta_schema.text_checks(meta, {"T0001": cover + notes + body + pipe})
+    assert errors == [] and "T0001: the designation 'API RP 5LT' is first on page 12 of the text" in warnings
+    plain = notes.replace("page 2", "page 1") + body + pipe  # no cover: only the first 10 pages are looked at
+    assert meta_schema.text_checks(meta, {"T0001": plain})[0] == [
+        "T0001: the designation 'API RP 5LT' is not on the first 3 pages of the text"
+    ]
+    early = cover + "=== page 2 ===\n\nAPI RECOMMENDED PRACTICE 5LT\n\n=== page 3 ===\n\nScope\n"
+    errors, warnings = meta_schema.text_checks(meta, {"T0001": early})
+    assert errors == [] and not any("designation" in w for w in warnings)
+
+
 def test_digest_by_genre(tmp_path, monkeypatch):
     from assistant_x.intake.state import State
 

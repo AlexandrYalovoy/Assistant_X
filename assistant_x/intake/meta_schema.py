@@ -205,12 +205,37 @@ def _texts(value):
     return value if isinstance(value, list) else [value] if value else []
 
 
+# The short words of designations and how the documents spell them out ("API RP 5LT" is printed "API RECOMMENDED
+# PRACTICE 5LT" on the pages of the standard).
+_SPELLED = {"rp": "recommendedpractice", "spec": "specification", "std": "standard", "publ": "publication"}
+# The cover a scan of law.resource.org starts with, before the pages of the document itself.
+_COVER = re.compile(r"edict\s+of\s+government|public\.?\s*resource", re.I)
+
+
+def _forms(k):
+    """The keys of a designation key k: itself and its short words spelled out."""
+    forms = {k}
+    for short, long in _SPELLED.items():
+        forms |= {re.sub(rf"{short}(?=[\d.]|$)", long, f) for f in forms}
+    return forms
+
+
+def _later_page(pages, keys, cover):
+    """The first page after the third where one of keys occurs: within 10 pages, or anywhere after a cover."""
+    for p, t in pages[3:] if cover else pages[3:10]:
+        if any(k in _key(t) for k in keys):
+            return p
+    return None
+
+
 def text_checks(meta, texts, names=None):
     """(errors, warnings) of the document lines against the texts of their files ({tid: Markdown}; names: {tid: file
-    name}): a designation must be on the first 3 pages (or in the file name; its digits are enough after OCR), the year
-    should be in the text, half of the keywords in the languages of the document should be in it, and the title
-    must share a word with the first pages of a text of two pages or more, or with its file name (a line written for
-    another tid; a page photo read badly by OCR has a title from its file name)."""
+    name}): a designation must be on the first 3 pages (or in the file name; its digits are enough after OCR; its
+    short words may be spelled out, "RP" as "Recommended Practice"), found only later (within 10 pages, or anywhere
+    after a law.resource.org cover) it is a warning; the year should be in the text, half of the keywords in the
+    languages of the document should be in it, and the title must share a word with the first pages of a text of two
+    pages or more, or with its file name (a line written for another tid; a page photo read badly by OCR has a title
+    from its file name)."""
     from assistant_x.core.common import split_pages
 
     errors, warnings = [], []
@@ -224,9 +249,20 @@ def text_checks(meta, texts, names=None):
         for d in _texts(m.get("designation")):
             k = _key(d)
             digits = max(re.findall(r"[\d][\d.\-/]*\d", k), key=len, default="")
-            if k and k not in first_key and k not in name_key and not (len(digits) >= 4 and digits in first_key):
-                if not any(_key(x) in first_key for x in _texts(m.get("designation")) if x != d):
-                    errors.append(f"{tid}: the designation {d!r} is not on the first 3 pages of the text")
+            if (
+                k
+                and k not in name_key
+                and not any(f in first_key for f in _forms(k))
+                and not (len(digits) >= 4 and digits in first_key)
+            ):
+                others = [x for x in _texts(m.get("designation")) if x != d]
+                if not any(f in first_key for x in others for f in _forms(_key(x))):
+                    keys = set().union(*(_forms(_key(x)) for x in [d, *others]))
+                    page = _later_page(pages, keys, bool(_COVER.search(pages[0][1])))
+                    if page:
+                        warnings.append(f"{tid}: the designation {d!r} is first on page {page} of the text")
+                    else:
+                        errors.append(f"{tid}: the designation {d!r} is not on the first 3 pages of the text")
                 break
         yr = m.get("year")
         if isinstance(yr, int) and str(yr) not in text:
@@ -238,6 +274,8 @@ def text_checks(meta, texts, names=None):
             if kws and found < len(kws) / 2:
                 warnings.append(f"{tid}: {found} of {len(kws)} keywords ({lg}) occur in the text")
         title = _stems(" ".join(_texts(m.get("title"))))
+        if _COVER.search(pages[0][1]):  # the title page comes after the cover and its notes
+            first = "\n".join(t for _, t in pages[:10])
         if len(pages) >= 2 and title and not title & _stems(first) and not title & _stems((names or {}).get(tid, "")):
             errors.append(f"{tid}: the title shares no word with the first pages of the text: a line of another file?")
     return errors, warnings
