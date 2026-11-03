@@ -39,3 +39,31 @@ def test_a_bad_hierarchy_is_refused_and_a_broken_file_falls_back(tmp_path):
     (tmp_path / H.FILE).write_text("{not json", encoding="utf-8")
     assert H.load(tmp_path, config.profile_dir("oil-gas-ru")).source.endswith("hierarchy.json")
     assert H.load(tmp_path, config.profile_dir("oil-gas-ru")).source != str(tmp_path / H.FILE)
+
+
+def test_the_kazakh_designations_take_their_levels():
+    h = H.load(None, config.profile_dir("oil-gas-ru"))
+    cases = {
+        "Закон Республики Казахстан от 11 апреля 2014 года № 188-V": 2,
+        "Кодекс Республики Казахстан О недрах и недропользовании": 2,
+        "Указ Президента Республики Казахстан": 2,
+        "Постановление Правительства Республики Казахстан от 2012 года № 1350": 2,
+        "ТР РК 1.0-2020": 3,
+        "СТ РК 1916-2009": 5,
+        "СТ РК ISO 13623-2010": 5,
+        "СТ РК EN 1990-2011": 5,
+        "СН РК 3.05-01-2013": 6,
+        "СП РК 3.05-101-2013": 6,
+        "СП РК EN 1992-1-1:2004/2011": 6,
+        "НП РК 2.03-01-2018": 6,
+        "НП к СП РК EN 1990:2002:A1:2005/2011": 6,
+        "МСН 2.04-01-98": 6,
+        "МСП 4.02-102-99": 6,
+        "Правила обеспечения промышленной безопасности для опасных производственных объектов нефтяной и газовой отраслей": 6,
+        "НТП РК 03-01-2019": 7,
+        "РДС РК 1.01-01-2014": 7,
+        "МДС РК 3.02-01-2014": 9,
+        "МУ РК 1.01-2019": 9,
+    }
+    assert {d: h.rank(d, code="N-1") for d in cases} == cases
+    assert h.rank("Правила РС классификации судов", code="N-1") == 4  # the register rules stay international
