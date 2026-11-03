@@ -47,6 +47,9 @@ def test_title_and_approval_only_rejected():
 def test_plan_only_part_rejected_over_its_pages():
     v = A.classify("План мероприятий.docx", text(TITLE, PLAN_1, PLAN_2))
     assert v["verdict"] == "reject" and "implementation_plan" in v["kinds"]
+    # "введение в действие" on a later page of the plan is no clause "Введение" of real content
+    later = PLAN_2 + " 4. Обеспечить введение в действие документа в дочерних обществах с даты приказа. "
+    assert A.classify("9.pdf", text(PLAN_1, later))["verdict"] == "reject"
 
 
 def test_title_approval_and_a_real_standard_accepted():
