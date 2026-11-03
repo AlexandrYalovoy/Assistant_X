@@ -878,18 +878,22 @@ def wait_claude_closed(dry):
 
 def register_desktop(py, dry):
     """The entry of the library in the settings of Claude Desktop (clients/claude_desktop.py: a copy of the file first,
-    the other servers kept, a file that cannot be read left alone); True when a file changed."""
+    the other servers kept, a file that cannot be read left alone); True when a file changed. Recorded in
+    connections.json, so assistant-x update (and update --from) moves it to a new python as the other apps."""
     from assistant_x import clients
-    from assistant_x.clients import claude_desktop
+    from assistant_x.clients import claude_desktop, connect
 
     if not claude_desktop.found():
         say(
             "   Claude Desktop is not found on this PC: writing the setting in advance, it is picked up once Claude is installed."
         )
-    changed = False
-    for path, status in claude_desktop.connect(clients.entry(py, "all", False, P.ROOT), dry):
+    changed, e = False, clients.entry(py, "all", False, P.ROOT)
+    done = claude_desktop.connect(e, dry)
+    for path, status in done:
         say(f"   {path}: {status}")
         changed |= status == "written"
+    if not dry and any(s in ("written", "unchanged") for _, s in done):
+        connect.record(claude_desktop.NAME, "all", e)
     return changed
 
 
@@ -909,7 +913,11 @@ def register_others(py, dry):
             "   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline, Kimi)"
         )
         return
-    connect.connect(names, dry=dry, python=py, root=P.ROOT, say=lambda s: say("   " + s.replace("\n", "\n   ")))
+    for name in names:  # one app that fails (a settings file it cannot take) never stops the others
+        try:
+            connect.connect([name], dry=dry, python=py, root=P.ROOT, say=lambda s: say("   " + s.replace("\n", "\n   ")))
+        except Exception as e:  # noqa: BLE001 — reported, the installation goes on
+            say(f"   {clients.app(name).TITLE}: not connected ({type(e).__name__}: {e}); later: assistant-x connect {name}")
 
 
 def self_check(py, dry):

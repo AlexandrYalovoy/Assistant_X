@@ -127,8 +127,9 @@ def build(lib, topics, say=print):
 
 
 def update(cfg, db=None, say=print):
-    """The key norms after a build of the search base, without a search: (added, dropped), or None when the library
-    has no key norms or its profile no topics. The entries of documents no longer in the base, or whose card changed
+    """The key norms after a build of the search base, without a search: (added, dropped), or None when the profile
+    has no topics or the file cannot be read (left alone). A library without the file (a new or updated install that
+    never ran --refresh) gets one: every norm of the base is verified against the topics as a new one. The entries of documents no longer in the base, or whose card changed
     (a new edition under its code, a card corrected), are dropped; the pages of the norms not seen yet (new or changed)
     are verified against every topic (evidence: the words of the topic and its value in one line), the best page of a
     document for a topic kept; a topic keeps PER_TOPIC pages, the highest level first. A list built before "seen"
@@ -138,8 +139,10 @@ def update(cfg, db=None, say=print):
     from assistant_x.search import jurisdiction
 
     data, topics = read(path_of(cfg)), topics_of(cfg)
-    if not data or not topics:
+    if not topics or (data is None and os.path.exists(path_of(cfg))):
         return None
+    if not data:  # no list yet: built here from the pages of the norms, "seen" empty so that every norm is verified
+        data = dict(version=1, built=datetime.date.today().isoformat(), topics=[], verified=0, dropped=0, seen={})
     con = connect(db or cfg["db"], readonly=True)
     try:
         docs = {

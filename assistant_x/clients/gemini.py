@@ -46,6 +46,18 @@ def rules(text, block):
     return (text.rstrip("\n") + "\n\n" if text.strip() else "") + BEGIN + block.rstrip("\n") + "\n" + END
 
 
+NOT_UTF8 = "left alone: not UTF-8; add the rules by hand"
+
+
+def text_of(p):
+    """The text of a rules file ("" when there is none), None when it is not UTF-8 (the user's own file saved in the
+    code page of Windows): such a file is left alone, never read or written over."""
+    try:
+        return p.read_text(encoding="utf-8-sig") if p.exists() else ""
+    except UnicodeDecodeError:
+        return None
+
+
 def guide():
     from assistant_x.setup import skill
 
@@ -64,8 +76,8 @@ def connect(e, dry):
     except K.Refused as why:
         return [(path, f"left alone: {why}; add by hand:\n{K.by_hand(e)}")]
     p = rules_path()
-    old = p.read_text(encoding="utf-8-sig") if p.exists() else ""
-    out.append((str(p), K.put(p, rules(old, guide()), dry)))
+    old = text_of(p)
+    out.append((str(p), NOT_UTF8 if old is None else K.put(p, rules(old, guide()), dry)))
     return out
 
 
@@ -76,8 +88,9 @@ def disconnect(dry):
     except K.Refused as why:
         out.append((path, f"left alone: {why}"))
     p = rules_path()
-    if p.exists() and BEGIN in p.read_text(encoding="utf-8-sig"):
-        out.append((str(p), K.put(p, rules(p.read_text(encoding="utf-8-sig"), None), dry)))
+    old = text_of(p)
+    if old and BEGIN in old:
+        out.append((str(p), K.put(p, rules(old, None), dry)))
     return out
 
 

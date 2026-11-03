@@ -366,7 +366,10 @@ def test_check_through_a_connected_app(home, mini, tmp_path, monkeypatch):
     connect.connect(["lmstudio"], python=sys.executable, root=mini["root"], say=lambda s: None)
     try:
         r = connect.check(["lmstudio"], say=lambda s: None)["lmstudio"]
-        assert r["tools"] == len(toolsets.REFERENCE) and r["initialize_s"] < 5 and "search_s" in r, (r.get("answer"), r.get("error"))
+        assert r["tools"] == len(toolsets.REFERENCE) and r["initialize_s"] < 5 and "search_s" in r, (
+            r.get("answer"),
+            r.get("error"),
+        )
         assert not r["ok"] and "no meaning vectors" in r["error"]  # the mini library has none: said, not "in order"
     finally:
         from assistant_x.server import service
@@ -431,3 +434,70 @@ def test_claude_desktop_hears_once_that_its_skill_is_outdated(tmp_path, monkeypa
     monkeypatch.setattr(mcp_server, "_desktop_noticed", False)
     assert mcp_server.start_notice("lms-loop") == "" and mcp_server.start_notice("") == ""
     assert "upload it again" in mcp_server.start_notice("claude-ai") and mcp_server.start_notice("claude-ai") == ""
+
+
+# ---------- the Claude Desktop of the installer, a rules file not in UTF-8 (audit of 2026-11-03) ----------
+
+
+def test_the_installer_records_claude_desktop_and_update_moves_it(home, tmp_path, monkeypatch):
+    """I-01: the installer connects Claude Desktop and records it in connections.json, so assistant-x update (and
+    update --from) moves it to the python of the new version; an older install with the entry alone is moved too."""
+    from assistant_x.clients import claude_desktop
+    from assistant_x.setup import install
+
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
+    lib = str(tmp_path / "My Library")
+    monkeypatch.setattr(install.P, "ROOT", lib, raising=False)
+    monkeypatch.setattr(install, "say", lambda s="": None)
+    old = r"C:\OLD\venv\Scripts\python.exe"
+    (home / "AppData" / "Roaming" / "Claude").mkdir(parents=True)
+    install.register_desktop(old, False)
+    assert K.connections()["claude_desktop"]["toolset"] == "all"
+    assert claude_desktop.read()["command"] == old
+    assert list(connect.update(say=lambda s: None)) == ["claude_desktop"]
+    assert claude_desktop.read()["command"] == K.windowless(sys.executable)
+    K.remember("claude_desktop", None)  # an install before the record: the entry in the settings alone
+    claude_desktop.connect(K.entry(old, "all", False, lib), False)
+    assert K.connections() == {} and list(connect.update(say=lambda s: None)) == ["claude_desktop"]
+    e = claude_desktop.read()
+    assert e["command"] == K.windowless(sys.executable) and e["env"]["AX_WORKSPACE"] == lib
+    assert K.connections()["claude_desktop"]["workspace"] == lib
+
+
+@pytest.mark.parametrize("app", ["gemini", "kimi"])
+def test_a_rules_file_not_in_utf8_is_left_alone(home, tmp_path, monkeypatch, app):
+    """I-06: GEMINI.md or AGENTS.md saved in the code page of Windows is left alone with a word to add the rules by
+    hand; the entry is written, the file keeps its bytes, disconnect does not fail on it."""
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
+    monkeypatch.delenv("KIMI_CODE_HOME", raising=False)
+    folder = home / (".gemini" if app == "gemini" else ".kimi")
+    folder.mkdir()
+    rules = folder / ("GEMINI.md" if app == "gemini" else "AGENTS.md")
+    mine = "\u041c\u043e\u0438 \u043f\u0440\u0430\u0432\u0438\u043b\u0430\n".encode("cp1251")
+    rules.write_bytes(mine)
+    done = connect.connect([app], python=sys.executable, say=lambda s: None)[app]
+    assert (str(rules), "left alone: not UTF-8; add the rules by hand") in done
+    assert K.app(app).read() and rules.read_bytes() == mine
+    connect.disconnect([app], say=lambda s: None)
+    assert rules.read_bytes() == mine and not K.app(app).read()
+
+
+def test_one_app_that_fails_never_stops_the_installer(home, tmp_path, monkeypatch):
+    """I-06: register_others connects every app found; one that raises is reported and the next is still connected."""
+    from assistant_x.clients import gemini
+    from assistant_x.setup import install
+
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
+    monkeypatch.delenv("KIMI_CODE_HOME", raising=False)
+    said = []
+    monkeypatch.setattr(install, "say", lambda s="": said.append(s))
+    monkeypatch.setattr(install.P, "ROOT", str(home / "lib"), raising=False)
+    (home / ".gemini").mkdir()
+    (home / ".kimi").mkdir()  # after Gemini CLI in the order of the installer
+    monkeypatch.setattr(gemini, "connect", lambda e, dry: 1 / 0)
+    for n in K.APPS:
+        if n not in ("gemini", "kimi"):
+            monkeypatch.setattr(K.app(n), "found", lambda: False)
+    install.register_others(sys.executable, False)
+    assert any("Gemini CLI: not connected (ZeroDivisionError" in s for s in said)
+    assert K.app("kimi").read() and list(K.connections()) == ["kimi"]

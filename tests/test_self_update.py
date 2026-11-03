@@ -106,3 +106,101 @@ def test_update_from_goes_to_the_update_of_the_program(monkeypatch):
     assert connect.update_main(["--from", "https://github.com/o/r", "--dry-run"]) == 0
     assert seen == [["--from", "https://github.com/o/r", "--dry-run"]]
     assert json.dumps(seen)
+
+
+# ---------- the chain of environments, the constraints, the environment in use (audit of 2026-11-03) ----------
+
+
+def test_a_third_environment_still_sees_the_packages_of_the_first(tmp_path):
+    """I-02: a folder named by a .pth line never has its own .pth files read, so each update names the whole chain:
+    the packages of the first environment (and those its own .pth files add, pywin32's) are seen from the third."""
+    import subprocess, sys
+
+    orig, a, b, c = (tmp_path / n for n in ("orig", "a", "b", "c"))
+    for d in (orig, a, b, c):
+        d.mkdir()
+    (orig / "first_env_module.py").write_text("X = 1\n", encoding="utf-8")
+    (orig / "extra").mkdir()
+    (orig / "extra" / "pth_added_module.py").write_text("Y = 2\n", encoding="utf-8")
+    (orig / "extra.pth").write_text(str(orig / "extra") + "\n", encoding="utf-8")
+    (a / U.PREVIOUS).write_text(str(orig) + "\n", encoding="utf-8")  # an update before the fix: one plain line
+    (b / U.PREVIOUS).write_text(U.previous_pth(U.chain(str(a))), encoding="utf-8")
+    (c / U.PREVIOUS).write_text(U.previous_pth(U.chain(str(b))), encoding="utf-8")
+    assert U.chain(str(b)) == [str(b), str(a), str(orig)]
+    code = f"import site; site.addsitedir({str(c)!r}); import first_env_module, pth_added_module"
+    r = subprocess.run([sys.executable, "-I", "-S", "-c", code], capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+
+
+def test_the_new_environment_takes_the_constraints_of_the_release(monkeypatch, tmp_path):
+    """I-03: the wheel is installed with -c constraints.txt of the release (from the wheel), as setup/install.py does;
+    I-02: the .pth of the new environment names the chain of the old one."""
+    import zipfile
+
+    from assistant_x.setup import constraints
+
+    old_site, new_site = tmp_path / "old_site", tmp_path / "new_site"
+    old_site.mkdir()
+    new_site.mkdir()
+    (old_site / U.PREVIOUS).write_text(str(tmp_path / "first_site") + "\n", encoding="utf-8")
+    wheel = tmp_path / "dl" / WHEEL
+    wheel.parent.mkdir()
+    with zipfile.ZipFile(wheel, "w") as z:
+        z.writestr(U.CONSTRAINTS, "numpy==1.0\n")
+    cmds = []
+    monkeypatch.setattr(U, "run", lambda cmd, dry: cmds.append(cmd) or 0)
+    monkeypatch.setattr(U, "site_packages", lambda py: str(old_site if py == "OLD-PY" else new_site))
+    U.install("OLD-PY", str(wheel), str(tmp_path / "venv-9.9.9"), False)
+    pip = cmds[-1]
+    assert pip[-1] == str(wheel) and "-c" in pip
+    assert open(pip[pip.index("-c") + 1], encoding="utf-8").read() == "numpy==1.0\n"
+    assert U.pth_dirs((new_site / U.PREVIOUS).read_text(encoding="utf-8")) == [str(old_site), str(tmp_path / "first_site")]
+    wheel.write_bytes(b"not a zip")  # a wheel without the file: the constraints of this program
+    U.install("OLD-PY", str(wheel), str(tmp_path / "venv-9.9.9"), False)
+    assert cmds[-1][cmds[-1].index("-c") + 1] == constraints.PATH
+
+
+def in_use_setup(monkeypatch, tmp_path):
+    from assistant_x.clients import claude_desktop
+
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "machine"))
+    monkeypatch.setattr(claude_desktop, "read", lambda: None)
+    release(monkeypatch)
+    monkeypatch.setattr(U, "download", lambda *a, **k: pytest.fail("nothing is downloaded"))
+    new_dir = tmp_path / "machine" / "venv-9.9.9"
+    (new_dir / "Scripts").mkdir(parents=True)
+    (new_dir / "keep.txt").write_text("in use", encoding="utf-8")
+    return new_dir
+
+
+def test_the_environment_in_use_is_never_removed(monkeypatch, tmp_path, capsys):
+    """I-04: --force on the version in use, or a rerun when the apps already start venv-<version>: refused, the folder
+    stays."""
+    from assistant_x import clients as K
+
+    new_dir = in_use_setup(monkeypatch, tmp_path)
+    py = str(new_dir / "Scripts" / "python.exe")
+    assert U.update("https://github.com/o/r", force=True, old_py=py) == 1
+    assert (new_dir / "keep.txt").exists() and "the environment in use" in capsys.readouterr().out
+    K.remember("codex", {"python": py})  # an app starts it, the update runs from an older environment
+    assert U.update("https://github.com/o/r", old_py=str(tmp_path / "venv" / "Scripts" / "python.exe")) == 1
+    assert (new_dir / "keep.txt").exists()
+
+
+def test_ctrl_c_midway_connects_the_apps_back(monkeypatch, tmp_path):
+    """I-04: any stop of the install (Ctrl+C too) connects the apps back to the old python and removes the half-made
+    environment; the interruption goes on."""
+    in_use_setup(monkeypatch, tmp_path)
+    (tmp_path / "machine" / "venv-9.9.9" / "keep.txt").unlink()
+    monkeypatch.setattr(U, "download", lambda rel, folder: "w.whl")
+    calls = []
+    monkeypatch.setattr(U, "reconnect", lambda py, dry: calls.append(py) or 0)
+
+    def stop(*a):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(U, "install", stop)
+    with pytest.raises(KeyboardInterrupt):
+        U.update("https://github.com/o/r", old_py=str(tmp_path / "venv" / "Scripts" / "python.exe"))
+    assert calls == [str(tmp_path / "venv" / "Scripts" / "python.exe")]
+    assert not (tmp_path / "machine" / "venv-9.9.9").exists()

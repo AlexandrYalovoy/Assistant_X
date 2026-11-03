@@ -10,21 +10,25 @@ r"""assistant-x update --from URL: a newer release of the program from its GitHu
 2. Nothing to do when this version is that one or newer (--force installs it again).
 3. The wheel is downloaded into the machine folder (updates\<version>) and checked against SHA256SUMS: a release
    without the sum of its wheel is refused.
-4. A new environment venv-<version> beside the one in use: it sees the packages of the old one (a .pth line), so only
-   what the new version needs more is installed; the program is installed into it from the wheel.
+4. A new environment venv-<version> beside the one in use: it sees the packages of the old one and of every one that
+   one saw (_assistant_x_previous.pth: the whole chain, as a .pth file inside a folder named by a .pth is never read),
+   so only what the new version needs more is installed, at the versions of constraints.txt of the wheel; the program
+   is installed into it from the wheel. The environment in use (or one an app starts) is never made again.
 5. The apps are connected again with the new python (assistant-x update: the entries and the skills), and assistant-x
    doctor --json runs there. When a step fails, the apps are connected back to the old python, the new environment
    is removed and the old one keeps working.
 The library, the workspace and its settings are never touched; the old environment stays (an older one than the
 previous version is removed only by hand). Standard library only."""
 
-import argparse, json, os, re, shutil, sys, urllib.parse, urllib.request
+import argparse, ast, json, os, re, shutil, sys, urllib.parse, urllib.request, zipfile
 from pathlib import Path
 
 from assistant_x.core import proc, workspace
 
 WHEEL_RX = re.compile(r"^assistant_x-(\d+(?:\.\d+)*)-py3-none-any\.whl$")
 SUMS = ("SHA256SUMS", "SHA256SUMS.txt")
+PREVIOUS = "_assistant_x_previous.pth"  # in the site-packages of a new environment: the ones of the older environments
+CONSTRAINTS = "assistant_x/setup/constraints.txt"  # in the wheel: the versions of its release
 TIMEOUT = 60
 
 
@@ -118,6 +122,64 @@ def site_packages(py):
     return out.stdout.strip()
 
 
+def same(a, b):
+    return os.path.normcase(os.path.realpath(a)) == os.path.normcase(os.path.realpath(b))
+
+
+def pth_dirs(text):
+    """The folders a .pth file of ours names: a plain line, or the folder of an "import site; site.addsitedir(...)"."""
+    out = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith(("import ", "import\t")):
+            m = re.search(r"addsitedir\((.+?)\)\s*$", line)
+            try:
+                out += [ast.literal_eval(m.group(1))] if m else []
+            except (ValueError, SyntaxError):
+                continue
+        else:
+            out.append(line)
+    return out
+
+
+def chain(site):
+    """site and every site-packages it sees through its _assistant_x_previous.pth, transitively, the newest first."""
+    out, todo = [], [site]
+    while todo:
+        d = todo.pop(0)
+        if not d or any(same(d, x) for x in out):
+            continue
+        out.append(d)
+        try:
+            todo += pth_dirs(Path(d, PREVIOUS).read_text(encoding="utf-8"))
+        except OSError:
+            continue
+    return out
+
+
+def previous_pth(dirs):
+    """The text of _assistant_x_previous.pth: site.addsitedir of every folder, so their own .pth files (pywin32, an
+    older chain) are read too, which a plain line never does."""
+    return "".join(f"import site; site.addsitedir({d!r})\n" for d in dirs)
+
+
+def constraints_of(wheel, folder):
+    """constraints.txt of the release (taken out of its wheel into folder), else the one of this program."""
+    from assistant_x.setup import constraints
+
+    try:
+        with zipfile.ZipFile(wheel) as z:
+            data = z.read(CONSTRAINTS)
+    except (OSError, KeyError, zipfile.BadZipFile):
+        return constraints.PATH
+    path = os.path.join(folder, "constraints.txt")
+    with open(path, "wb") as f:
+        f.write(data)
+    return path
+
+
 def run(cmd, dry):
     if dry:
         say("   would run: " + " ".join(cmd))
@@ -131,13 +193,12 @@ def install(old_py, wheel, new_dir, dry):
     new_py = venv_python(new_dir)
     if run([base, "-m", "venv", new_dir], dry):
         raise SystemExit(f"The new environment {new_dir} could not be made")
+    cons = "constraints.txt" if dry else constraints_of(wheel, os.path.dirname(os.path.abspath(wheel)))
     if not dry:
-        old_site = site_packages(old_py)
         new_site = site_packages(new_py)
-        Path(new_site, "_assistant_x_previous.pth").write_text(old_site + "\n", encoding="utf-8")
-    if run(
-        [new_py, "-m", "pip", "install", "--disable-pip-version-check", "--upgrade-strategy", "only-if-needed", wheel], dry
-    ):
+        Path(new_site, PREVIOUS).write_text(previous_pth(chain(site_packages(old_py))), encoding="utf-8")
+    pip = [new_py, "-m", "pip", "install", "--disable-pip-version-check", "--upgrade-strategy", "only-if-needed"]
+    if run([*pip, "-c", cons, wheel], dry):  # the versions of the release, as setup/install.py installs them
         raise SystemExit(f"The program could not be installed into {new_dir}")
     return new_py
 
@@ -154,6 +215,23 @@ def doctor(py, dry):
         return bool(json.loads(out.stdout).get("ok"))
     except ValueError:
         return False
+
+
+def env_of(py):
+    """The environment folder of a python (Scripts\\python.exe, bin/python)."""
+    return os.path.dirname(os.path.dirname(os.path.abspath(py)))
+
+
+def in_use(old_py):
+    """The environments that run now or that an app starts: this one, the one of old_py, the pythons of the apps."""
+    from assistant_x import clients as K
+
+    out = [sys.prefix, env_of(old_py)]
+    out += [env_of(s["python"]) for s in K.connections().values() if isinstance(s, dict) and s.get("python")]
+    e = K.app("claude_desktop").read()
+    if e and e.get("command"):
+        out.append(env_of(e["command"]))
+    return out
 
 
 def update(url, dry=False, force=False, old_py=None):
@@ -173,17 +251,23 @@ def update(url, dry=False, force=False, old_py=None):
         say(f"Would download {rel['wheel']} with its SHA256SUMS into {folder}, install it into {new_dir} beside the")
         say(f"environment in use ({old_py}), connect the apps again and run doctor; the library stays as it is.")
         return 0
+    if any(same(new_dir, d) for d in in_use(old_py)):  # --force on this version, or a rerun after a stop midway
+        say(f"{new_dir} is the environment in use (this program or an app starts it): it is never made again here.")
+        say("Start assistant-x update --from with the python of an older environment, or remove that folder by hand.")
+        return 1
     wheel = download(rel, folder)
-    if os.path.exists(new_dir):
-        shutil.rmtree(new_dir)
     try:
+        if os.path.exists(new_dir):  # left by an update stopped midway: no app starts it
+            shutil.rmtree(new_dir)
         new_py = install(old_py, wheel, new_dir, dry)
         if reconnect(new_py, dry) or not doctor(new_py, dry):
             raise SystemExit("assistant-x doctor found a problem in the new version")
-    except (SystemExit, OSError, ValueError, proc.SubprocessError) as e:
+    except BaseException as e:  # Ctrl+C too: the apps never stay on a half-made environment
         say(f"The update failed ({e}): the apps are connected back to {old_py}; the new environment is removed.")
         reconnect(old_py, dry)
         shutil.rmtree(new_dir, ignore_errors=True)
+        if not isinstance(e, (Exception, SystemExit)):
+            raise
         return 1
     with open(os.path.join(str(machine), "python.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(new_py + "\n")  # the python of the program in use: Install-Base.bat and Update.bat start it

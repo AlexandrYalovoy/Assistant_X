@@ -2,9 +2,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Kimi (Moonshot AI): the Kimi CLI (`kimi`, ~/.kimi/mcp.json) and Kimi Code (~/.kimi-code/mcp.json, or the folder of
 KIMI_CODE_HOME), each the mcpServers of the MCP clients (command, args, env); Kimi Code also takes startupTimeoutMs and
-toolTimeoutMs for the long first answer. The rules of the library go into the AGENTS.md of the folder, the instructions
-Kimi reads in every session, as a block between two marker comments (as for Gemini CLI). Both apps when both are
-there. All the tools: the Kimi models carry the intake too.
+toolTimeoutMs for the long first answer. The rules of the library go into the AGENTS.md of the folder, as a block
+between two marker comments (as for Gemini CLI). Both apps when both are there. All the tools: the Kimi models carry
+the intake too.
+
+Not verified: whether the Kimi CLI reads this global AGENTS.md at all (its documentation names the AGENTS.md files of
+the project, from its root down to the working folder, .kimi/AGENTS.md among them). The block is written all the same;
+the rules reach Kimi regardless through the instructions of the MCP server and its tool library_guide.
 
 The formats were checked against the documentation of Moonshot AI (2026-11-03):
 https://moonshotai.github.io/kimi-cli/en/customization/mcp.html and
@@ -20,7 +24,10 @@ from assistant_x.clients import gemini
 NAME, TITLE = "kimi", "Kimi CLI / Kimi Code"
 TOOLSET, COMPACT = "all", False
 SETTINGS = "`~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md`"
-SKILL = "a block of the short rules in `AGENTS.md` of the folder"
+SKILL = (
+    "a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified;"
+    " the instructions of the server and `library_guide` carry the rules regardless)"
+)
 BEGIN = "<!-- >>> assistant-x (assistant-x connect kimi; assistant-x disconnect kimi removes it) -->\n"
 END = gemini.END
 
@@ -81,8 +88,8 @@ def connect(e, dry):
             out.append((path, f"left alone: {why}; add by hand:\n{K.by_hand(e)}"))
             continue
         p = d / "AGENTS.md"
-        old = p.read_text(encoding="utf-8-sig") if p.exists() else ""
-        out.append((str(p), K.put(p, rules(old, gemini.guide()), dry)))
+        old = gemini.text_of(p)
+        out.append((str(p), gemini.NOT_UTF8 if old is None else K.put(p, rules(old, gemini.guide()), dry)))
     return out
 
 
@@ -95,8 +102,9 @@ def disconnect(dry):
         except K.Refused as why:
             out.append((path, f"left alone: {why}"))
         p = d / "AGENTS.md"
-        if p.exists() and BEGIN in p.read_text(encoding="utf-8-sig"):
-            out.append((str(p), K.put(p, rules(p.read_text(encoding="utf-8-sig"), None), dry)))
+        old = gemini.text_of(p)
+        if old and BEGIN in old:
+            out.append((str(p), K.put(p, rules(old, None), dry)))
     return out
 
 

@@ -43,24 +43,36 @@ def connect(names, toolset=None, compact=None, dry=False, python=None, root=None
         if a.skill_dir() is not None and not dry:
             done[name] += skills.install(name)
         if not dry and any(s in ("written", "unchanged") for _, s in done[name]):
-            from assistant_x import __version__
-
-            K.remember(
-                name,
-                {
-                    "toolset": ts,
-                    "compact": "--compact" in e["args"],
-                    "python": e["command"],
-                    "workspace": e["env"]["AX_WORKSPACE"],
-                    "version": __version__,
-                    "time": time.strftime("%Y-%m-%d %H:%M"),
-                },
-            )
+            record(name, ts, e)
         for path, status in done[name]:
             say(f"{a.TITLE}: {path}: {status}")
     if not done:
         say("No app of the list was found on this PC: " + ", ".join(K.APPS))
     return done
+
+
+def record(name, toolset, e):
+    """connections.json: the app connected with the entry e (assistant-x update writes it again with a new python)."""
+    from assistant_x import __version__
+
+    K.remember(
+        name,
+        {
+            "toolset": toolset,
+            "compact": "--compact" in e["args"],
+            "python": e["command"],
+            "workspace": e["env"]["AX_WORKSPACE"],
+            "version": __version__,
+            "time": time.strftime("%Y-%m-%d %H:%M"),
+        },
+    )
+
+
+def settings_of(e):
+    """The settings of connections.json read back from an entry of ours: {toolset, compact, workspace}."""
+    args = e.get("args") or []
+    toolset = args[args.index("--tools") + 1] if "--tools" in args[:-1] else "all"
+    return {"toolset": toolset, "compact": "--compact" in args, "workspace": (e.get("env") or {}).get("AX_WORKSPACE")}
 
 
 def disconnect(names, dry=False, say=print):
@@ -252,10 +264,18 @@ def main(argv=None, disconnecting=False):
     return 1 if refused or not done else 0
 
 
+UNRECORDED = ("claude_desktop",)  # connected by an installer before connections.json named it (setup/install.py)
+
+
 def update(say=print):
-    """connect again every app of connections.json with its own settings (the python of this program)."""
-    done = {}
-    for name, s in K.connections().items():
+    """connect again every app of connections.json with its own settings (the python of this program); Claude Desktop
+    too when its settings have the entry of the library but connections.json does not name it (an older install)."""
+    done, conns = {}, dict(K.connections())
+    for name in UNRECORDED:
+        e = None if name in conns else K.app(name).read()
+        if e:
+            conns[name] = settings_of(e)
+    for name, s in conns.items():
         if name in K.APPS:
             done.update(connect([name], s.get("toolset"), s.get("compact"), root=s.get("workspace"), say=say))
     if not done:

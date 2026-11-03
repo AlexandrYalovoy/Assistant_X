@@ -201,3 +201,31 @@ def test_a_build_adds_the_key_norms_of_a_new_norm_and_drops_those_of_one_taken_o
     build(path)
     got = K.read(K.path_of(cfg))
     assert got["topics"][0]["entries"] == [] and "N-00009" not in got["seen"]
+
+
+def test_a_build_makes_the_key_norms_of_a_library_that_has_none(tmp_path, monkeypatch):
+    """I-05: a library without index/key_norms.json (an install or update that never ran --refresh) gets one at its
+    next build, its norms verified without a search; a file that cannot be read is left alone."""
+    from assistant_x.core import card as C
+    from tests.search.conftest import TEXT, card, write
+
+    monkeypatch.setattr(K, "topics_of", lambda cfg: [TOPIC])
+    path = make_library(str(tmp_path / "lib"))
+    cfg = load_config(path)
+    idx = os.path.join(str(tmp_path / "lib"), "index")
+    new = card(
+        "N-00009", "Field facilities", "Обустройство месторождений", "standard", "01_Standards", "N-00009.pdf", TEXT, 1
+    )
+    new["doc"]["designation"] = {"ru": "ГОСТ Р 99999-2026"}
+    C.dump(new, os.path.join(idx, "cards", "N-00009.json"))
+    write(os.path.join(idx, "texts", "N-00009.md"), "=== page 1 ===\n\n" + PAGE + "\n")
+    if os.path.exists(K.path_of(cfg)):
+        os.remove(K.path_of(cfg))
+    build(path)
+    got = K.read(K.path_of(cfg))
+    assert got and [(e["code"], e["pdf_page"]) for e in got["topics"][0]["entries"]] == [("N-00009", 1)]
+    assert "N-00009" in got["seen"]
+    with open(K.path_of(cfg), "w", encoding="utf-8") as f:
+        f.write("{not json")
+    assert K.update(cfg, cfg["db"], say=lambda s: None) is None
+    assert open(K.path_of(cfg), encoding="utf-8").read() == "{not json"
