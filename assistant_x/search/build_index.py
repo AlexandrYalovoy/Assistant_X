@@ -442,6 +442,9 @@ def build(a):
     con.close()  # the old base may be deleted right below: no connection of this process may hold any base
     n_docs, n_open = catalog.write(Path(cfg["catalog"]).parent, profile=cfg, cards={c: v[0] for c, v in cards.items()})
     print(f"Catalog: {n_docs} documents; sources to update: {n_open} open items.")
+    from assistant_x.search import key_norms
+
+    key_norms.update(cfg, cfg["db"])  # the key norms of the topics: the documents gone dropped, the new ones verified
     if a.full:
         if had_vectors(cfg, in_use):  # switching now would leave the search without meaning for an hour
             set_pointer(cfg["index_dir"], DB_NEXT, cfg["db"])

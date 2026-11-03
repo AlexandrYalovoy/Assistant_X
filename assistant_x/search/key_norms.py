@@ -6,8 +6,13 @@ the order of the hierarchy of documents. search_library puts the key norms of th
 governing standard of a design question is found even when its table is far from the words of the question by
 meaning (the velocity table of GOST R 58367 for "how to choose the diameter of a gas pipeline").
 
-    assistant-x key-norms            build index/key_norms.json of the workspace (searches, verifies, writes)
+    assistant-x key-norms --refresh  build index/key_norms.json of the workspace anew (searches, verifies, writes)
     assistant-x key-norms --show     the topics and their pages
+
+After every build of the search base (an intake applied, a base package installed or updated, documents taken out)
+update() brings the list up to date without a search: the entries of documents gone or changed are dropped, the pages
+of new or changed norms are verified against every topic by the same rule; "seen" keeps the sha of the card of every
+norm verified. New topics are a deliberate step (key_topics.json of the profile), never automatic.
 
 index/key_norms.json is library data: a base package carries it (its codes remapped on install).
 Every entry was verified: its page has the words of the topic and a value (a number with its unit, a table row);
@@ -109,13 +114,116 @@ def build(lib, topics, say=print):
         entries.sort(key=lambda e: e["level"] if e["level"] is not None else 99)  # stable: the search order in a level
         out.append(dict(id=t["id"], name=t["name"], ask=t["ask"], entries=entries[:PER_TOPIC]))
         say(f"{t['id']}: {len(entries[:PER_TOPIC])} pages ({', '.join(e['code'] for e in entries[:PER_TOPIC])})")
+    seen = {c: s or "" for c, s in lib.con.execute("SELECT code, card_sha FROM docs WHERE code LIKE 'N-%'")}
     return dict(
         version=1,
         built=datetime.date.today().isoformat(),
         topics=out,
         verified=verified,
         dropped=dropped,
+        seen=seen,
     )
+
+
+def update(cfg, db=None, say=print):
+    """The key norms after a build of the search base, without a search: (added, dropped), or None when the library
+    has no key norms or its profile no topics. The entries of documents no longer in the base, or whose card changed
+    (a new edition under its code, a card corrected), are dropped; the pages of the norms not seen yet (new or changed)
+    are verified against every topic (evidence: the words of the topic and its value in one line), the best page of a
+    document for a topic kept; a topic keeps PER_TOPIC pages, the highest level first. A list built before "seen"
+    existed takes the norms of the base as seen (assistant-x key-norms --refresh verifies them all)."""
+    from assistant_x.core import config, hierarchy
+    from assistant_x.core.common import connect
+    from assistant_x.search import jurisdiction
+
+    data, topics = read(path_of(cfg)), topics_of(cfg)
+    if not data or not topics:
+        return None
+    con = connect(db or cfg["db"], readonly=True)
+    try:
+        docs = {
+            r[0]: r
+            for r in con.execute(
+                "SELECT code, card_sha, designation, title, json_extract(card, '$.doc.jurisdiction') FROM docs "
+                "WHERE code LIKE 'N-%'"
+            )
+        }
+        seen = data.get("seen")
+        if seen is None:
+            seen = {c: r[1] or "" for c, r in docs.items()}
+        gone = {c for c in seen if c not in docs or (docs[c][1] or "") != seen[c]}
+        fresh = [c for c, r in docs.items() if seen.get(c) != (r[1] or "") or c in gone]
+        prof = config.profile_dir(cfg.get("profile")) if cfg.get("profile") else None
+        hier = hierarchy.load(cfg.get("workspace"), prof)
+        jur = jurisdiction.load(cfg.get("profile"))
+        dropped = 0
+        for t in data.get("topics", []):
+            keep = [e for e in t.get("entries", []) if e["code"] in docs and e["code"] not in gone]
+            dropped += len(t.get("entries", [])) - len(keep)
+            t["entries"] = keep
+        added = 0
+        by_id = {t["id"]: t for t in data.get("topics", [])}
+        for code in fresh:
+            _, sha, designation, title, field = docs[code]
+            level = hier.rank(designation, title, code)
+            row = {"designation": designation, "title": title, "jurisdiction": field or ""}
+            if level > MAX_LEVEL or (jur and jur.of(row) in jur.extra):
+                seen[code] = sha or ""
+                continue
+            pages = [(p, t, words(t)) for p, t in con.execute("SELECT page, text FROM pages WHERE code=?", (code,))]
+            for topic in topics:
+                best = None
+                for page, text, ws in pages:
+                    if not (has(topic["verify"], ws) and has(topic["ask"], ws)):
+                        continue
+                    quote = evidence(topic, text)
+                    score = len(quotes.found(quotes.stems(" ".join(topic["queries"])), quote)) if quote else 0
+                    if quote and (best is None or score > best[0]):
+                        best = (score, page, quote)
+                if not best:
+                    continue
+                t = by_id.setdefault(topic["id"], dict(id=topic["id"], name=topic["name"], ask=topic["ask"], entries=[]))
+                if not any(e["code"] == code for e in t["entries"]):
+                    t["entries"].append(
+                        dict(
+                            code=code,
+                            designation=(designation or "").split(" / ")[-1],
+                            title=title,
+                            level=level,
+                            pdf_page=best[1],
+                            quote=best[2],
+                        )
+                    )
+                    added += 1
+            seen[code] = sha or ""
+        for c in [c for c in seen if c not in docs]:
+            del seen[c]
+        for t in by_id.values():
+            t["entries"] = sorted(t["entries"], key=lambda e: e["level"] if e.get("level") is not None else 99)
+            t["entries"] = t["entries"][:PER_TOPIC]
+        data["topics"], data["seen"] = list(by_id.values()), seen
+    finally:
+        con.close()
+    write(path_of(cfg), data)
+    say(f"Key norms: +{added}, -{dropped} (assistant-x key-norms --show lists them).")
+    return added, dropped
+
+
+def check(cfg, con):
+    """[warnings] of index/key_norms.json against the base: a code not in it, a page it lacks, a quote no longer on
+    its page; [] when the library has no key norms."""
+    data = read(path_of(cfg))
+    if not data:
+        return []
+    out = []
+    for t in data.get("topics", []):
+        for e in t.get("entries", []):
+            row = con.execute("SELECT text FROM pages WHERE code=? AND page=?", (e["code"], e["pdf_page"])).fetchone()
+            if row is None:
+                out.append(f"key norms, {t['id']}: {e['code']} PDF {e['pdf_page']} is not in the base")
+            elif not has(t.get("ask") or [], words(row[0])):
+                out.append(f"key norms, {t['id']}: {e['code']} PDF {e['pdf_page']} no longer has the words of the topic")
+    return out
 
 
 _cache = {}
@@ -204,6 +312,7 @@ def remap(data, codes):
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="assistant-x key-norms", description=__doc__.split("\n\n")[0])
     ap.add_argument("--show", action="store_true", help="the topics and their pages")
+    ap.add_argument("--refresh", action="store_true", help="build the list anew (the default)")
     a = ap.parse_args(argv)
     from assistant_x.core.common import load_config
     from assistant_x.search.retrieval import Library

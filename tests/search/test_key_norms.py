@@ -156,3 +156,48 @@ def test_the_bridge_gives_the_first_search_of_a_question_as_the_context_of_the_n
     assert T.compact_tools([{"name": "search_library", "inputSchema": {"properties": {"query": {}, "context": {}}}}])[0][
         "inputSchema"
     ]["properties"] == {"query": {}}
+
+
+def test_a_build_adds_the_key_norms_of_a_new_norm_and_drops_those_of_one_taken_out(tmp_path, monkeypatch):
+    """After an apply the build brings the list up to date without a search: a new norm with a table of the topic gets
+    an entry, the entry goes when the norm is taken out; the base check warns of an entry the base lacks."""
+    from assistant_x.core import card as C
+    from assistant_x.search import check_index
+    from tests.search.conftest import TEXT, card, write
+
+    monkeypatch.setattr(K, "topics_of", lambda cfg: [TOPIC])
+    path = make_library(str(tmp_path / "lib"))
+    cfg = load_config(path)
+    K.write(K.path_of(cfg), {"topics": [dict(TOPIC, entries=[])]})  # a list made before "seen": the base is seen
+    build(path)
+    assert K.read(K.path_of(cfg))["topics"][0]["entries"] == []
+    idx = os.path.join(str(tmp_path / "lib"), "index")
+    new = card(
+        "N-00009", "Field facilities", "Обустройство месторождений", "standard", "01_Standards", "N-00009.pdf", TEXT, 1
+    )
+    new["doc"]["designation"] = {"ru": "ГОСТ Р 99999-2026"}
+    C.dump(new, os.path.join(idx, "cards", "N-00009.json"))
+    write(os.path.join(idx, "texts", "N-00009.md"), "=== page 1 ===\n\n" + PAGE + "\n")
+    build(path)
+    got = K.read(K.path_of(cfg))
+    assert [(e["code"], e["pdf_page"], e["level"]) for e in got["topics"][0]["entries"]] == [("N-00009", 1, 5)]
+    assert "N-00009" in got["seen"]
+    K.write(
+        K.path_of(cfg),
+        dict(
+            got,
+            topics=[
+                dict(
+                    got["topics"][0],
+                    entries=got["topics"][0]["entries"] + [dict(got["topics"][0]["entries"][0], pdf_page=77)],
+                )
+            ],
+        ),
+    )
+    rep, _ = check_index.check(load_config(path))
+    assert any("N-00009 PDF 77 is not in the base" in t for k, ts in rep.items.items() for t in ts)
+    os.remove(os.path.join(idx, "cards", "N-00009.json"))
+    os.remove(os.path.join(idx, "texts", "N-00009.md"))
+    build(path)
+    got = K.read(K.path_of(cfg))
+    assert got["topics"][0]["entries"] == [] and "N-00009" not in got["seen"]

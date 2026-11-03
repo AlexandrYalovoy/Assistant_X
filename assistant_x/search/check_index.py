@@ -184,6 +184,17 @@ def check(cfg, files=True):
         ok, why = journal.is_current(idx)
         if not ok:
             warn("journal.md is out of date (update: python -m assistant_x.core.journal)", why)
+    if os.path.exists(cfg.get("db") or ""):  # the key norms of the topics against the base (search/key_norms.py)
+        from assistant_x.core.common import connect
+        from assistant_x.search import key_norms
+
+        con = connect(cfg["db"], readonly=True)
+        try:
+            stale = key_norms.check(cfg, con)
+        finally:
+            con.close()
+        for text in stale:
+            warn("key norms out of date (assistant-x key-norms --refresh builds them anew)", text)
     return rep, len(cards)
 
 
