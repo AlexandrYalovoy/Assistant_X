@@ -52,7 +52,8 @@ def settings():
 
 
 def allowed_tools():
-    """The permission rules of the reading tools ("mcp__assistant-x__search_library", ...)."""
+    """The permission rules of the reading tools ("mcp__assistant-x__search_library", ...), allowed without a
+    question; export_references writes into a folder of the user, so Claude Code asks for it each time."""
     return [f"mcp__{K.SERVER}__{name}" for name in toolsets.READER]
 
 

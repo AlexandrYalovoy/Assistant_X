@@ -6,6 +6,33 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- One form of a reference in every app and mode, built by the search itself: `[code, cl. N, table N, p. N, PDF N]`
+  (in Russian `[шифр, п. N, табл. N, стр. N, PDF N]`); the clause above the quote, the caption of its table, the
+  printed page (the page label of the PDF, else a number of its header or footer that keeps one offset over 3 pages);
+  a part not found is left out, never made up.
+- The quote marked on its page: `page_image(code, page, quote=…)` marks it in yellow (`highlight=false`: the page
+  clean); `export_references(folder, lines)` copies the files of the documents cited into a folder of the user and
+  makes there one PDF of the pages cited, a page a sheet, the reference on top and the quote marked. Only words of the
+  text layer of a page are marked, a scan says it is not; the originals never change, a file there already is
+  replaced only on the user's yes, a network or device path and the folders of the library are refused. Every answer
+  ends with a line on both.
+- Kimi: `assistant-x connect kimi` writes the library into the Kimi CLI (`~/.kimi/mcp.json`) and Kimi Code
+  (`~/.kimi-code/mcp.json`), the rules into their `AGENTS.md` (not yet checked with a running Kimi).
+- LM Studio: the reference mode answers with up to 15 verbatim quotes of the library with their references
+  (`reference_quotes` under `[search]`), grouped by the level of the documents; no analysis of its own.
+- Answers follow the hierarchy of documents (the law, technical regulations, national standards and sets of rules,
+  company documents …; plain "Constitution" at the top); the user may set their own (`library_hierarchy`).
+- Key norms of the design topics: found, verified on their pages and given first in every answer
+  (`index\key_norms.json`, brought up to date by every build, `assistant-x key-norms`).
+- The jurisdiction of a document (a field of its card, found by the intake) and a filter of the search; the home
+  norms answer, foreign national norms (American, European, British, German) come after them as a supplement, first
+  only when the question names them.
+- The engineering form of an answer: initial data, the requirements by level with quotes, the calculation by the
+  documents found, checks and conflicts, what the library lacks.
+- Search: the FAISS index looks into 1 024 clusters; a line of a table of contents is not quoted and weighs less; a
+  hit shows the lines around its best one.
+- Setup from a plain git checkout: Setup.bat downloads a signed Python when there is none, passes the exit code of the
+  installer on, and the installer needs no package before the packages are installed.
 - Administrative pages stay out of the library: a file of only such pages (a title page, an approval or familiarization sheet, an implementation plan, an order putting a document into force, a cover letter, a service memo, the explanatory note to a draft norm, a transfer act) goes to `inbox\_rejected\admin` with a manifest after its text is read, a document or a part of a set alike; bound with a real document in one file such pages go in with it. Catalogs, reviews, the results of pilot tests, methods, notices of change and orders that approve rules are never set aside, a doubt is a warning; `[intake] admin_filter` turns it off, `admin_accept` takes a file in anyway, and `assistant-x check` warns of such documents already in the library.
 
 ## 0.5.11 — 2026-11-01

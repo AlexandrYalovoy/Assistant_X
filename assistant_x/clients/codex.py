@@ -99,7 +99,7 @@ def block(e):
         f"tool_timeout_sec = {K.TOOL_TIMEOUT}\n",
     ]
     if "--tools" in e["args"]:
-        lines.append(f"enabled_tools = {value(list(toolsets.READER))}\n")
+        lines.append(f"enabled_tools = {value(list(toolsets.READER + toolsets.EXPORT))}\n")
     lines.append(f"\n[{TABLE}.env]\n")
     lines += [f"{k} = {value(v)}\n" for k, v in e["env"].items()]
     return lines

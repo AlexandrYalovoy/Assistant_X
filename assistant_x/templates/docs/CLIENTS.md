@@ -37,9 +37,12 @@ the entry of every connected app as the app does, makes the handshake, lists the
 
 ## Where the text goes
 
-The library and its search run on the PC. The pages a model reads to answer go to the maker of that model: Anthropic
-for Claude, OpenAI for Codex and ChatGPT, DeepSeek for DeepSeek models; nothing leaves the PC with a local model in
-LM Studio (or in DeepSeek Harness and Codex pointed at LM Studio).
+The library and its search run on the PC. What the tools give a model goes to the maker of that model (Anthropic
+for Claude, OpenAI for Codex and ChatGPT, DeepSeek for DeepSeek models, Google for Gemini CLI and Antigravity,
+Moonshot AI for Kimi, the provider chosen in Cursor or Cline): the question, the search hits (fragments, quotes, codes
+and titles), the pages it reads, cards, the list of documents, page images, and during the intake the drafts of the
+cards with the start of the text of the new files. Nothing leaves the PC with a local model in LM Studio (or in
+DeepSeek Harness and Codex pointed at LM Studio).
 
 ## Codex and ChatGPT
 

@@ -23,8 +23,9 @@ separate file (`<name>.axbase`).
 2. Unpack the archive of the program into a folder. When you have a base, put its `.axbase` file into the same folder,
    beside `Setup.bat`.
 3. Double-click `Setup.bat`. It installs the program and the models of the search, makes the library
-   `Documents\Assistant X` and writes the library into the settings of LM Studio (`~/.lmstudio/mcp.json`): the 8 reading
-   tools with short answers, made for small local models. At its end it names the base beside it ("A base package was
+   `Documents\Assistant X` and writes the library into the settings of LM Studio (`~/.lmstudio/mcp.json`) in the reference
+   mode made for small local models: `library_guide`, `search_library`, `read_pages` and `export_references`, with
+   short answers, and the preset "Assistant X" (its rules as the system prompt). At its end it names the base beside it ("A base package was
    found: ... Install it? [Y/N]"): answer Y. With no base beside it, the Windows window "Open a file" asks for one:
    choose the `.axbase` file, or press Cancel to go on without a base.
 4. Open LM Studio, start a chat with the model and turn on the server `assistant-x` among its tools (integrations).
@@ -42,22 +43,20 @@ Start a question with `AX:` so that the model works with the library:
 AX: what is the design pressure of a three-phase separator by GOST R 58367?
 ```
 
-The model calls `library_guide` once (the rules of the answers and the shelves of the library), searches with
-`search_library`, reads the pages it needs with `read_pages` and answers citing `[code, cl. N, table N, p. N, PDF N]`. Before a
-verbatim quote or a number of a table it checks it with `verify_quote`; ask "check the quote" when in doubt. The
-library of LM Studio only reads: the intake of new documents and the base packages are done with `Setup.bat`,
-`intake.bat` or an app with all the tools (Claude, Codex).
+The model works as a reference desk: it calls `library_guide` once, searches with `search_library` and answers
+with the lines of the library about the question, up to 15, each a verbatim quote with its reference
+`[code, cl. N, table N, p. N, PDF N]`, then the sources; no analysis or calculation of its own (that is the work of
+Claude or ChatGPT). Every quote line comes from the search itself, so it is the text of the page. "Copy the
+references to D:\Project": the model calls `export_references`, which puts there the files of the documents cited and
+one PDF of the pages cited with the quotes marked. Nothing else is written: the intake of new documents and the base
+packages are done with `Setup.bat`, `intake.bat` or an app with all the tools (Claude, Codex).
 
 ## A preset for small models
 
-A small model keeps the rules better with them in its system prompt:
-
-```
-assistant-x skill --app guide
-```
-
-writes `system-prompt.md` into `Documents\Assistant X\skill`. In LM Studio make a preset of the model and paste the
-text into its system prompt.
+`connect lmstudio` (and so `Setup.bat`) writes the preset `Assistant X` beside the settings of LM Studio
+(`~/.lmstudio/config-presets/Assistant X.preset.json`): the rules of the reference mode as the system prompt and
+thinking off, so that the model answers instead of thinking at length. Choose it for the model in LM Studio; the
+model works without it too, the rules reach it through `library_guide`.
 
 ## When something fails
 

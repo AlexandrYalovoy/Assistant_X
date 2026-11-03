@@ -1,3 +1,5 @@
+# Assistant X — Copyright (C) 2026 Alexandr Yalovoy
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """The intake modules run by themselves (python -m, as apply_job runs them) with the output in a legacy code page:
 a character such as an arrow is replaced instead of stopping the command halfway (an apply stopped on a log line)."""
 

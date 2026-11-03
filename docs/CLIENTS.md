@@ -35,7 +35,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | none: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | none: `library_guide` |
 | Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | none: `library_guide` |
-| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | all | a block of the short rules in `AGENTS.md` of the folder |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | all | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
 
 `--full` gives an app every tool without the compact answers, `--reader` only the reading tools, `--compact` the short
 answers. A copy of a settings file is kept beside it before a change (`<name>.backup-<date>`, the newest three), the
@@ -48,9 +48,12 @@ the entry of every connected app as the app does, makes the handshake, lists the
 
 ## Where the text goes
 
-The library and its search run on the PC. The pages a model reads to answer go to the maker of that model: Anthropic
-for Claude, OpenAI for Codex and ChatGPT, DeepSeek for DeepSeek models; nothing leaves the PC with a local model in
-LM Studio (or in DeepSeek Harness and Codex pointed at LM Studio).
+The library and its search run on the PC. What the tools give a model goes to the maker of that model (Anthropic
+for Claude, OpenAI for Codex and ChatGPT, DeepSeek for DeepSeek models, Google for Gemini CLI and Antigravity,
+Moonshot AI for Kimi, the provider chosen in Cursor or Cline): the question, the search hits (fragments, quotes, codes
+and titles), the pages it reads, cards, the list of documents, page images, and during the intake the drafts of the
+cards with the start of the text of the new files. Nothing leaves the PC with a local model in LM Studio (or in
+DeepSeek Harness and Codex pointed at LM Studio).
 
 ## Codex and ChatGPT
 

@@ -37,7 +37,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | нет: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | нет: `library_guide` |
 | Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | нет: `library_guide` |
-| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | all | блок кратких правил в `AGENTS.md` папки |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | all | блок кратких правил в `AGENTS.md` папки (читает ли Kimi CLI глобальный файл, не проверено; инструкции сервера и `library_guide` передают правила в любом случае) |
 
 `--full` даёт приложению все инструменты без компактных ответов, `--reader` — только инструменты чтения, `--compact` —
 короткие ответы. Перед изменением рядом с файлом настроек сохраняется его копия (`<name>.backup-<date>`, три
@@ -51,9 +51,12 @@ app ──stdio──> assistant-x mcp ─────────────�
 
 ## Куда уходит текст
 
-Библиотека и поиск по ней работают на ПК. Страницы, которые модель читает для ответа, уходят создателю этой модели:
-Anthropic для Claude, OpenAI для Codex и ChatGPT, DeepSeek для моделей DeepSeek; с локальной моделью в LM Studio (или
-в DeepSeek Harness и Codex, направленных на LM Studio) ничего не покидает ПК.
+Библиотека и поиск по ней работают на ПК. То, что инструменты дают модели, уходит создателю этой модели (Anthropic
+для Claude, OpenAI для Codex и ChatGPT, DeepSeek для моделей DeepSeek, Google для Gemini CLI и Antigravity, Moonshot AI
+для Kimi, поставщик, выбранный в Cursor или Cline): вопрос, найденное (фрагменты, цитаты, шифры и названия), прочитанные
+страницы, карточки, список документов, изображения страниц, а при разборе — черновики карточек с началом текста новых
+файлов. С локальной моделью в LM Studio (или в DeepSeek Harness и Codex, направленных на LM Studio) ничего не покидает
+ПК.
 
 ## Codex и ChatGPT
 

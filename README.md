@@ -24,8 +24,9 @@ students, doctors, lawyers, economists.
   question after a start waits about 20 s for the models; meanwhile the search answers by words.
 - **One library for all your AI apps.** A single local service loads the models once (an NVIDIA, AMD or Intel video
   card, or the processor) and serves every connected app at the same time.
-- **Private by design.** Documents, texts and the search stay on your PC; a model sees only the pages it reads to
-  answer, and with a local model in LM Studio nothing leaves the PC.
+- **Private by design.** Documents, texts and the search stay on your PC; a model in the cloud sees what the tools
+  give it for a question (the search hits, the pages it reads, cards), and with a local model in LM Studio nothing
+  leaves the PC.
 - **Share a library.** Export it as a base package and install it in another workspace, merged with the documents
   already there.
 - **English and Russian** documents out of the box; one card schema and one set of shelves for any field, with domain
@@ -89,11 +90,11 @@ Version 0.5.11 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the da
 
 ### One service for all your apps
 
-- One command connects them: `assistant-x connect auto` finds Claude Desktop, Claude Code, Codex, DeepSeek Harness
-  and LM Studio and writes the library into each.
+- One command connects them: `assistant-x connect auto` finds Claude Desktop, Claude Code, Codex, DeepSeek Harness,
+  LM Studio, Gemini CLI, Antigravity, Cursor, Cline and Kimi and writes the library into each.
 - One local service per PC: the models are loaded once and serve every app at the same time.
 - An NVIDIA video card (CUDA), an AMD or Intel one (DirectML), or the processor.
-- A mode for small local models (`--compact`) and a read-only set of tools (`--tools reader`).
+- A mode for small local models (`--compact`) and a reading set of tools (`--tools reader`: it changes nothing in the library).
 - MCP over HTTP for other clients, with an access token.
 - The skill of every app is written by the program and refreshed with a new version.
 
@@ -106,7 +107,7 @@ Version 0.5.11 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the da
 
 ### Privacy and security
 
-- Documents, texts, the base and the search stay on your PC; a model gets only the pages it reads to answer.
+- Documents, texts, the base and the search stay on your PC; a model gets what the tools give it for a question.
 - With a local model in LM Studio nothing leaves the computer.
 - The library changes only through a plan and its confirmation token.
 - Documents are treated as untrusted: hidden instructions in a text are found and marked.
@@ -231,8 +232,11 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
 - **An app with MCP:** Claude Desktop or Claude Code; Codex (CLI, IDE) or the ChatGPT desktop app; DeepSeek
   Harness; LM Studio with a model that can call tools; or any MCP client (stdio, or streamable HTTP with
   `assistant-x serve --http`). The library also works from the command line alone ("Without an app" below).
-- **Where your text goes:** the search runs on your PC, but the pages the model reads to answer go to the provider of
-  that model (Anthropic, OpenAI, DeepSeek). For confidential documents use a local model in LM Studio.
+- **Where your text goes:** the search runs on your PC, but what the tools give the model goes to the provider of
+  that model (Anthropic, OpenAI, DeepSeek, Google, Moonshot AI for Kimi, the provider set in Cursor or Cline): your
+  question, the search hits (fragments, quotes, codes and titles of documents), the pages it reads, cards and the
+  list of documents, page images, and during "AX: sort my documents" the drafts of the cards with the headings and the
+  start of the text of the new files and their names. For confidential documents use a local model in LM Studio.
 
 ## Getting started (Windows)
 
@@ -337,7 +341,7 @@ paths into `assistant_x.local.toml`. The tests (all but the slow ones) run in CI
 ### Connect your apps
 
 `assistant-x connect auto` (Setup.bat runs it) writes the entry of the library into every app it finds; `assistant-x
-connect APP` one app (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`), `--full` gives an app every tool,
+connect APP` one app (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`, `kimi`), `--full` gives an app every tool,
 `assistant-x disconnect APP` takes it out. A copy of the settings file is kept beside it, the entries of others stay.
 Every entry starts the same light bridge, `<python> -m assistant_x.server.bridge`, which talks to one library service
 on 127.0.0.1: the models are loaded once for all the apps. By hand (any MCP client that starts a program):
@@ -364,8 +368,8 @@ After a new version, `assistant-x update` writes the entries again; the skills o
 service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
 outdated.
 
-`--tools reader` gives the 8 reading tools (search, pages, contents, page image, quote check, card, list, the guide);
-without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
+`--tools reader` gives the 8 reading tools (search, pages, contents, page image, quote check, card, list, the guide)
+and `export_references`, which writes copies of the references only into a folder the user names; without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
 models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
 `assistant-x serve --http [--port 8765]` (every request needs the bearer token of `mcp_http_token.txt` in the PC folder:
 [SECURITY.md](SECURITY.md)).
