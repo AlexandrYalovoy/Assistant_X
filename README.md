@@ -192,6 +192,13 @@ The levels and their designation patterns are data (`hierarchy.json` of the prof
 assistant "my hierarchy is: …": it shows the levels and, on your yes, writes `hierarchy.json` into the workspace
 (the tool `library_hierarchy`), which is then used instead of the profile's.
 
+### LM Studio: the reference mode
+
+A local model in LM Studio answers as a reference desk: up to 15 verbatim quotes of the library, each with its
+reference `[code, PDF N]`, grouped by the level of the documents, then the sources; no analysis of its own. The number
+is a setting: `reference_quotes = 15` under `[search]` in `assistant_x.toml`. The full engineering answer (initial data,
+requirements by level, calculation, checks) comes from Claude or ChatGPT (Codex).
+
 ## Your workspace (not in the repository)
 
 All your data lives in one folder, `Documents\Assistant X` by default (`assistant-x init [FOLDER]` makes it; another

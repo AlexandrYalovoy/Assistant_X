@@ -26,7 +26,7 @@ TOOLSETS = ("reader", "all")
 # other tools are hidden, their descriptions would only take its context
 REFERENCE = ("library_guide", "search_library", "read_pages")
 HIDDEN_ARGS = ("quotes", "reference", "context")  # set by the bridge in the compact mode, not shown to the model
-COMPACT_CHARS = 6000  # about 1 500–2 000 tokens of an answer
+COMPACT_CHARS = 12000  # about 3 500-4 000 tokens of an answer: 15 quote lines of a search fit
 COMPACT_K = 3  # search_library results in the compact mode, at most: the best of the library
 COMPACT_NORMS = 3  # and the best of shelf N (standards, company documents) after them
 CUT_NOTE = (
@@ -103,8 +103,9 @@ WEAK_STOP = (
 
 
 FORM_HINT = (
-    "Reference mode, answer in the user's language: 1) one line: what was found; 2) three to six of the lines below, "
-    "copied exactly: «quote» — [code, PDF N], title; 3) Sources: code, title. No explanation, no calculation, no "
+    "Reference mode, answer in the user's language: 1) one line: what was found; 2) every line below that is about "
+    "the question (up to 15), copied exactly, grouped by the level of the documents, the highest first: «quote» — "
+    "[code, PDF N], title; 3) Sources: code, title. No explanation, no calculation, no "
     'advice, nothing from yourself. If no line is about the question, answer only "The library has no documents on '
     "this question\" in the user's language."
 )

@@ -385,6 +385,12 @@ def search_library(
     light = not full_mode()
     if light:
         cpu_mode()
+    reference = COMPACT if quotes is None else quotes
+    want = int(lib().cfg.get("reference_quotes", REFERENCE_QUOTES)) if reference else 0
+    if reference:  # the reference mode quotes up to want lines: the search finds enough for them, of more documents
+        k = max(k, (want * 3 + 4) // 5)
+        if not sections and not codes:
+            norms = max(norms, want - k)
     res = find_fragments(
         query,
         k,
@@ -421,8 +427,8 @@ def search_library(
     pending = f"{pending}\n\n" if pending else ""
     if not res:
         return pending + "Nothing found. Try other terms or remove the filters."
-    if COMPACT if quotes is None else quotes:  # the reference mode: lines ready to copy, short to save the context
-        got = quotes_mod.lines(query, res)
+    if reference:  # the reference mode: lines ready to copy, short to save the context
+        got = quotes_mod.lines(query, res, n=want)
         if not got:
             return pending + "Nothing found on the pages (only the cards of documents). Try other terms."
         return pending + quotes_mod.HEAD + "\n\n" + "\n".join(got)
@@ -480,6 +486,7 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
     return res
 
 
+REFERENCE_QUOTES = 15  # quote lines of a search in the reference mode at most ([search] reference_quotes)
 SUPPLEMENT_SURE = 0.7  # the reranker's certainty a supplement hit needs: trap questions 0.001-0.01, on topic 0.87-1.0
 
 

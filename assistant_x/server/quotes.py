@@ -200,8 +200,19 @@ def line(query, r):
     return f"«{quote}»{table} — [{r['code']}, {at}], {title}{mark}"
 
 
-def lines(query, res):
+PER_DOC = 2  # quote lines of one document in a search: the others get places too
+
+
+def lines(query, res, n=None):
     """The lines of the page hits, one per hit, the highest level of the hierarchy of documents first (the order of
-    the search within a level); [] when no hit has a page."""
+    the search within a level), PER_DOC of a document and n at most (all when None); [] when no hit has a page."""
     ranked = sorted(res, key=lambda r: (bool(r.get("supplement")), r.get("level") if r.get("level") is not None else 99))
-    return [x for x in (line(query, r) for r in ranked) if x]
+    out, per = [], {}
+    for r in ranked:
+        if per.get(r["code"], 0) >= PER_DOC:
+            continue
+        x = line(query, r)
+        if x:
+            per[r["code"]] = per.get(r["code"], 0) + 1
+            out.append(x)
+    return out[:n] if n else out
