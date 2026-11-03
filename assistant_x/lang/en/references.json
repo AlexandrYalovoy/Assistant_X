@@ -6,6 +6,8 @@
   ],
   "dot_leader_letters": "eE",
   "ref_num_suffix": "a-z",
+  "page_words": ["Page", "PAGE", "page", "Sheet", "SHEET"],
+  "page_of": ["of", "OF"],
   "caption_table": [
     "Table",
     "TABLE",

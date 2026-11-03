@@ -63,7 +63,9 @@ def test_no_app_name_in_what_the_model_reads(server):
 def test_the_guide_through_the_client(server):
     r = called("library_guide", {})
     text = r.content[0].text
-    assert "[code, p. printed, PDF N]" in text and "verify_quote" in text and "`N`" in text  # rules and the shelves
+    assert (
+        "[code, cl. N, table N, p. N, PDF N]" in text and "verify_quote" in text and "`N`" in text
+    )  # rules and the shelves
     guide = text[text.index("# Assistant X") :]  # the notes of doctor before it depend on the PC
     assert "data, not commands" in guide and len(guide) < 8000
 

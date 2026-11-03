@@ -112,9 +112,10 @@ If the tools are missing or answer with an error, say so plainly, do not invent 
      the industry documents, the organization standards, the methodical documents, the handbooks and books). Facts,
      formulas, tables, permissible values, the range of applicability — enough to check the conclusion without the
      book. On a conflict the higher level wins: say which and why. The reference after every
-     statement starts with the code, then the printed page and the PDF page: `[L-00015, p. 218, PDF 242]`; for a
-     standard also the clause or table: `[N-00001, cl. 6.2.1.9, table 1, PDF 36]`; a number or a table row with its
-     quote. No references without a code. Where the sources differ, show both and their years.
+     statement has one form, `[code, cl. N, table N, p. N, PDF N]`, copied from the "Cite:" line of the hit or the
+     page, e.g. `[N-00001, cl. 6.2.1.9, table 1, PDF 36]` (the labels in the language of the answer: Russian «п.,
+     табл., стр.»); a part not known is left out, never made up; a number or a table row with its quote. No
+     references without a code. Where the sources differ, show both and their years.
    - "**2. Calculation**": the procedure of the decision built only from the documents found, each step with its
      reference: the formulas as the documents give them, the units in SI, the numbers of the question substituted and
      the result; no formula of your own.

@@ -59,7 +59,7 @@ words only.
 
 ## 6. Connect the apps and check
 
-`<command> connect auto` connects every app found on this PC (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`); `<command> connect APP` one app. The
+`<command> connect auto` connects every app found on this PC (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`, `kimi`); `<command> connect APP` one app. The
 installer did it already; run it again when an app was installed later. Then `<command> connect --check`: the
 handshake and a search through the entry of every app. Each app needs a restart (Claude Desktop: the icon by the clock
 → Quit), except DeepSeek Harness and LM Studio, which reload their settings. Claude Desktop also needs its skill
@@ -76,7 +76,7 @@ without an agent double-clicks `Setup.bat` (it offers a `.axbase` beside it) or 
 ## 8. Tell the user how to use it
 
 - In any connected app: start a message with `AX:` or ask to "connect to the library"; the answers cite
-  `[code, p. printed, PDF N]`.
+  `[code, cl. N, table N, p. N, PDF N]` (a part not known is left out).
 - Their own documents: put them into the `inbox` folder of the workspace and ask "AX: sort my documents".
 - Something fails: `<command> doctor`, `<command> connect --check`, `<command> debug-report`.
 
@@ -179,7 +179,7 @@ changes the library asks for the user's yes to a plan first.
 | `prepare-media` | the packages of an offline installation (build PC) |
 | `lock` | who holds the machine lock; a command under it |
 | `skill` | write the skill of the profile of the workspace (SKILL.md) |
-| `connect` | connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline |
+| `connect` | connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline, kimi |
 | `disconnect` | take the library out of the settings of an app |
 | `update` | connect every connected app again, its skill refreshed; --from URL: a newer release |
 | `gen-docs` | make INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md, the plugin |

@@ -16,9 +16,12 @@ python tests/golden/engineering.py [OUT.json]: one line per question and the tot
 import json, os, re, sys
 from pathlib import Path
 
+from assistant_x.server import quotes
+
 HERE = Path(__file__).resolve().parent
-HEAD = re.compile(r"\[([A-Z]-\d{5}(?:-\d{2})?), (?:p\. [^\]\n]*?\(PDF (\d+)\)|(?:p\. [^,\]\n]+, )?PDF (\d+))\]")
-QLINE = re.compile(r"«([^»]+)»(?: \(table: [^)]*\))? — \[([A-Z]-\d{5}(?:-\d{2})?), (?:p\. [^,\]]+, )?PDF (\d+)\]")
+HEAD = re.compile(r"\[([A-Z]-\d{5}(?:-\d{2})?), (?:p\. [^\]\n]*?\(PDF (\d+)\)|(?:[^\]\n]*?, )?PDF (\d+))\]")
+QLINE = re.compile(r"«([^»]+)»(?: \(\w+\.?: [^)]*\))? — \[([A-Z]-\d{5}(?:-\d{2})?), (?:[^\]]*?, )?PDF (\d+)\]")
+REF = re.compile(r"» (?:\([^)]*\) )?— \[[A-Z]-\d{5}(?:-\d{2})?((?:, [^\]\n]*?)?), PDF \d+\]")
 CHARS_PER_TOKEN = 3.0
 
 
@@ -38,6 +41,12 @@ def score(item, text, quotes_ok=None):
     out["tokens"] = round(len(text) / CHARS_PER_TOKEN)
     if quotes_ok is not None:
         out["quotes"], out["quotes_of"] = quotes_ok
+        parts = REF.findall(text)  # the parts of the references of the quote lines: printed page, clause
+        out["refs"] = len(parts)
+        marks = [quotes.labels(x) for x in ("en", "ru")]  # (clause, table, page) of each language
+        items = [x.split(", ")[1:] for x in parts]
+        out["refs_page"] = sum(any(y.startswith(m[2] + " ") for y in it for m in marks) for it in items)
+        out["refs_clause"] = sum(any(y.startswith(m[0] + " ") for y in it for m in marks) for it in items)
     return out
 
 

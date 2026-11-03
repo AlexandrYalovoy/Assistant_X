@@ -168,6 +168,7 @@ class Library:
             self._model_mismatch = models.model_mismatch(self.cfg, self.con)
             self._load_cards()
             self.maps = Maps(lambda: self.con)  # outline and tables/figures/formulas of each document (bookmap.py)
+            self._printed = {}  # code -> {PDF page: printed page} found in the text (printed.py)
             self._stamp = stamp
 
     def _load_cards(self):
@@ -656,7 +657,7 @@ class Library:
                     designation=r.get("designation") or "",
                     jurisdiction=r.get("jurisdiction") or "",
                     sure=(stats.get("sure") or {}).get(r["id"]),
-                    label=None if card else r["label"],
+                    label=None if card else r["label"] or self.printed(r["code"]).get(r["page"]),
                     page_note="" if card else page_note(r["page_score"], r["page_flags"]),
                 )
             )
@@ -808,11 +809,26 @@ class Library:
         status = "not_found" if ratio < QUOTE_RATIO else "found" if at == page else "found_nearby"
         return result(status, at, False, ratio, closest, diff)
 
-    def page_info(self, code, start, end):
-        """{page: (label, recognition score, flags)} of the pages of a document."""
+    def printed(self, code):
+        """{PDF page: printed page} of a document without page labels, found in its headers and footers
+        (printed.py): read once per state of the base."""
         self.refresh()
+        code = code.strip().upper()
+        got = self._printed.get(code)
+        if got is None:
+            from assistant_x.search import printed
+
+            rows = self.con.execute("SELECT page, text FROM pages WHERE code=? AND COALESCE(label, '') = ''", (code,))
+            got = self._printed[code] = printed.detect(dict(rows.fetchall()))
+        return got
+
+    def page_info(self, code, start, end):
+        """{page: (label, recognition score, flags)} of the pages of a document: the label of the PDF, else the
+        printed page found in the text (printed)."""
+        self.refresh()
+        found = self.printed(code)
         return {
-            r[0]: (r[1], r[2], r[3])
+            r[0]: (r[1] or found.get(r[0]), r[2], r[3])
             for r in self.con.execute(
                 "SELECT page, label, ocr_score, flags FROM pages WHERE code=? AND page BETWEEN ? AND ? ORDER BY page",
                 (code.strip().upper(), start, end),

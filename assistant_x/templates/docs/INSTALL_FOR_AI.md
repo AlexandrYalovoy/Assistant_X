@@ -76,7 +76,7 @@ without an agent double-clicks `Setup.bat` (it offers a `.axbase` beside it) or 
 ## 8. Tell the user how to use it
 
 - In any connected app: start a message with `AX:` or ask to "connect to the library"; the answers cite
-  `[code, p. printed, PDF N]`.
+  `[code, cl. N, table N, p. N, PDF N]` (a part not known is left out).
 - Their own documents: put them into the `inbox` folder of the workspace and ask "AX: sort my documents".
 - Something fails: `<command> doctor`, `<command> connect --check`, `<command> debug-report`.
 

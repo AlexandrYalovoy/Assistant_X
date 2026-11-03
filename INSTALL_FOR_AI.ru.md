@@ -58,7 +58,7 @@ py -3.11 -m assistant_x.setup.install --online --yes --json [--workspace "D:\My 
 
 ## 6. Подключите приложения и проверьте
 
-`<command> connect auto` подключает все приложения, найденные на этом ПК (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`); `<command> connect APP` — одно
+`<command> connect auto` подключает все приложения, найденные на этом ПК (`claude_desktop`, `claude_code`, `codex`, `dsh`, `lmstudio`, `gemini`, `antigravity`, `cursor`, `cline`, `kimi`); `<command> connect APP` — одно
 приложение. Установщик это уже сделал; запустите снова, если приложение поставили позже. Затем
 `<command> connect --check`: рукопожатие и поиск через запись каждого приложения. Каждое приложение нужно
 перезапустить (Claude Desktop: значок у часов → Quit), кроме DeepSeek Harness и LM Studio, которые перечитывают
@@ -75,7 +75,7 @@ Setup.bat с `--yes` ничего не спрашивает и не открыв
 ## 8. Расскажите пользователю, как пользоваться
 
 - В любом подключённом приложении: начните сообщение с `AX:` или попросите «подключись к библиотеке»; ответы ссылаются
-  в виде `[code, p. printed, PDF N]` (шифр, печатная страница, страница PDF).
+  в виде `[шифр, п. N, табл. N, стр. N, PDF N]` (пункт, таблица, печатная страница; неизвестная часть опускается).
 - Свои документы: положите их в папку `inbox` рабочей папки и попросите «AX: разбери мои документы».
 - Если что-то не работает: `<command> doctor`, `<command> connect --check`, `<command> debug-report`.
 
@@ -179,7 +179,7 @@ Setup.bat с `--yes` ничего не спрашивает и не открыв
 | `prepare-media` | пакеты для установки без интернета (сборочный ПК) |
 | `lock` | кто держит блокировку машины; команда под ней |
 | `skill` | записать навык профиля рабочей папки (SKILL.md) |
-| `connect` | подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline |
+| `connect` | подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline, kimi |
 | `disconnect` | убрать библиотеку из настроек приложения |
 | `update` | заново подключить все подключённые приложения и обновить их навыки; --from URL: новый релиз |
 | `gen-docs` | создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин |

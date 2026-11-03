@@ -103,9 +103,10 @@ WEAK_STOP = (
 
 
 FORM_HINT = (
-    "Reference mode, answer in the user's language: 1) one line: what was found; 2) every line below that is about "
-    "the question (up to 15), copied exactly, grouped by the level of the documents, the highest first: «quote» — "
-    "[code, PDF N], title; 3) Sources: code, title. No explanation, no calculation, no "
+    "Reference mode, answer in the user's language: 1) one line: what was found; 2) ALL the lines below that are "
+    "about the question, up to 15 (do not stop at the first few; never a line off the question), copied exactly, "
+    "grouped by the level of the documents, the highest first: «quote» — [code, …, PDF N], title; 3) Sources: code, "
+    "title. No explanation, no calculation, no "
     'advice, nothing from yourself. If no line is about the question, answer only "The library has no documents on '
     "this question\" in the user's language."
 )

@@ -13,7 +13,7 @@ students, doctors, lawyers, economists.
 
 ## At a glance
 
-- **Answers you can check.** Every answer cites `[code, printed page, PDF page]`; a quote is verified word for word
+- **Answers you can check.** Every answer cites `[code, cl. N, table N, p. N, PDF N]`; a quote is verified word for word
   against the page, and the assistant can show you the image of the original page.
 - **Takes in a whole library.** PDF and scans (OCR with a quality score per page), Word, PowerPoint, Excel, EPUB,
   FB2, DjVu, images, HTML, archives (ZIP, 7z, RAR) and e-mails with attachments. Duplicates and new editions are
@@ -40,7 +40,7 @@ Version 0.5.11 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the da
 
 ### Answers you can check
 
-- Every answer names the document and the page: `[code, p. printed, PDF N]`, with a code such as `N00012` that stays
+- Every answer names the document and the place: `[code, cl. N, table N, p. N, PDF N]` (clause, table, printed page; a part not known is left out), with a code such as `N00012` that stays
   with the document for its whole life.
 - A verbatim quote is checked against the text of its page (`verify_quote`); a quote that does not match is caught.
 - The image of the original page (`page_image`): look at a table, a diagram or a formula with your own eyes.
@@ -195,8 +195,12 @@ assistant "my hierarchy is: …": it shows the levels and, on your yes, writes `
 ### LM Studio: the reference mode
 
 A local model in LM Studio answers as a reference desk: up to 15 verbatim quotes of the library, each with its
-reference `[code, PDF N]`, grouped by the level of the documents, then the sources; no analysis of its own. The number
-is a setting: `reference_quotes = 15` under `[search]` in `assistant_x.toml`. The full engineering answer (initial data,
+reference `[code, cl. N, table N, p. N, PDF N]`, grouped by the level of the documents, then the sources; no analysis of its own. The number
+is a setting: `reference_quotes = 15` under `[search]` in `assistant_x.toml`.
+
+Every reference, in every app and mode, has one form: the code, the clause, the table, the printed page and the PDF
+page that are known, e.g. `[N-00001, cl. 6.2.1.9, table 1, PDF 36]` (in Russian `[N-00001, п. 6.2.1.9, табл. 1,
+PDF 36]`); a part that is not known is left out, never made up. The full engineering answer (initial data,
 requirements by level, calculation, checks) comes from Claude or ChatGPT (Codex).
 
 ## Your workspace (not in the repository)
@@ -227,7 +231,7 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
 
 1. [`Setup.bat`](Setup.bat) — finds or installs Python, installs the packages and the program, makes the workspace
    `Documents\Assistant X` with the profile `general`, connects the library to every app it finds (Claude Desktop,
-   Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline:
+   Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline, Kimi:
    `assistant-x connect auto`), writes the skills and runs a
    self-test. From a medium (`assistant-x prepare-media --out E:\` on a PC with internet:
    [`Setup.bat`](Setup.bat), `app\`, `packages\`, `models\` with `MODELS.json`, `programs\`) everything of the program goes to
@@ -249,7 +253,7 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
    the tool `library_guide`.
 4. Put documents into `inbox` of the workspace and write to your assistant "AX: sort my documents" (or double-click
    [`intake.bat`](intake.bat) and let the assistant write the cards afterwards).
-5. Ask, starting the message with "AX:" (or "connect to the library"). The answers cite `[code, p. printed, PDF N]`.
+5. Ask, starting the message with "AX:" (or "connect to the library"). The answers cite `[code, cl. N, table N, p. N, PDF N]`.
    `assistant-x.bat doctor` shows where everything is and what is missing, `assistant-x connect --check` whether every
    app reaches the library.
 

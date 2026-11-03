@@ -106,3 +106,44 @@ def test_the_source_warning_keeps_what_matters_for_a_citation():
         "3 pages with garbled recognition"
     )
     assert mcp_server._warn({"issue": "the English part of the card is not written yet — write it"}) == ""
+
+
+def test_the_printed_page_from_the_headers_and_footers():
+    """A number at the top or bottom that keeps one offset to the PDF page over 3 pages in a row; the header numbers
+    of a designation, an offset of 0, a lone number and two fitting offsets give nothing."""
+    from assistant_x.search.printed import detect
+
+    body = "Текст пункта 4.4.18 о скорости газа, достаточно длинная строка, чтобы не быть колонтитулом страницы.\n"
+    pages = {p: f"СП РК 4.03-101-2013*\n{body * 3}{p - 120}\n" for p in range(121, 126)}
+    pages[126] = f"СП РК 4.03-101-2013*\n{body * 3}"  # no number: the run ends
+    pages[127] = f"{body}7\n"  # a lone number
+    pages.update({p: f"- {r} -\n{body}" for p, r in ((3, "i"), (4, "ii"), (5, "iii"))})
+    pages.update({p: f"Страница {p}\n{body}" for p in range(10, 14)})  # the printed page is the PDF page
+    pages.update({p: f"Пример №{p - 20}\n{body}" for p in range(30, 34)})  # a number inside a text: not a page
+    pages.update({p: f"{body}**СТРАНИЦА  {p - 40}  ИЗ  191**\n" for p in range(50, 53)})
+    got = detect(pages)
+    assert not any(p in got for p in range(30, 34)) and got.get(51) == "11"
+    assert {p: got.get(p) for p in range(121, 128)} == {
+        121: "1",
+        122: "2",
+        123: "3",
+        124: "4",
+        125: "5",
+        126: None,
+        127: None,
+    }
+    assert got.get(5) == "iii" and not any(p in got for p in range(10, 14))
+    assert detect({p: f"{p - 1}\n{body}{p + 5}" for p in range(1, 6)}) == {}  # two offsets fit: no guess
+
+
+def test_one_form_of_a_reference_with_the_parts_known():
+    """[code, cl. N, table N, p. N, PDF N]: the labels of the language of the answer, the parts not known left out."""
+    assert quotes.cite("N-00001", 36, None, "6.2.1.9", "1", "ru") == "[N-00001, п. 6.2.1.9, табл. 1, PDF 36]"
+    assert quotes.cite("N-00001", 36, "34", None, None, "en") == "[N-00001, p. 34, PDF 36]"
+    assert quotes.cite("L-00015", 242) == "[L-00015, PDF 242]"
+    page = TABLE.replace("|Наименование", "Таблица 1 - Скорость движения технологических потоков\n\n|Наименование", 1)
+    got = quotes.line("скорость газа в трубопроводах", hit(page), "ru")
+    assert got == (
+        "«Газуглеводородный в трубопроводах | 5-20» (табл.: Наименование потоков | Скорость, м/с) — "
+        "[N-00001, п. 6.2.1.9, табл. 1, PDF 36], ГОСТ Р 58367-2019 Обустройство месторождений"
+    )

@@ -16,7 +16,7 @@ need with read_pages;
 the "References" line of a found fragment says on which PDF page the table, formula or clause it refers to lies:
 read those too; book_map shows the table of contents of a book with its pages and what lies in a section;
 check figures from tables and charts with page_image; document_info gives the card of a document (its contents with
-fields=["toc"]). Cite like this: [code, p. printed, PDF N] ("p. 218 (PDF 222)" in a hit is the printed page from the
+fields=["toc"]). Cite in one form, [code, cl. N, table N, p. N, PDF N], as the "Cite:" line gives it ("p. 218 (PDF 222)" in a hit is the printed page from the
 PDF itself; else the "page numbering" of the card gives it); a hit marked "card" is the card of a document, not a page:
 read its pages before citing. A "Page:" line of a hit or of read_pages warns about that page (a complex table, a poor
 recognition): check its numbers with page_image. Before a verbatim quote or a number taken from a table call

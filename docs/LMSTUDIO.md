@@ -43,7 +43,7 @@ AX: what is the design pressure of a three-phase separator by GOST R 58367?
 ```
 
 The model calls `library_guide` once (the rules of the answers and the shelves of the library), searches with
-`search_library`, reads the pages it needs with `read_pages` and answers citing `[code, p. printed, PDF N]`. Before a
+`search_library`, reads the pages it needs with `read_pages` and answers citing `[code, cl. N, table N, p. N, PDF N]`. Before a
 verbatim quote or a number of a table it checks it with `verify_quote`; ask "check the quote" when in doubt. The
 library of LM Studio only reads: the intake of new documents and the base packages are done with `Setup.bat`,
 `intake.bat` or an app with all the tools (Claude, Codex).

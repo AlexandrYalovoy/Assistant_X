@@ -8,7 +8,7 @@ language of the user.
 
 1. One line: what was found (which documents).
 2. Every line of the results that is about the question, up to 15 (fewer only when fewer are about it; never a
-   line off the question to fill the number), each copied exactly as `search_library` gives it: `«quote» — [code, PDF
+   line off the question to fill the number), each copied exactly as `search_library` gives it: `«quote» — [code, cl. N, table N, p. N, PDF
    N], title`, grouped by the level of the hierarchy of documents, the highest first, as given. Never change the
    words or the numbers of a quote, never write a quote that is not in the results.
 3. **Sources**: one line per document cited: code, title.

@@ -1,7 +1,7 @@
 # Assistant X — Copyright (C) 2026 Alexandr Yalovoy
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The reference mode of a small local model (LM Studio, the compact bridge): every search hit as one line ready to
-copy, «quote» — [code, PDF N], short title. The quote is the sentence or the table row of the fragment that holds the
+copy, «quote» — [code, cl. N, table N, p. N, PDF N], short title. The quote is the sentence or the table row of the fragment that holds the
 most words of the question (a table row with the header of its table), cut short to save the context of the model.
 Standard library only: the server and the bridge both use it."""
 
@@ -131,6 +131,105 @@ def pick_parts(query, text):
 WINDOW = 900  # the characters of a search hit shown around its best line
 
 
+ENGLISH = ("cl.", "table", "p.")  # the labels of a reference: clause, table, printed page
+
+
+def labels(lang):
+    """The labels of a reference in a language (lang/<code>/text.json "ref_labels"), English when it has none."""
+    from assistant_x.core import lang as packs
+
+    got = packs.get(lang, "ref_labels") if lang in packs.available() else None
+    return tuple(got) if got and len(got) == 3 else ENGLISH
+
+
+def cite(code, pdf, page=None, clause=None, table=None, lang="en"):
+    """The one form of a reference: [code, cl. 6.2.1.9, table 1, p. 36, PDF 36], the labels in the language of the
+    answer (lang/<code>/text.json "ref_labels"); a part that is not known is left out, never made up; the code and the
+    PDF page always."""
+    cl, tb, pg = labels(lang)
+    parts = [code]
+    parts += [f"{cl} {clause}"] if clause else []
+    parts += [f"{tb} {table}"] if table else []
+    parts += [f"{pg} {page}"] if page else []
+    return "[" + ", ".join(parts + [f"PDF {pdf}"]) + "]"
+
+
+_caption = []
+
+
+def caption_rx():
+    """A caption of a table (the words of the language packs, lang/<code>/references.json "caption_table") and its
+    number."""
+    if not _caption:
+        from assistant_x.core import lang
+
+        words = "|".join(lang.words("caption_table")) or "(?!)"
+        _caption.append(re.compile(rf"^\W*(?:{words})\W*\s*([^\W_][\w.\-]*)", re.I))
+    return _caption[0]
+
+
+def place(text, at):
+    """(clause, table) of the line at of a page text: the nearest number of a clause at the start of a line up to it,
+    and, for a table row, the number of the nearest caption of a table above it; None for a part not found."""
+    lines = (text or "").splitlines()
+    if not lines:
+        return None, None
+    at = max(0, min(at, len(lines) - 1))
+    clause = table = None
+    for i in range(at, max(-1, at - 40), -1):
+        m = CLAUSE.match(clean(lines[i]) + " ")
+        if m:
+            clause = m.group(0).strip().rstrip(".")
+            break
+    if lines[at].lstrip().startswith("|"):
+        for i in range(at, max(-1, at - 60), -1):
+            m = caption_rx().match(clean(lines[i]))
+            if m:
+                table = m.group(1).rstrip(".")
+                break
+    return clause, table
+
+
+def line_of(text, quote):
+    """The index of the line of a page text that holds the start of a quote (-1 when none does)."""
+    head = squash(quote.split(" | ")[0])[:30]
+    if not head:
+        return -1
+    for i, x in enumerate((text or "").splitlines()):
+        if head in squash(x):
+            return i
+    return -1
+
+
+def squash(s):
+    return re.sub(r"[\s|*_]+", "", s or "").lower()
+
+
+def best_line(query, lines):
+    """The index of the line of a fragment with the most words of the question (worth: a value counts more, a table
+    row is read with the header of its table)."""
+    if not lines:
+        return 0
+    want = stems(query)
+    header, heads = "", []
+    for x in lines:  # the header row of the table of each line ("" outside a table)
+        row = x.lstrip().startswith("|")
+        header = (header or clean(x)) if row else ""
+        heads.append(header if row else "")
+    return max(
+        range(len(lines)),
+        key=lambda i: (worth(want, clean(lines[i]), heads[i], lines[i].lstrip().startswith("|")), -i),
+    )
+
+
+def head_cite(query, r, lang="en"):
+    """The reference of a search hit in the one form (cite): the clause and the table of its line the most about the
+    question."""
+    text = r.get("text") or ""
+    clause, table = place(text, best_line(query, text.splitlines())) if text else (None, None)
+    return cite(r["code"], r["page"], r.get("label"), clause, table, lang)
+
+
 def window(query, text, n=WINDOW):
     """The lines of a fragment around the one with the most words of the question (a value counts a little more),
     n characters at most, a table row with the header row of its table; the fragment itself when it is short.
@@ -139,16 +238,7 @@ def window(query, text, n=WINDOW):
     if len(text) <= n:
         return text
     lines = text.splitlines()
-    want = stems(query)
-    header, heads = "", []
-    for x in lines:  # the header row of the table of each line ("" outside a table)
-        row = x.lstrip().startswith("|")
-        header = (header or clean(x)) if row else ""
-        heads.append(header if row else "")
-    best = max(
-        range(len(lines)),
-        key=lambda i: (worth(want, clean(lines[i]), heads[i], lines[i].lstrip().startswith("|")), -i),
-    )
+    best = best_line(query, lines)
     lo = hi = best
     size = len(lines[best])
     while True:  # the neighbours, after it first, while they fit
@@ -178,8 +268,8 @@ def cut(text, n):
     return text[: sp if sp > 0 else n].rstrip(" ,;:") + "…"
 
 
-def line(query, r):
-    """«quote» — [code, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
+def line(query, r, lang="en"):
+    """«quote» — [code, cl. N, table N, p. N, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
     if r.get("kind") in ("card", "card_q") or not r.get("page"):
         return None
     given = r.get("quote") or r.get("evidence") or ""  # a key norm: the quote that verified its topic on the page
@@ -193,17 +283,21 @@ def line(query, r):
     quote = quote.replace("«", '"').replace("»", '"')
     if not quote:
         return None
-    at = f"p. {r['label']}, PDF {r['page']}" if r.get("label") else f"PDF {r['page']}"
-    table = f" (table: {header})" if header else ""  # the columns of a row, outside the quote: it stays verifiable
+    i = line_of(r.get("text") or "", quote)
+    clause, tab = place(r.get("text") or "", i) if i >= 0 else (None, None)
+    ref = cite(r["code"], r["page"], r.get("label"), clause, tab, lang)
+    table = (
+        f" ({labels(lang)[1]}: {header})" if header else ""
+    )  # the columns of a row, outside the quote: it stays verifiable
     mark = f" [{r['supplement']}]" if r.get("supplement") else ""  # a foreign national norm, after the answer
     title = cut(" ".join((r.get("title") or "").split()), TITLE_CHARS)
-    return f"«{quote}»{table} — [{r['code']}, {at}], {title}{mark}"
+    return f"«{quote}»{table} — {ref}, {title}{mark}"
 
 
 PER_DOC = 2  # quote lines of one document in a search: the others get places too
 
 
-def lines(query, res, n=None):
+def lines(query, res, n=None, lang="en"):
     """The lines of the page hits, one per hit, the highest level of the hierarchy of documents first (the order of
     the search within a level), PER_DOC of a document and n at most (all when None); [] when no hit has a page."""
     ranked = sorted(res, key=lambda r: (bool(r.get("supplement")), r.get("level") if r.get("level") is not None else 99))
@@ -211,7 +305,7 @@ def lines(query, res, n=None):
     for r in ranked:
         if per.get(r["code"], 0) >= PER_DOC:
             continue
-        x = line(query, r)
+        x = line(query, r, lang)
         if x:
             per[r["code"]] = per.get(r["code"], 0) + 1
             out.append(x)

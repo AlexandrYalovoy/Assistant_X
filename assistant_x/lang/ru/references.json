@@ -1,6 +1,8 @@
 {
   "_comment": "Russian captions of tables, figures and appendices, and the words of references in running text ('see table 4.2', 'formula (12)', 'clause 5.3'), for the book map (search/bookmap.py). Regex pieces.",
   "ref_num_suffix": "а-я",
+  "page_words": ["Страница", "СТРАНИЦА", "страница", "Стр\\.", "стр\\.", "Лист", "ЛИСТ"],
+  "page_of": ["из", "ИЗ"],
   "caption_table": [
     "Таблица",
     "ТАБЛИЦА",

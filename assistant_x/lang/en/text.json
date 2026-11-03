@@ -63,6 +63,7 @@
     "to",
     "nor"
   ],
+  "ref_labels": ["cl.", "table", "p."],
   "_units": "the units of measure a value of a norm carries: a quote with a number and one of them is a value (server/quotes.py)",
   "units": ["mm", "cm", "m", "km", "min", "h", "s", "m/s", "ft/s", "MPa", "kPa", "bar", "psi", "°C", "°F", "kW", "in"]
 }
