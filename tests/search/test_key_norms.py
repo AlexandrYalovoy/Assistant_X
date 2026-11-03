@@ -229,3 +229,21 @@ def test_a_build_makes_the_key_norms_of_a_library_that_has_none(tmp_path, monkey
         f.write("{not json")
     assert K.update(cfg, cfg["db"], say=lambda s: None) is None
     assert open(K.path_of(cfg), encoding="utf-8").read() == "{not json"
+
+
+def test_an_install_keeps_the_key_norms_of_the_package_when_the_cards_are_written_anew(tmp_path):
+    """Release test 0.6: a list with "seen" (the sums of the cards of the library that made it) lost every entry at the
+    build after the install, which writes the cards anew, and got 5 496 candidates verified again instead."""
+    from tests.base.test_install import empty
+
+    a = make_library(str(tmp_path / "A"))
+    build(a)
+    cfg = load_config(a)
+    e = dict(code="N-00001", pdf_page=2, level=5, quote="обводнённости", designation="", title="")
+    K.write(K.path_of(cfg), {"topics": [dict(TOPIC, ask=[["обводнен"]], entries=[e])], "seen": {"N-00001": "x" * 16}})
+    pkg = str(tmp_path / "a.axbase")
+    X.export(cfg, settings.load(a)[1], pkg, "test-a", "1.0", say=lambda _: None)
+    root = str(tmp_path / "colleague")
+    assert B.install(pkg, confirm=True, config=empty(root), say=lambda _: None) == 0
+    got = K.read(os.path.join(root, "index", K.FILE))
+    assert [(x["code"], x["pdf_page"]) for t in got["topics"] for x in t["entries"]] == [("N-00001", 2)]

@@ -585,7 +585,13 @@ def key_norms(w, pkg_dir, plan):
             K.write(dst, own)
         return
     got = K.remap(K.read(src) or {}, plan.get("package_mapping") or {})
-    K.write(dst, K.merge(own or {}, got, skip=set(plan.get("skip") or ())))
+    merged = K.merge(own or {}, got, skip=set(plan.get("skip") or ()))
+    # "seen" holds the cards as the library that made the list had them: the install writes the cards anew (other
+    # sums), so the build after it would take every entry for a changed card, drop the list of the package and verify
+    # every norm again (release test 0.6: 184 key norms of the package lost, 5 496 candidates verified). Without it the
+    # build takes the norms of the base as seen, as for a list made before "seen" existed.
+    merged.pop("seen", None)
+    K.write(dst, merged)
 
 
 def config_path(w):
