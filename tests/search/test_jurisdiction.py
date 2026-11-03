@@ -91,3 +91,28 @@ def test_a_question_naming_american_norms_puts_them_before_the_key_norms(monkeyp
     assert got[0] == "N-01887" and "N-00421" in got
     got = [r["code"] for r in m.find_fragments("толщина стенки промысловой трубы", 8, {})]
     assert got[0] == "N-00421"  # a plain question: the key norm first, the American after the home ones
+
+
+def test_a_plain_question_gets_the_foreign_norms_the_reranker_is_sure_of_after_the_answer(monkeypatch):
+    from assistant_x.server import mcp_server as m
+
+    class Lib:
+        cfg = {"profile": "oil-gas-ru"}
+
+        def search(self, query, k, jurisdictions=None, **kw):
+            if jurisdictions:  # the supplement search
+                return [hit("N-02004", "UFC 3-570-06", page=19, jurisdiction="US", sure=0.99),
+                        hit("N-01887", "ASME B31G", page=2, jurisdiction="US", sure=0.95),
+                        hit("N-01888", "ASME B36.10M", page=1, jurisdiction="US", sure=0.96),
+                        hit("N-01999", "UFC 3-240-01", page=104, jurisdiction="US", sure=0.2)]  # fmt: skip
+            return [hit("N-00278", "ГОСТ Р 51164-98", page=24), hit("N-01285", "ГОСТ 9.602-2016", page=19)]
+
+    monkeypatch.setattr(m, "lib", lambda: Lib())
+    monkeypatch.setattr(m, "key_hits", lambda q: [])
+    got = m.find_fragments("защитный потенциал катодной защиты трубопровода", 8, {})
+    assert [r["code"] for r in got] == ["N-00278", "N-01285", "N-02004", "N-01887"]  # two places for the US, sure ones
+    assert [r.get("supplement") for r in got] == [None, None, "US", "US"]
+    from assistant_x.server import quotes
+
+    lines = quotes.lines("потенциал", [dict(r, text="Защитный потенциал -850 мВ.") for r in got])
+    assert lines[-1].endswith("[US]") and not lines[0].endswith("]")

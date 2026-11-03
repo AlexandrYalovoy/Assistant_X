@@ -554,6 +554,7 @@ class Library:
         final = {i: fused[i] / top + weight / (1 + np.exp(-x)) + lift * self.lift(rows[i]) for i, x in zip(order, logits)}
         if stats is not None and len(logits):  # how sure the reranker is of its best fragment (the low closeness note)
             stats["rerank_top"] = round(float(1 / (1 + np.exp(-logits.max()))), 3)
+            stats["sure"] = {i: round(float(1 / (1 + np.exp(-x))), 3) for i, x in zip(order, logits)}
         return sorted(order, key=lambda i: -final[i]) + rest
 
     def level(self, r):
@@ -654,6 +655,7 @@ class Library:
                     level=self.level(r),
                     designation=r.get("designation") or "",
                     jurisdiction=r.get("jurisdiction") or "",
+                    sure=(stats.get("sure") or {}).get(r["id"]),
                     label=None if card else r["label"],
                     page_note="" if card else page_note(r["page_score"], r["page_flags"]),
                 )

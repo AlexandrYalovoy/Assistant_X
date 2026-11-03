@@ -234,6 +234,8 @@ def _head(r):
     flags = [r.get("doc_type") or "", r["section"], str(r["year"] or "")]
     if r.get("level") is not None and r.get("kind") != "card":
         flags.append(f"level {r['level']:g}")  # the hierarchy of documents: the answer lists the highest first
+    if r.get("supplement"):
+        flags.append(f"supplement: foreign norm {r['supplement']}")  # after the answer, apart
     if r.get("personal"):
         flags.append("personal document")
     if r.get("named"):
@@ -467,7 +469,40 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
         res = first + [r for r in res if (r["code"], r.get("page")) not in seen]
     if jur and not codes and jur.asked(query):  # "by ASME", "Kazakh norms": its documents before the key norms too
         res = jur.arrange(res, query, len(res))
+    elif (
+        jur and jur.extra and not codes and not flt.get("jurisdictions")
+    ):  # the foreign national norms in parallel, after the answer, when on topic
+        res = res + supplement(query, jur, res, sections, kw)
     return res
+
+
+SUPPLEMENT_SURE = 0.7  # the reranker's certainty a supplement hit needs: trap questions 0.001-0.01, on topic 0.87-1.0
+
+
+def supplement(query, jur, res, sections, kw):
+    """The best hits of the supplement jurisdictions (American, European… national norms) for a question that names
+    none, each jurisdiction in its places (jurisdictions.json "extra"), marked supplement, only those the reranker is
+    sure of; never instead of the answer, after it."""
+    seen = {(r["code"], r.get("page")) for r in res}
+    got = lib().search(
+        query,
+        k=jur.room() * 2,
+        sections=sections,
+        jurisdictions=list(jur.extra),
+        **{x: y for x, y in kw.items() if x != "jurisdictions"},
+    )
+    out, used = [], {}
+    for r in got:
+        j = jur.of(r)
+        if (
+            (r["code"], r.get("page")) in seen
+            or (r.get("sure") or 0) < SUPPLEMENT_SURE
+            or used.get(j, 0) >= jur.extra.get(j, 0)
+        ):
+            continue
+        used[j] = used.get(j, 0) + 1
+        out.append(dict(r, supplement=j))
+    return out
 
 
 def key_hits(query):

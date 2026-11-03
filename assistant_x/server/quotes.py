@@ -152,11 +152,12 @@ def line(query, r):
     if not quote:
         return None
     at = f"p. {r['label']}, PDF {r['page']}" if r.get("label") else f"PDF {r['page']}"
-    return f"«{quote}» — [{r['code']}, {at}], {cut(' '.join((r.get('title') or '').split()), TITLE_CHARS)}"
+    mark = f" [{r['supplement']}]" if r.get("supplement") else ""  # a foreign national norm, after the answer
+    return f"«{quote}» — [{r['code']}, {at}], {cut(' '.join((r.get('title') or '').split()), TITLE_CHARS)}{mark}"
 
 
 def lines(query, res):
     """The lines of the page hits, one per hit, the highest level of the hierarchy of documents first (the order of
     the search within a level); [] when no hit has a page."""
-    ranked = sorted(res, key=lambda r: r.get("level") if r.get("level") is not None else 99)
+    ranked = sorted(res, key=lambda r: (bool(r.get("supplement")), r.get("level") if r.get("level") is not None else 99))
     return [x for x in (line(query, r) for r in ranked) if x]

@@ -116,6 +116,8 @@ If the tools are missing or answer with an error, say so plainly, do not invent 
    - "**2. Engineering procedure**": the steps of the decision built only from the documents found, each step with its
      reference.
    - "**3. What the library lacks**", if anything: what was searched for and not found.
+   - "**Foreign norms (supplement)**", optional and short: the hits marked "supplement: foreign norm" (American,
+     European… national norms), with their references; they never enter the requirements above.
    At the end — "**Sources:**", a line per document: code — authors, title, year — the file name of the original (from
    `document_info`). The last line: "If needed, I can show the image of any page of the references above right in the
    chat — name the code and the PDF page, e.g. `L-00015, PDF 242`".
