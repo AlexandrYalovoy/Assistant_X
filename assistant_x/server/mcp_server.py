@@ -35,7 +35,12 @@ except Exception as e:  # e.g. a package missing on this PC: the server cannot s
 
 INSTRUCTIONS = texts.INSTRUCTIONS
 
-mcp = Server("Assistant X", instructions=INSTRUCTIONS)
+try:  # the version a client sees in the handshake (release test 0.6: a running service answered "")
+    from assistant_x import __version__ as _VERSION
+
+    mcp = Server("Assistant X", instructions=INSTRUCTIONS, version=_VERSION)
+except TypeError:  # mcp 1.x: no version of the server
+    mcp = Server("Assistant X", instructions=INSTRUCTIONS)
 
 
 def tool(title, read=True, destructive=False):

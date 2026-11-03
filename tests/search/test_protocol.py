@@ -204,3 +204,11 @@ def test_the_compact_bridge_puts_the_answer_form_before_every_result():
         b.calls[i] = "search_library"
         out = b.adjust({"id": i, "result": weak})["result"]["content"]
     assert out[0]["text"].startswith("STOP.") and len(out) == 1
+
+
+def test_the_server_names_its_version_in_the_handshake():
+    """Release test 0.6: a running service answered the handshake of a client with an empty version."""
+    from assistant_x import __version__
+    from assistant_x.server import mcp_server
+
+    assert getattr(mcp_server.mcp, "version", __version__) == __version__
