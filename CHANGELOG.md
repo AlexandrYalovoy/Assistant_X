@@ -6,6 +6,15 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- A plan-schedule of revision, inspection, repair or maintenance with no results stays out of the library like the
+  other administrative papers; an act, a record, a report or a defect list with results goes in.
+- `assistant-x intake redo --fill CODES`: a part of a set without its text is read (its text layer, or the recognition
+  of a scan) and named in the card of its set; an older intake left out every part of 1500 characters or less. The
+  author's library: 636 drawing sheets, schemes and appendices joined the search.
+- Audit 0.6 (`private` notes of the author): the update moves Claude Desktop to the new version and keeps the chain of
+  environments; the folder of export_references refuses a network or device path and a link into the library; the
+  marks of a quote never land inside another number; no clause made of a date; filters of the search read once per
+  state of the base (1–2 s less a question); the docs say what goes to the provider of a cloud model.
 - One form of a reference in every app and mode, built by the search itself: `[code, cl. N, table N, p. N, PDF N]`
   (in Russian `[шифр, п. N, табл. N, стр. N, PDF N]`); the clause above the quote, the caption of its table, the
   printed page (the page label of the PDF, else a number of its header or footer that keeps one offset over 3 pages);

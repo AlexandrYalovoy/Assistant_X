@@ -245,6 +245,26 @@ per server start); else 0.5.
   found with small differences (the differences are listed, e.g. «450» → «400»), less is "not found" with the closest
   place, and the quote goes into the answer as a paraphrase. The answer also carries the printed page and a "Page:"
   line for a complex table or a poor recognition of that page.
+- The reference of a hit is built by the search itself, in one form for every app and mode (`server/quotes.py`
+  `cite`): `[code, cl. N, table N, p. N, PDF N]`, the labels in the language of the answer (`ref_labels` of the
+  language packs: «п., табл., стр.» in Russian). The clause is the nearest number of a clause heading a line above the
+  quote on its page (a number followed by a word of a capital or of four letters; never a date or a value); the table
+  is the number of the nearest caption above a table row (a caption without a digit gives none); the printed page is
+  the page label of the PDF, else the number in the header or the footer that keeps one offset to the PDF page over
+  three pages in a row (`search/printed.py`; an offset of 0 adds nothing and is left out). A part not found is left
+  out, never made up. Every hit carries a line "Cite: [...]" and read_pages its references on top.
+- The reference mode of a small local model (LM Studio, `--compact`): `search_library` answers with lines ready to
+  copy, «quote» — [reference], title, up to `reference_quotes` (15) of them over more documents; a key norm whose quote
+  the page text does not hold shows a line of the page instead.
+- `page_image(code, page, quote=…)` marks the quote in yellow on the image (`server/highlight.py`: the whole quote, else
+  its cells and runs of six words, also when the spaces differ; a short part only as whole words; only the parts near
+  the longest one); `highlight=false` shows the page clean. Only what the text layer of the page has is marked: a scan
+  without one, or a turned page, is not, and the answer says so. `export_references(folder, lines)` copies the files of
+  the documents cited into a folder of the user and makes there "References — <date>.pdf", a page a sheet with the
+  reference on top and the quote marked; a network or device path and the folders of the library are refused, a file
+  there already is replaced only with `overwrite=true` after the user's yes, the originals are never changed.
+- The vector rows a filter lets through (the norms, the supplement of foreign norms) are read once per state of the
+  base and kept for 8 filters, so a question with filters does not read the base again.
 - `page_image` takes the page image from library (the PDF copy of a DOC/DOCX beside it), and if the document has not
   been moved yet, looks for a file with the same name in the whole library. A DOC/DOCX needs a PDF copy with the same
   name beside it.
