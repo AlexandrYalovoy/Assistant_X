@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian names in the inbox: personal papers by the name of a file or folder (land register extracts, insurance numbers, tax statements, passports, certificates…: sent to _to_delete unopened; not the bare word for 'passport', the datasheets of equipment are called so too), words of hidden text aimed at an AI, and the folders of a kit of a Russian standard as the registry distributes it (the document file, its scan images, additional documents) with the names of its administrative pages. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one).",
+  "_comment": "Russian names in the inbox: personal papers by the name of a file or folder (land register extracts, insurance numbers, tax statements, passports, certificates…: sent to _to_delete unopened; not the bare word for 'passport', the datasheets of equipment are called so too), words of hidden text aimed at an AI, and the folders of a kit of a Russian standard as the registry distributes it (the document file, its scan images, additional documents) with the names of its administrative pages. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one). admin_*: the administrative pages a file of only such pages is set aside for (intake/admin_filter.py): the page kinds named in the head of a page, the subjects of a short letter or order, the words of substantive papers never set aside, the start of real content, engineering words and quantities, the labels of the report.",
   "personal_papers": [
     "ЕГРН",
     "СНИЛС",
@@ -48,5 +48,64 @@
   "kit_signed_title": "титул|ttt|ttr|^m-|^м-|^\\d+_m",
   "kit_plan": "план",
   "kit_explanatory": "поясн|_пз",
-  "kit_register": "реестр"
+  "kit_register": "реестр",
+  "admin_pages": {
+    "title_page": "^.{0,200}?(?:утверждаю|издание официальное|введ[её]н\\w*\\W+в\\W+действие)",
+    "approval_sheet": "лист\\w*\\W+(?:согласовани|утверждени|подписей)",
+    "familiarization": "лист\\w*\\W+(?:ознакомлени|регистрации\\W+изменени|рассылк)",
+    "implementation_plan": "план\\w*\\W+(?:мероприяти\\w*\\W+)?по\\W+внедрени|план\\w*\\W+внедрени",
+    "order_in_force": "(?:приказ|распоряжени)\\w*(?:\\W+\\S+){0,30}?\\W+[оo]б?\\W+(?:вводе|введении|внедрении)",
+    "cover_letter": "сопроводительн\\w*\\W+письм|(?:направляем|направляю|препровождаем|высылаем)\\W+(?:вам|в\\W+ваш|в\\W+адрес)",
+    "service_memo": "служебн\\w*\\W+записк|докладн\\w*\\W+записк",
+    "meeting_minutes": "протокол\\w*(?:\\W+\\S+){0,3}?\\W+(?:совещани|заседани)",
+    "explanatory_note": "пояснительн\\w*\\W+записк\\w*\\W+к\\W+(?:проекту|окончательн\\w*\\W+редакции|первой\\W+редакции)\\W+(?:\\w+\\W+){0,3}?(?:нмд|нд\\b|стандарт|методическ|типов|ттт|ттр|тпр|м-|ск-|мп-|кр-|оск|гост|сп\\b|снип|\\d{4,5}\\b)",
+    "transfer_act": "акт\\w*\\W+(?:при[её]ма[\\W-]+)?передачи"
+  },
+  "admin_whole": {
+    "payment_order": [
+      "(?:приказ|распоряжени)",
+      "отсрочк\\w*\\W+(?:платеж|платёж|оплат)|порядк\\w*\\W+(?:оплат|расч[её]тов)"
+    ],
+    "price_letter": [
+      "уважаем\\w*",
+      "(?:^|\\W)[оo]б?\\W+(?:стоимост|ценах|цене)\\w*"
+    ],
+    "meeting_letter": [
+      "уважаем\\w*",
+      "(?:^|\\W)[оo]б?\\W+(?:\\w+\\W+){0,3}?совещани\\w*"
+    ]
+  },
+  "admin_keep": {
+    "catalog": "каталог",
+    "review": "\\bотзыв",
+    "pilot_tests": "(?:заключени|акт|протокол|презентац|отч[её]т|результат|итог)\\w*(?:\\W+\\w+){0,6}?\\W+(?:опи|опытно[\\W-]*промы\\w+)\\b|(?:\\bопи|опытно[\\W-]*промы\\w+)\\W+(?:\\w+\\W+){0,3}?(?:признаны|прошли|успешн)",
+    "method": "^\\W*методик|^\\W*методические",
+    "commercial_offer": "коммерческ\\w*\\W+предложени|\\bткп\\b|технико[\\W-]*коммерческ",
+    "change_notice": "извещени\\w*\\W+(?:об\\W+)?изменени|изменени\\w*\\W+№\\W*\\d+\\W+к\\W|поправк\\w*\\W+к\\W",
+    "rules_order": "об\\W+утверждении\\W+(?:\\w+\\W+){0,2}?(?:правил|норм\\b|норм\\W|требований|методик|регламент|технического)",
+    "test_record": "протокол\\w*\\W+(?:\\w+\\W+){0,2}?(?:испытани|исследовани|измерени|лабораторн)"
+  },
+  "admin_restart": [
+    "(?:^|\\W)\\d+(?:\\.\\d+)*\\.?\\W+(?:область применения|общие положения|термины и определения|нормативные ссылки)",
+    "\\bсодержание\\b|\\bвведение\\b"
+  ],
+  "admin_tech": [
+    "\\d\\s*(?:мм|см|км|кг|мпа|кпа|бар|атм|°\\s?[сc]|квт|мвт|кв|гц|м3|м³|м2|м²|мин|сут|ppm)\\b",
+    "диаметр|давлени|температур|расход|мощност|толщин|напряжени|нагрузк|скорост|плотност|вязкост|коэффициент|формул|расч[её]т|сталь|насос|трубопровод|сосуд|клапан|арматур|сепаратор|компрессор|кабел|изоляц|коррози|сварн"
+  ],
+  "admin_labels": {
+    "title_page": "титульный лист",
+    "approval_sheet": "лист согласования или утверждения",
+    "familiarization": "лист ознакомления, регистрации изменений или рассылки",
+    "implementation_plan": "план мероприятий по внедрению",
+    "order_in_force": "приказ о вводе в действие",
+    "cover_letter": "сопроводительное письмо",
+    "service_memo": "служебная записка",
+    "meeting_minutes": "протокол совещания",
+    "explanatory_note": "пояснительная записка к проекту НД",
+    "transfer_act": "акт передачи",
+    "payment_order": "приказ о порядке оплаты или отсрочек платежа",
+    "price_letter": "письмо о стоимости",
+    "meeting_letter": "письмо о совещании"
+  }
 }

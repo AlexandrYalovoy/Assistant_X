@@ -4,6 +4,10 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.5.12 — not released
+
+- Administrative pages stay out of the library: a file of only such pages (a title page, an approval or familiarization sheet, an implementation plan, an order putting a document into force, a cover letter, a service memo, the explanatory note to a draft norm, a transfer act) goes to `inbox\_rejected\admin` with a manifest after its text is read, a document or a part of a set alike; bound with a real document in one file such pages go in with it. Catalogs, reviews, the results of pilot tests, methods, notices of change and orders that approve rules are never set aside, a doubt is a warning; `[intake] admin_filter` turns it off, `admin_accept` takes a file in anyway, and `assistant-x check` warns of such documents already in the library.
+
 ## 0.5.11 — 2026-11-01
 
 Answers from the whole library and no question before every page.

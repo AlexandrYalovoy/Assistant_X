@@ -48,6 +48,9 @@ profile = "general"
 # order = "cost"                   # "cost": a run takes the fast files, then the medium, then slow_batch slow ones;
 #                                   "all": everything at once
 # slow_batch = 12                  # DjVu and long scans a run takes at most with order = "cost"
+# admin_filter = true              # a file of administrative pages only (a title page, an approval sheet, an
+#                                   implementation plan, a cover letter…) goes to inbox\_rejected\admin
+# admin_accept = []                # names or folders of such files taken in anyway: ["Plan 2024.docx", "Kits/"]
 
 # [intake.disk]
 # factor = 3

@@ -113,6 +113,8 @@ def load(path=None):
     cfg["slow_batch"] = int(raw.get("slow_batch") or default["slow_batch"])
     if cfg["slow_batch"] < 1:
         sys.exit(f"{path}: slow_batch {cfg['slow_batch']}: a whole number of files from 1")
+    cfg["admin_filter"] = bool(raw.get("admin_filter", default["admin_filter"]))
+    cfg["admin_accept"] = [str(x) for x in (raw.get("admin_accept") or default["admin_accept"])]
     cfg["ocr_shards"] = str(raw.get("ocr_shards") or default["ocr_shards"])
     if cfg["ocr_shards"] not in schedule.SHARD_MODES:
         sys.exit(f"{path}: ocr_shards {cfg['ocr_shards']!r}, one of these is needed: {', '.join(schedule.SHARD_MODES)}")

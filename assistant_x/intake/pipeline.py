@@ -89,6 +89,14 @@ def cmd_run(cfg, a):
     if damaged:
         say(f"Damaged files moved to inbox\\_to_delete\\damaged: {len(damaged)}")
         events = events + damaged
+    from assistant_x.intake import admin_filter
+
+    admin, doubts = admin_filter.set_aside(cfg, state, work)  # the author, 2026-11-03: administrative pages stay out
+    if admin:
+        say(f"Administrative pages only, moved to inbox\\_rejected\\admin: {len(admin)} (manifest.tsv there)")
+        events = events + admin
+    for d in doubts:
+        say("warning: " + d)
     from assistant_x.intake import metadraft
     from assistant_x.intake import quality_report
 
@@ -102,6 +110,10 @@ def cmd_run(cfg, a):
     counts, total = ledger.write(work, state)
     with open(work / "summary.md", "a", encoding="utf-8") as f:
         f.write(ledger.line(counts, total) + "\n")
+        for e in admin:
+            f.write(f"- {e[1]} → {e[5]} ({e[6]})\n")
+        for d in doubts:
+            f.write(f"- warning: {d}\n")
     say("\n" + text + ledger.line(counts, total))
     return 0
 

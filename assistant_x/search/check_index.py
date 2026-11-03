@@ -10,6 +10,7 @@ Usage: assistant-x check [--config assistant_x.toml] [--all] [--no-files]
   --no-files  do not look for the originals in library (e.g. on a copy of the index without the library)"""
 
 import argparse, collections, os
+from pathlib import Path
 from assistant_x.core import card as C
 from assistant_x.core import config as settings
 from assistant_x.core.common import INVISIBLE_RX, load_config, split_pages, text_stats
@@ -195,6 +196,11 @@ def check(cfg, files=True):
             con.close()
         for text in stale:
             warn("key norms out of date (assistant-x key-norms --refresh builds them anew)", text)
+    if files:  # what an older intake let in: documents and parts of administrative pages only (core/admin_pages.py)
+        from assistant_x.core import admin_pages
+
+        for code, why in admin_pages.scan_library(Path(os.path.dirname(cfg["cards_dir"]))):
+            warn("administrative pages only (assistant-x remove CODE takes it out)", f"{code}: {why}")
     return rep, len(cards)
 
 

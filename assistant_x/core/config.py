@@ -61,6 +61,11 @@ INTAKE = {
     # then the medium ones, then slow_batch slow ones a run; "all" takes everything at once
     "order": "cost",
     "slow_batch": 12,
+    # a file of administrative pages only (a title page, an approval sheet, an implementation plan, a cover letter…,
+    # intake/admin_filter.py) goes to inbox\_rejected\admin after its text is read (the author, 2026-11-03);
+    # admin_accept: names or folders of such files taken in anyway
+    "admin_filter": True,
+    "admin_accept": [],
     # page: seconds a page of a conversion may take on average before the watchdog stops it (process.Batch: the pages
     # without a text layer are then read from their images)
     "timeouts": {"soffice": 900, "hidden": 1800, "convert": 14400, "unpack": 1800, "page": 180},
