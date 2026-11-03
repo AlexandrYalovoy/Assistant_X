@@ -352,3 +352,20 @@ def test_the_redo_drops_the_copies_of_a_read_document(tmp_path):
     ocr_redo.drop_copies(tmp_path, "N-00001")
     assert not list((tmp_path / "src").glob("N-00001*")) and not list((tmp_path / "pdf").glob("*"))
     assert (tmp_path / "src" / "N-00002.pdf").exists() and (tmp_path / "md" / "N-00001.md").exists()
+
+
+def test_a_part_without_text_gets_one_named_in_the_card_of_its_set(tmp_path):
+    """Audit 0.6, P-05: an older build left out a part of 1500 characters or less; redo --fill reads it and names its
+    text in the card of its set, where the build looks for it; a part with no words gets none."""
+    from assistant_x.intake import ocr_redo
+
+    cards = tmp_path / "cards"
+    cards.mkdir()
+    card = {"code": "E-00007", "file": {"parts": [{"code": "E-00007-02", "text": ""}, {"code": "E-00007-03", "text": ""}]}}
+    (cards / "E-00007.json").write_text(json.dumps(card), encoding="utf-8")
+    assert ocr_redo.name_text(tmp_path, "E-00007-03")
+    parts = json.loads((cards / "E-00007.json").read_text(encoding="utf-8"))["file"]["parts"]
+    assert [p["text"] for p in parts] == ["", "index/texts/E-00007-03.md"]
+    assert not ocr_redo.name_text(tmp_path, "E-00007-03")  # named already
+    assert ocr_redo.filled({"new": 81.5, "variant": "300"}).startswith(ocr_redo.FILLED)
+    assert ocr_redo.filled({"new": None}).startswith("recognized: no text added")

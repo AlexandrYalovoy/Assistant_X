@@ -12,6 +12,9 @@ clean but nearly empty text is no gain).
     assistant-x intake redo --worst 100 [--below 70]   the worst of index/ocr_quality.tsv below the threshold
     --dry-run                                                 recognise and score, change nothing
     --reuse <redo folder>                                     take the texts an earlier (stopped) run finished
+    --fill                                                    a part named that has no text gets one: read, added, and
+                                                              named in the card of its set (an older build left out a
+                                                              part of 1500 characters or less: 673 parts, audit 0.6)
 
 Old and new texts are compared by the word part of the score (tools/ocr_score.py without the Tesseract confidence:
 the old texts have none). A document with a broken font (U+FFFD, Latin Extended-B), or with a text layer whose new
@@ -445,14 +448,16 @@ def cmd_redo(cfg, a):
     docs, results, reused = [], {}, 0
     for code in codes:
         tp, pdf = texts / f"{code}.md", library_pdf(cfg, code)
-        if not tp.exists() or pdf is None:
+        fill = getattr(a, "fill", False) and not tp.exists() and pdf is not None
+        if (not tp.exists() and not fill) or pdf is None:
             results[code] = {
                 "code": code,
                 "why": "no text in index\\texts" if not tp.exists() else "found no PDF of the document by manifest.tsv",
             }
             continue
-        old = tp.read_text(encoding="utf-8")
+        old = "" if fill else tp.read_text(encoding="utf-8")
         d = {
+            "fill": fill,
             "code": code,
             "pdf": str(pdf),
             "w": str(work / code),
@@ -478,10 +483,12 @@ def cmd_redo(cfg, a):
         nonlocal replaced
         code = d["code"]
         r.update(old=d["old_score"], old_known=d["old_known"], old_doubled=d["old_doubled"], pdf=d["pdf"])
-        r["status"] = verdict(r, texts, gain)
-        r["replaced"] = r["status"].startswith("recognized again: text replaced")
+        r["status"] = filled(r) if d.get("fill") else verdict(r, texts, gain)
+        r["replaced"] = r["status"].startswith(("recognized again: text replaced", FILLED))
         if r["replaced"] and not a.dry_run:
             apply_text(texts, code, r, aside, rows, date)
+            if d.get("fill"):
+                name_text(cfg.index, code)
             ocr_score.write_tsv(tsv, rows)
             replaced += 1
         if not a.dry_run and (texts / f"{code}.md").exists():
@@ -560,6 +567,34 @@ def apply_text(texts, code, r, aside, rows, date):
         old_info.unlink()
     detail = json.loads(Path(r["detail"]).read_text(encoding="utf-8")) if r.get("detail") else ocr_score.score_text(new_md)
     rows[code] = ocr_score.row_of(code, detail, "redo", date)
+
+
+FILLED = "recognized: text added"
+
+
+def filled(r):
+    """The event line of a part without text read for the first time: added when it has words."""
+    if r.get("why"):
+        return f"recognized: no text added — {r['why']}"
+    if r.get("new") is None:
+        return "recognized: no text added — the page has no words"
+    return f"{FILLED} — a part without its text, score {fmt(r['new'])} ({r.get('variant') or 'text layer'})"
+
+
+def name_text(index, code):
+    """Name index/texts/<code>.md as the text of a part in the card of its set (the build reads it from there); the
+    card written at once, its old copy kept aside by text_notes."""
+    from assistant_x.core import card as C
+
+    parent = code.rsplit("-", 1)[0]
+    path = index / "cards" / f"{parent}.json"
+    card = json.loads(path.read_text(encoding="utf-8"))
+    for p in (card.get("file") or {}).get("parts") or []:
+        if isinstance(p, dict) and p.get("code") == code and not p.get("text"):
+            p["text"] = f"index/texts/{code}.md"
+            C.dump(card, path)
+            return True
+    return False
 
 
 def event(cfg, date, code, r):
