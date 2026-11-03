@@ -205,6 +205,34 @@ def test_gemini_cli_settings_and_rules(home):
     assert (d / "GEMINI.md").read_text(encoding="utf-8") == "# My rules\n\nAnswer briefly.\n"
 
 
+def test_kimi_cli_and_kimi_code_settings_and_rules(home, monkeypatch):
+    """Kimi: ~/.kimi/mcp.json and the folder of Kimi Code (KIMI_CODE_HOME), each with the rules in its AGENTS.md;
+    Kimi Code takes the timeouts in ms. The formats from the documentation of Moonshot AI, not a running Kimi."""
+    from assistant_x.clients import kimi
+
+    monkeypatch.delenv("KIMI_CODE_HOME", raising=False)
+    assert not kimi.found() and "kimi" in K.APPS and kimi.read() is None
+    cli, code = home / ".kimi", home / "kimi-code-home"
+    cli.mkdir()
+    code.mkdir()
+    monkeypatch.setenv("KIMI_CODE_HOME", str(code))
+    (cli / "mcp.json").write_text(json.dumps({"mcpServers": {"git": {"command": "uvx"}}}), encoding="utf-8")
+    (code / "AGENTS.md").write_text("# Mine\n", encoding="utf-8")
+    e = entry()
+    assert kimi.found() and [s for _, s in kimi.connect(e, False)] == ["written"] * 4
+    a = json.loads((cli / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+    b = json.loads((code / "mcp.json").read_text(encoding="utf-8"))["mcpServers"]["assistant-x"]
+    assert a["git"] == {"command": "uvx"} and a["assistant-x"]["command"] == e["command"]
+    assert "startupTimeoutMs" not in a["assistant-x"] and b["toolTimeoutMs"] == K.TOOL_TIMEOUT * 1000
+    assert b["startupTimeoutMs"] == K.STARTUP_TIMEOUT * 1000 and kimi.read()["command"] == e["command"]
+    rules = (code / "AGENTS.md").read_text(encoding="utf-8")
+    assert rules.startswith("# Mine\n\n") and kimi.BEGIN in rules and "library_guide" in rules
+    assert [s for _, s in kimi.connect(e, False)] == ["unchanged"] * 4
+    kimi.disconnect(False)
+    assert json.loads((cli / "mcp.json").read_text(encoding="utf-8")) == {"mcpServers": {"git": {"command": "uvx"}}}
+    assert (code / "AGENTS.md").read_text(encoding="utf-8") == "# Mine\n" and not (cli / "AGENTS.md").read_text("utf-8")
+
+
 @pytest.mark.parametrize("name", ["antigravity", "cursor", "cline"])
 def test_the_mcp_json_of_ide_agents(home, name):
     a = K.app(name)

@@ -35,6 +35,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | none: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | none: `library_guide` |
 | Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | none: `library_guide` |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | all | a block of the short rules in `AGENTS.md` of the folder |
 
 `--full` gives an app every tool without the compact answers, `--reader` only the reading tools, `--compact` the short
 answers. A copy of a settings file is kept beside it before a change (`<name>.backup-<date>`, the newest three), the

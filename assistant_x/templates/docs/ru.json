@@ -61,6 +61,11 @@
    "TITLE": "Cline (VS Code)",
    "SETTINGS": "`%APPDATA%\\Code\\User\\globalStorage\\saoudrizwan.claude-dev\\settings\\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`)",
    "SKILL": "нет: `library_guide`"
+  },
+  "kimi": {
+   "TITLE": "Kimi CLI / Kimi Code",
+   "SETTINGS": "`~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md`",
+   "SKILL": "блок кратких правил в `AGENTS.md` папки"
   }
  },
  "tools": {
@@ -110,7 +115,7 @@
   "prepare-media": "пакеты для установки без интернета (сборочный ПК)",
   "lock": "кто держит блокировку машины; команда под ней",
   "skill": "записать навык профиля рабочей папки (SKILL.md)",
-  "connect": "подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline",
+  "connect": "подключить приложения этого ПК: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline, kimi",
   "disconnect": "убрать библиотеку из настроек приложения",
   "update": "заново подключить все подключённые приложения и обновить их навыки; --from URL: новый релиз",
   "gen-docs": "создать INSTALL_FOR_AI.md, AGENTS.md, docs/CLIENTS.md и плагин",

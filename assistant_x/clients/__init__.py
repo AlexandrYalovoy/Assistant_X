@@ -18,7 +18,7 @@ import datetime, importlib, json, os, shutil, sys
 from pathlib import Path
 
 SERVER = "assistant-x"
-APPS = ("claude_desktop", "claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline")
+APPS = ("claude_desktop", "claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline", "kimi")
 BACKUPS_KEPT = 3
 TOOL_TIMEOUT = 900  # s: an answer of the library (a cold start loads the models)
 STARTUP_TIMEOUT = 60  # s: the bridge answers the handshake at once; the tool list waits for the service

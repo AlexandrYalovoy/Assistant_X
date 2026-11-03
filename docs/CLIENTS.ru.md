@@ -37,6 +37,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | нет: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | нет: `library_guide` |
 | Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | нет: `library_guide` |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | all | блок кратких правил в `AGENTS.md` папки |
 
 `--full` даёт приложению все инструменты без компактных ответов, `--reader` — только инструменты чтения, `--compact` —
 короткие ответы. Перед изменением рядом с файлом настроек сохраняется его копия (`<name>.backup-<date>`, три

@@ -45,7 +45,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "skill": ("assistant_x.setup.skill", "write the skill of the profile of the workspace (SKILL.md)"),
     "connect": (
         "assistant_x.clients.connect",
-        "connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline",
+        "connect the apps of this PC: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline, kimi",
     ),
     "disconnect": ("assistant_x.clients.disconnect", "take the library out of the settings of an app"),
     "update": (

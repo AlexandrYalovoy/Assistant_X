@@ -901,12 +901,12 @@ def register_others(py, dry):
 
     names = [
         n
-        for n in ("claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline")
+        for n in ("claude_code", "codex", "dsh", "lmstudio", "gemini", "antigravity", "cursor", "cline", "kimi")
         if clients.app(n).found()
     ]
     if not names:
         say(
-            "   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline)"
+            "   no other app found (Claude Code, Codex, DeepSeek Harness, LM Studio, Gemini CLI, Antigravity, Cursor, Cline, Kimi)"
         )
         return
     connect.connect(names, dry=dry, python=py, root=P.ROOT, say=lambda s: say("   " + s.replace("\n", "\n   ")))
