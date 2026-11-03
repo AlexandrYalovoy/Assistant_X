@@ -47,6 +47,12 @@ PROBLEMS = {
         "The library service did not start.",
         "read the end of the service log {log}; then assistant-x doctor --json",
     ),
+    "service-light": (
+        "The library service searches on the processor without the reranker: another server of the library holds the "
+        "video card, so the answers are less accurate.",
+        "close the apps of the library for a minute (the library service then stops) and open one again; if it stays: "
+        "assistant-x doctor --json and assistant-x debug-report",
+    ),
     "gpu-memory-low": (
         "The video card has little free memory: the search models and a local language model slow each other down.",
         'in assistant_x.toml under [search] set device = "cpu" (the library then leaves the video card to the local '

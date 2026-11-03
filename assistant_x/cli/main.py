@@ -251,6 +251,15 @@ def diagnose(w):
                 remarks.append(PB.item("app-in-process", app=row["app"]))
     except Exception:  # noqa: BLE001 — a settings file that cannot be read: connect --list says more
         pass
+    try:
+        from assistant_x.core import lock
+        from assistant_x.server import service
+
+        info = service.read_info(w.root)
+        if info and lock.alive(info.get("pid")) and service.light(info):
+            remarks.append(PB.item("service-light"))
+    except Exception:  # noqa: BLE001 — a note only
+        pass
     free = gpu_memory_low()
     if free is not None:
         msg = f"The video card has {free:.0f} MB free: the search models and a local language model slow each other down."

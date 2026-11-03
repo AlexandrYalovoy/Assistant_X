@@ -96,6 +96,51 @@ class Activity:
                 self.last = time.monotonic()
 
 
+MODELS_WAIT = 300  # seconds the service waits for its models before it writes where they are
+
+
+def models_state(first):
+    """{models, device, reranker} of this service: does it hold the models lock, where its search runs (cuda, dml,
+    cpu) and is the reranker loaded; a service without the lock searches on the processor without the reranker."""
+    from assistant_x.server import mcp_server as S
+
+    if not first or S._lib is None:
+        return {"models": bool(first), "device": "cpu", "reranker": False}
+    lib = S._lib
+    device = "cpu" if not lib.on_card() else ("cuda" if lib.has_cuda() else "dml")
+    return {"models": True, "device": device, "reranker": lib._reranker is not None}
+
+
+def note_models(path, first):
+    """When the models are loaded (or after MODELS_WAIT), the info file of the service says where they are: doctor
+    warns of a service that runs light (service-light)."""
+    from assistant_x.server import mcp_server as S
+
+    end = time.monotonic() + MODELS_WAIT
+    while first and time.monotonic() < end:
+        lib = S._lib
+        if lib is not None and lib.dense_ready.is_set() and (lib._reranker is not None or not lib.may_rerank()):
+            break
+        time.sleep(2)
+    info = read_info_file(path) or {}
+    write_info(path, {**info, **models_state(first)})
+
+
+def read_info_file(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def light(info):
+    """Is a service of this info running light (on the processor without the reranker)? None when it did not say."""
+    if not isinstance(info, dict) or "models" not in info:
+        return None
+    return not info.get("models") or not info.get("reranker")
+
+
 def write_info(path, info):
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -178,6 +223,7 @@ def main(argv=None):
     threading.Thread(target=watch, daemon=True).start()
     threading.Thread(target=refresh, daemon=True).start()
     write_info(paths["info"], {**health, "port": port, "started": time.time(), "token_file": token_path})
+    threading.Thread(target=note_models, args=(paths["info"], first), daemon=True).start()
     print(f"library service: http://127.0.0.1:{port}/mcp (pid {os.getpid()})", file=sys.stderr)
     try:
         server.run(sockets=[sock])
