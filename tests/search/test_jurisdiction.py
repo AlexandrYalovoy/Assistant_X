@@ -73,3 +73,21 @@ def test_foreign_national_norms_are_a_supplement_and_first_when_named():
     assert [r["code"] for r in j.arrange(res, "толщина стенки трубопровода", 2)] == ["N-2", "N-4", "N-1", "N-3"]
     assert [r["code"] for r in j.arrange(res, "что требуют европейские нормы к толщине стенки", 2)][0] == "N-1"
     assert [r["code"] for r in j.arrange(res, "толщина стенки по DIN", 2)][0] == "N-3"
+
+
+def test_a_question_naming_american_norms_puts_them_before_the_key_norms(monkeypatch):
+    """«по ASME»: the American hits come before the key norms of the topic, which lead every other question."""
+    from assistant_x.server import mcp_server as m
+
+    class Lib:
+        cfg = {"profile": "oil-gas-ru"}
+
+        def search(self, query, k, **kw):
+            return [hit("N-01887", "ASME B31.3", page=5), hit("N-00273", "ГОСТ 35070-2024", page=9)]
+
+    monkeypatch.setattr(m, "lib", lambda: Lib())
+    monkeypatch.setattr(m, "key_hits", lambda q: [hit("N-00421", "ГОСТ Р 55990-2014", page=56, key=True)])
+    got = [r["code"] for r in m.find_fragments("толщина стенки трубы по ASME B31.3", 8, {})]
+    assert got[0] == "N-01887" and "N-00421" in got
+    got = [r["code"] for r in m.find_fragments("толщина стенки промысловой трубы", 8, {})]
+    assert got[0] == "N-00421"  # a plain question: the key norm first, the American after the home ones

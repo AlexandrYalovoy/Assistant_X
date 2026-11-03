@@ -465,6 +465,8 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
         first = key_hits(f"{query} {context}" if context else query)
         seen = {(r["code"], r["page"]) for r in first}
         res = first + [r for r in res if (r["code"], r.get("page")) not in seen]
+    if jur and not codes and jur.asked(query):  # "by ASME", "Kazakh norms": its documents before the key norms too
+        res = jur.arrange(res, query, len(res))
     return res
 
 

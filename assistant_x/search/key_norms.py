@@ -69,7 +69,12 @@ def evidence(topic, text):
 
 
 def build(lib, topics, say=print):
-    """{topics: [{id, name, ask, entries: [{code, designation, title, level, pdf_page, quote}]}], verified, dropped}."""
+    """{topics: [{id, name, ask, entries: [{code, designation, title, level, pdf_page, quote}]}], verified, dropped}.
+    The norms of a supplement jurisdiction (American, European… of the profile) are no key norms: the key norms are
+    the ones that govern."""
+    from assistant_x.search import jurisdiction
+
+    jur = jurisdiction.load(lib.cfg.get("profile"))
     out, verified, dropped = [], 0, 0
     for t in topics:
         seen, entries, per_doc = set(), [], {}
@@ -77,6 +82,8 @@ def build(lib, topics, say=print):
             for r in lib.search(q, k=CANDIDATES, sections=["N"]):
                 at = (r["code"], r["page"])
                 if at in seen or r.get("kind") == "card" or (r.get("level") or 99) > MAX_LEVEL:
+                    continue
+                if jur and jur.of(r) in jur.extra:
                     continue
                 seen.add(at)
                 row = lib.con.execute("SELECT text FROM pages WHERE code=? AND page=?", at).fetchone()
