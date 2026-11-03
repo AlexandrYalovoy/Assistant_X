@@ -72,7 +72,19 @@ def units(text):
 
 
 CLAUSE = re.compile(r"^\s*\d+(?:\.\d+)+\.?\s")  # the number of a clause at the start of a line: no value
-VALUE = re.compile(r"\d+(?:[,.]\d+)?\s*(?:-|–|…|\.\.\.)\s*\d|\d\s*(?:%|°|мм|мин|м/с|МПа|кПа|м\b|ч\b|mm|min|m/s|MPa)")
+_value = []
+
+
+def value_rx():
+    """A value of a norm: a range ("5-20", "2,0…5,0") or a number with a unit of measure of the language packs
+    (lang/<code>/text.json "units"), or a percent or a degree."""
+    if not _value:
+        from assistant_x.core import lang
+
+        units = sorted(set(lang.words("units")), key=len, reverse=True)
+        unit = "|".join(re.escape(u) for u in units) or "(?!)"
+        _value.append(re.compile(rf"\d+(?:[,.]\d+)?\s*(?:-|–|…|\.\.\.)\s*\d|\d\s*(?:%|°|(?:{unit})(?!\w))"))
+    return _value[0]
 
 
 def worth(want, unit, header="", row=False):
@@ -81,7 +93,7 @@ def worth(want, unit, header="", row=False):
     table row with a word of the question a quarter more, a line of a table of contents far less."""
     got = found(want, unit)
     sc = len(got) + 0.5 * len(found(want, header) - got)
-    if (got or found(want, header)) and VALUE.search(CLAUSE.sub("", unit)):
+    if (got or found(want, header)) and value_rx().search(CLAUSE.sub("", unit)):
         sc += 1.5
     if row and got:
         sc += 0.25

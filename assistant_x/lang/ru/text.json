@@ -213,5 +213,7 @@
     "либо",
     "а",
     "до"
-  ]
+  ],
+  "_units": "the units of measure a value of a norm carries: a quote with a number and one of them is a value (server/quotes.py)",
+  "units": ["мм", "см", "м", "км", "мин", "ч", "сут", "м/с", "м3", "м³", "МПа", "кПа", "Па", "кгс/см2", "°С", "кВт", "т/сут", "мг/л", "мг/дм3"]
 }

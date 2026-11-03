@@ -233,7 +233,8 @@ def load(cfg):
     """The key norms of the workspace ({} when none), read again when the file changes."""
     p = path_of(cfg)
     try:
-        stamp = os.path.getmtime(p)
+        st = os.stat(p)
+        stamp = (st.st_mtime_ns, st.st_size)  # two writes within one tick of the clock differ by their size
     except OSError:
         return {}
     if _cache.get(p, (None,))[0] != stamp:
