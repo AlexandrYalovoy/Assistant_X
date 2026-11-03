@@ -67,7 +67,9 @@ def test_doctor_json_names_a_low_video_memory(mini, monkeypatch, capsys):
 
 def test_doctor_json_is_one_json_document_on_stdout(mini):
     env = dict(os.environ, AX_WORKSPACE=str(mini["root"]), PYTHONUTF8="1")
-    r = subprocess.run([sys.executable, "-m", "assistant_x", "doctor", "--json"], capture_output=True, text=True, env=env)
+    r = subprocess.run(
+        [sys.executable, "-m", "assistant_x", "doctor", "--json"], capture_output=True, text=True, encoding="utf-8", env=env
+    )
     assert json.loads(r.stdout)["workspace"] == str(mini["root"])
 
 

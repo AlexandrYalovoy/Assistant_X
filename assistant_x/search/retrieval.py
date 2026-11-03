@@ -61,6 +61,7 @@ TOC_MIN_SHARED, TOC_MIN_SHARE = 2, 0.4  # toc_match: two stems of the question, 
 # about 40 ms a search
 ANN_NPROBE = 1024
 ANN_RESCORE = 16
+ALLOWED_CACHE = 8  # filters whose vector rows are kept for the state of the base (a row list is up to ~9 MB)
 POOL = 50  # the candidates before the merging of pages and documents (and the reranking): max(POOL, 4 k)
 MAX_PER_DOC = 3  # pages of one document in an answer, unless the other documents leave places free (M-080)
 # final = fused / max(fused) + weight * sigmoid(logit of the reranker); [search] rerank_weight. Q4 (2026-10-29, 80
@@ -150,6 +151,8 @@ class Library:
         if stamp == self._stamp:
             return
         with self._init_lock:
+            if stamp == self._stamp:  # another thread reloaded it while this one waited
+                return
             self._vstate = None  # (vectors, row -> fragment id, FAISS index), replaced as a whole
             self._names = None  # the map of the file names of the library (_by_name), made again when asked
             self._vpath = vectors_path(self.cfg, self.con)
@@ -169,11 +172,13 @@ class Library:
             self._load_cards()
             self.maps = Maps(lambda: self.con)  # outline and tables/figures/formulas of each document (bookmap.py)
             self._printed = {}  # code -> {PDF page: printed page} found in the text (printed.py)
+            self._allowed = {}  # (filter sql, args) -> the vector rows it lets through (allowed_rows)
             self._stamp = stamp
 
     def _load_cards(self):
-        """From the cards of the base: the designations (exact match) and the terms (synonym groups)."""
-        self._desig, groups = [], []
+        """From the cards of the base: the designations (exact match) and the terms (synonym groups); each list made
+        apart and put in place whole, so a question of another thread meanwhile reads the old one, never half."""
+        desig, groups = [], []
         for r in self.con.execute("SELECT code, card FROM docs WHERE coalesce(parent, '') = ''"):
             try:
                 doc = json.loads(r["card"] or "{}").get("doc") or {}
@@ -182,13 +187,14 @@ class Library:
             for d in C.all_texts(doc.get("designation")):
                 k = C.designation_key(d)
                 if len(k) >= MIN_DESIG_KEY and re.search(r"\d", k):
-                    self._desig.append((k, r["code"], d))
+                    desig.append((k, r["code"], d))
             for t in doc.get("terms") or []:
                 g = [tuple(tokens(x)) for x in C.all_texts(t.get("name")) + ([t["expansion"]] if t.get("expansion") else [])]
                 g = list(dict.fromkeys(x for x in g if x))
                 if len(g) > 1:
                     groups.append(g)
-        self._desig.sort(key=lambda x: -len(x[0]))
+        desig.sort(key=lambda x: -len(x[0]))
+        self._desig = desig
         self.syn = self.syn_profile + groups
 
     def designations_in(self, query):
@@ -466,7 +472,11 @@ class Library:
         import numpy as np
 
         fsql, fargs = self._filter_sql(**flt)
-        return np.unique(
+        key = (fsql, tuple(fargs))
+        cache = self._allowed  # one state of the base: refresh() starts a new one
+        if key in cache:  # the supplement and the norms ask the same filters on every question (~0.5-0.9 s each)
+            return cache[key]
+        rows = np.unique(
             np.array(
                 [
                     r[0]
@@ -478,6 +488,11 @@ class Library:
                 dtype=np.int64,
             )
         )
+        rows.setflags(write=False)
+        if len(cache) >= ALLOWED_CACHE:
+            cache.pop(next(iter(cache)))
+        cache[key] = rows
+        return rows
 
     # ---------- reranking ----------
     def want_rerank(self, query=None, k=None):

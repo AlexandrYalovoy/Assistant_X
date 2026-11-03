@@ -194,3 +194,51 @@ def test_a_moved_original_is_found_without_walking_the_library_each_time(mini, m
         path, why = lib.original("N-00001")
         assert why is None and path.endswith(os.path.basename(real("N-00001")["file"]))
     assert len(walks) == 1
+
+
+def test_a_reload_of_the_base_never_shows_a_half_made_state(lib):
+    """Audit P-03: while one thread reloads (a build touched the base), the others still find a document by its
+    designation; the threads that waited for the reload do not repeat it."""
+    import threading
+
+    _, code, desig = lib._desig[0]
+    stop, missed, loads = threading.Event(), [], []
+    real = lib._load_cards
+
+    def counted():
+        loads.append(1)
+        real()
+
+    lib._load_cards = counted
+    try:
+
+        def reader():
+            while not stop.is_set():
+                if code not in lib.designations_in(f"требования {desig}"):
+                    missed.append(1)
+
+        readers = [threading.Thread(target=reader) for _ in range(3)]
+        for t in readers:
+            t.start()
+        for _ in range(4):
+            lib._stamp = object()  # the state changed
+            ts = [threading.Thread(target=lib.refresh) for _ in range(3)]
+            for t in ts:
+                t.start()
+            for t in ts:
+                t.join()
+        stop.set()
+        for t in readers:
+            t.join()
+    finally:
+        del lib._load_cards
+    assert not missed and len(loads) == 4
+
+
+def test_the_rows_of_a_filter_are_read_once_per_state_of_the_base(lib):
+    """Audit P-01, P-02: the supplement and the norms ask the same filters on every question."""
+    a = lib.allowed_rows(sections=["N"])
+    assert lib.allowed_rows(sections=["N"]) is a and not a.flags.writeable
+    lib._stamp = object()
+    lib.refresh()
+    assert lib.allowed_rows(sections=["N"]) is not a
