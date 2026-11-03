@@ -811,6 +811,8 @@ def page_image(code: str, page: int, zoom: float = 1.6, quote: str = "", highlig
         pdf = _open_pdf(path)
         if not 1 <= page <= pdf.page_count:
             return f"{code} has {pdf.page_count} PDF pages."
+        if pdf.needs_pass:
+            return f"{code}: the PDF is protected by a password; open the original."
         one, status = hl.marked_page(pdf, page, quote if highlight else "")
         p = one[0]
         z = page_zoom(zoom, p.rect.width, p.rect.height)
@@ -834,13 +836,16 @@ def export_references(folder: str, references: list[str], highlight: bool = True
     replaces it once the user agrees. The originals of the library are never changed."""
     from assistant_x.server import highlight as hl
 
+    busy = common.maintenance(lib().cfg["index_dir"])
+    if busy:
+        return common.maintenance_note(busy)
     refs = hl.references(references or [])
     if not refs:
         return "No reference [code, …, PDF N] in the lines given: give the lines of the answer with their references."
-    cfg = lib().cfg
+    if len(refs) > hl.MAX_REFS:
+        return f"{len(refs)} references: {hl.MAX_REFS} at most in one folder; give fewer lines."
     try:
-        keep = [cfg.get(k) for k in ("library_root", "index_dir", "texts_dir", "cards_dir", "packages_dir", "models_dir")]
-        path = hl.safe_folder(folder, keep + [os.path.join(cfg.get("workspace") or "", "inbox")])
+        path = hl.safe_folder(folder, library_folders())
     except ValueError as why:
         return str(why)
     lang = answer_lang()
@@ -873,6 +878,16 @@ def export_references(folder: str, references: list[str], highlight: bool = True
             )
     lines += [f"Not gathered: {m}" for m in got["missing"]]
     return "\n".join(lines)
+
+
+def library_folders():
+    """The folders of the library a copy must never go into: the data folders of the workspace (wherever its
+    [paths] put them) and the ones of the settings in use."""
+    from assistant_x.core import workspace
+
+    cfg, w = lib().cfg, workspace.current()
+    keys = ("library_root", "index_dir", "texts_dir", "cards_dir", "packages_dir", "models_dir")
+    return [cfg.get(k) for k in keys] + [w.inbox, w.library, w.index, w.data, w.db]
 
 
 def _sheet_head(code, page, quote, lang):
@@ -931,6 +946,7 @@ MARK_NOTES = {
     "partial": " The quote is marked in part: some of its words are not in the text layer of the page; tell the user.",
     "none": " The quote is not marked: the text layer of the page does not have it (a scan or another spelling); "
     "tell the user to find it on the page.",
+    "rotated": " The quote is not marked: the page is turned; tell the user to find it on the page.",
 }
 IMAGE_NOTE = (
     "The image of {code}, PDF {page}. If you cannot see images, read the page with read_pages({code!r}, {page}, {page}) "

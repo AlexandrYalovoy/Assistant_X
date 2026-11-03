@@ -58,6 +58,15 @@ def test_the_references_of_an_answer():
     ]
 
 
+def test_a_full_reference_as_an_answer_prints_it():
+    """The user pastes the reference of an answer as it is: the code and the PDF page count, the other parts in either
+    language are skipped; the quote of the line, when there is one."""
+    assert hl.references(["покажи [N-00001, п. 6.2.1.9, табл. 1, стр. 30, PDF 36]"]) == [("N-00001", 36, "")]
+    assert hl.references(["show [E-00006-02, cl. 4.4.18, table 6, p. 15, PDF 135]"]) == [("E-00006-02", 135, "")]
+    line = "«Газуглеводородный в трубопроводах | 5-20» (табл.: Наименование) — [N-00001, п. 6.2.1.9, табл. 1, PDF 36], ГОСТ"
+    assert hl.references([line]) == [("N-00001", 36, "Газуглеводородный в трубопроводах | 5-20")]
+
+
 def test_a_folder_of_the_user_only(tmp_path):
     lib = tmp_path / "library"
     assert hl.safe_folder(str(tmp_path / "out"), [str(lib)]) == str(tmp_path / "out")
@@ -87,3 +96,76 @@ def test_the_files_and_one_pdf_of_the_pages_cited(tmp_path):
     again = hl.export(*args, marks)
     assert again["exists"] and not again["files"] and again["pdf"] is None
     assert hl.export(*args, marks, overwrite=True)["pdf"] == got["pdf"]
+
+
+def test_short_parts_only_as_whole_words_and_far_parts_count_as_missing(tmp_path):
+    """Audit N-05, N-06: "10" is never marked inside "2010" or "100"; a part found far from the rest is not marked
+    and the status says partial."""
+    doc = pymupdf.open()
+    p = doc.new_page()
+    p.insert_htmlbox(pymupdf.Rect(50, 50, 550, 200), "Pressure 10<br>temperature 2010, 100 and 210")
+    p.insert_htmlbox(pymupdf.Rect(50, 700, 550, 760), "Velocity of gas 20 m/s")
+    rects, status = hl.find(p, "Pressure | 10")
+    assert status == "marked" and len(rects) == 2 and all(r.y1 < 90 for r in rects)
+    rects, status = hl.find(p, "Pressure 10 … Velocity of gas 20 m/s")
+    assert status == "partial"
+
+
+def test_the_quote_of_each_reference_and_the_runs_to_the_last_word():
+    """Audit N-13, N-15."""
+    line = "«alpha beta» — [N-00001, PDF 3], T1; see also [N-00002, PDF 7], T2"
+    assert hl.references([line]) == [("N-00001", 3, "alpha beta"), ("N-00002", 7, "")]
+    assert hl.runs("one two three four five six seven eight nine")[-1].endswith("nine")
+
+
+def test_no_network_device_or_linked_path_into_the_library(tmp_path):
+    """Audit N-01, N-02: a share, a device path and a junction to the library are refused."""
+    import subprocess
+
+    lib = tmp_path / "library"
+    lib.mkdir()
+    for bad in (r"\\host\share\refs", "//host/share", "\\\\?\\" + str(lib / "x")):
+        with pytest.raises(ValueError):
+            hl.safe_folder(bad, [str(lib)])
+    if os.name == "nt":
+        link = tmp_path / "myrefs"
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(lib)], check=True, capture_output=True)
+        for bad in (str(link), str(link / "sub")):
+            with pytest.raises(ValueError):
+                hl.safe_folder(bad, [str(lib)])
+
+
+def test_two_originals_of_one_name_and_a_protected_pdf(tmp_path):
+    """Audit N-04, N-11: both copies kept (the code in front of each name); a PDF with a password is left out
+    before anything is written."""
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    one, two = pdf(a / "Part 1.pdf"), pdf(b / "Part 1.pdf")
+    locked = str(tmp_path / "locked.pdf")
+    d = pymupdf.open(pdf(tmp_path / "plain.pdf"))
+    d.save(locked, encryption=pymupdf.PDF_ENCRYPT_AES_256, user_pw="x", owner_pw="y")
+    d.close()
+    files = {"N-00001": one, "N-00002": two, "N-00003": locked}
+    refs = [("N-00001", 1, ""), ("N-00002", 1, ""), ("N-00003", 1, "")]
+    got = hl.export(str(tmp_path / "out"), refs, lambda c: (files[c], None), lambda c, p, q: c, "References", {})
+    assert sorted(os.path.basename(f) for f in got["files"]) == ["N-00001_Part 1.pdf", "N-00002_Part 1.pdf"]
+    assert any(m.startswith("N-00003:") and "password" in m for m in got["missing"])
+    assert pymupdf.open(got["pdf"]).page_count == 2
+
+
+def test_a_moved_inbox_is_a_folder_of_the_library_too(tmp_path, monkeypatch):
+    """Audit N-03: the folders of [paths] count wherever they are."""
+    from types import SimpleNamespace
+
+    from assistant_x.core import workspace
+    from assistant_x.server import mcp_server
+
+    inbox = tmp_path / "shared_inbox"
+    w = SimpleNamespace(
+        inbox=inbox, library=tmp_path / "lib", index=tmp_path / "ix", data=tmp_path / "d", db=tmp_path / "db"
+    )
+    monkeypatch.setattr(workspace, "current", lambda: w)
+    monkeypatch.setattr(mcp_server, "lib", lambda: SimpleNamespace(cfg={}))
+    with pytest.raises(ValueError):
+        hl.safe_folder(str(inbox / "refs"), mcp_server.library_folders())

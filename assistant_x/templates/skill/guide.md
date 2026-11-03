@@ -44,8 +44,8 @@ about the subject of the question itself, stop and say "The library has no docum
    PDF N" — cite that page; "Not found" — no quotation marks, give it in your own words marked "(paraphrase)".
 5. A "Page:" line (a complex table, a poor recognition): check the number on `page_image(code, page)` if you can see
    images, else say "check against the original, PDF N". A "Source quality" line: tell the user when you cite it.
-6. "Show [code, PDF N]": `page_image(code, N, quote=…)` (`highlight=false`: unmarked). "Copy the references to …":
-   `export_references(folder, [your answer's lines])`; files there already: ask before `overwrite=true`.
+6. "Show [code, …, PDF N]" (any parts): `page_image(code, N, quote=<the quote of that line>)` (`highlight=false`:
+   clean). "Copy the references to …": `export_references(folder, [your answer's lines])`; files there already: ask before `overwrite=true`.
 7. "Low closeness" at the start of an answer: the library may have nothing on it — say so and suggest rephrasing;
    do not answer from yourself. "Found by words only … is loading": repeat in 10–20 s.
 

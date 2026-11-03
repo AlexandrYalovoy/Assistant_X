@@ -67,7 +67,8 @@
   "ref_file": "References",
   "ref_marks": {
     "none": "The quote is not marked: the text layer of the page does not have it (a scan or another spelling); check it on the page.",
-    "partial": "The quote is marked in part: some of its words are not in the text layer of the page; check it on the page."
+    "partial": "The quote is marked in part: some of its words are not in the text layer of the page; check it on the page.",
+    "rotated": "The quote is not marked: the page is turned; find it on the page."
   },
   "_units": "the units of measure a value of a norm carries: a quote with a number and one of them is a value (server/quotes.py)",
   "units": ["mm", "cm", "m", "km", "min", "h", "s", "m/s", "ft/s", "MPa", "kPa", "bar", "psi", "°C", "°F", "kW", "in"]
