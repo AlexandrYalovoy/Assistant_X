@@ -72,13 +72,20 @@ def units(text):
 
 
 def pick(query, text):
-    """The quote of a fragment for a question: the unit with the most stems of the question (a value and a table row
-    count a little more), a short sentence with the next one, a table row with its header; the start of the fragment
-    when no unit has a word of the question."""
+    """The quote of a fragment for a question with the header of its table in front of a table row (one string)."""
+    quote, header = pick_parts(query, text)
+    return f"{header}: {quote}" if header else quote
+
+
+def pick_parts(query, text):
+    """(quote, header of its table or "") of a fragment for a question: the unit with the most stems of the question (a
+    value and a table row count a little more), a short sentence with the next one; the start of the fragment when no
+    unit has a word of the question. The quote is the text of the page as it is (verify_quote finds it), the header of
+    a table row apart."""
     want = stems(query)
     us = units(text)
     if not us:
-        return ""
+        return "", ""
     best, score = 0, -1.0
     for i, (kind, u, header) in enumerate(us):
         got = found(want, u)
@@ -92,11 +99,9 @@ def pick(query, text):
         if sc > score:
             best, score = i, sc
     kind, quote, header = us[best]
-    if kind == "row" and header:
-        quote = f"{header}: {quote}"
-    elif kind == "text" and len(quote) < SHORT and best + 1 < len(us) and us[best + 1][0] == "text":
+    if kind == "text" and len(quote) < SHORT and best + 1 < len(us) and us[best + 1][0] == "text":
         quote = f"{quote} {us[best + 1][1]}"
-    return cut(quote, QUOTE_CHARS)
+    return cut(quote, QUOTE_CHARS), (cut(header, TITLE_CHARS) if kind == "row" else "")
 
 
 WINDOW = 900  # the characters of a search hit shown around its best line
@@ -148,12 +153,20 @@ def line(query, r):
     """«quote» — [code, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
     if r.get("kind") in ("card", "card_q") or not r.get("page"):
         return None
-    quote = (r.get("quote") or pick(query, r.get("text") or "")).replace("«", '"').replace("»", '"')
+    if r.get("quote"):  # a key norm: its verified quote, "header: row" for a table row of an older list
+        quote, header = r["quote"], r.get("header") or ""
+        if not header and ": " in quote and " | " in quote.split(": ", 1)[0]:
+            header, quote = quote.split(": ", 1)
+    else:
+        quote, header = pick_parts(query, r.get("text") or "")
+    quote = quote.replace("«", '"').replace("»", '"')
     if not quote:
         return None
     at = f"p. {r['label']}, PDF {r['page']}" if r.get("label") else f"PDF {r['page']}"
+    table = f" (table: {header})" if header else ""  # the columns of a row, outside the quote: it stays verifiable
     mark = f" [{r['supplement']}]" if r.get("supplement") else ""  # a foreign national norm, after the answer
-    return f"«{quote}» — [{r['code']}, {at}], {cut(' '.join((r.get('title') or '').split()), TITLE_CHARS)}{mark}"
+    title = cut(" ".join((r.get("title") or "").split()), TITLE_CHARS)
+    return f"«{quote}»{table} — [{r['code']}, {at}], {title}{mark}"
 
 
 def lines(query, res):
