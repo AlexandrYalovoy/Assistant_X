@@ -116,3 +116,28 @@ def test_a_plain_question_gets_the_foreign_norms_the_reranker_is_sure_of_after_t
 
     lines = quotes.lines("потенциал", [dict(r, text="Защитный потенциал -850 мВ.") for r in got])
     assert lines[-1].endswith("[US]") and not lines[0].endswith("]")
+
+
+def test_a_filter_of_the_caller_holds_for_the_key_norms_and_the_supplement(monkeypatch):
+    """jurisdictions=["KZ"]: no Russian key norm and no American supplement; a filter of genres or years: none of
+    them; codes: only the documents asked for."""
+    from assistant_x.server import mcp_server as m
+
+    calls = []
+
+    class Lib:
+        cfg = {"profile": "oil-gas-ru"}
+
+        def search(self, query, k, jurisdictions=None, codes=None, **kw):
+            calls.append(jurisdictions)
+            if jurisdictions and "US" in jurisdictions:
+                return [hit("N-02004", "UFC 3-570-06", page=19, jurisdiction="US", sure=0.99)]
+            return [hit("N-02200", "СН РК 3.05-01-2013", page=3, jurisdiction="KZ")]
+
+    monkeypatch.setattr(m, "lib", lambda: Lib())
+    monkeypatch.setattr(m, "key_hits", lambda q: [hit("N-00001", "ГОСТ Р 58367-2019", page=36, key=True)])
+    assert [r["code"] for r in m.find_fragments("расстояния от факела", 8, {}, jurisdictions=["KZ"])] == ["N-02200"]
+    assert [r["code"] for r in m.find_fragments("расстояния от факела", 8, {}, doc_types=["standard"])] == ["N-02200"]
+    assert [r["code"] for r in m.find_fragments("расстояния от факела", 8, {}, codes=["N-02200"])] == ["N-02200"]
+    got = [r["code"] for r in m.find_fragments("расстояния от факела", 8, {})]
+    assert got == ["N-00001", "N-02200", "N-02004"]  # no filter: the key norm, the answer, the supplement

@@ -463,15 +463,19 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
         seen = {(r["code"], r.get("page")) for r in res}
         extra = lib().search(query, k=min(norms, 10), sections=["N"], **kw)
         res = res + [r for r in extra if (r["code"], r.get("page")) not in seen]
-    if not codes and (not sections or "N" in sections):  # the key norms of the topic of a design question first
+    # a filter of the caller (genres, languages, years, scope) holds for what is added too: the key norms and the
+    # supplement are left out then; a filter of jurisdictions keeps the key norms of those jurisdictions only
+    narrowed = scope != "all" or any(flt.get(x) for x in ("doc_types", "langs", "year_from", "year_to"))
+    wanted = {x.strip().upper() for x in flt.get("jurisdictions") or []}
+    if not codes and not narrowed and (not sections or "N" in sections):  # the key norms of a design question first
         first = key_hits(f"{query} {context}" if context else query)
+        if wanted:
+            first = [r for r in first if jur and jur.of(r) in wanted]
         seen = {(r["code"], r["page"]) for r in first}
         res = first + [r for r in res if (r["code"], r.get("page")) not in seen]
     if jur and not codes and jur.asked(query):  # "by ASME", "Kazakh norms": its documents before the key norms too
         res = jur.arrange(res, query, len(res))
-    elif (
-        jur and jur.extra and not codes and not flt.get("jurisdictions")
-    ):  # the foreign national norms in parallel, after the answer, when on topic
+    elif jur and jur.extra and not codes and not narrowed and not wanted:  # the foreign norms in parallel, after it
         res = res + supplement(query, jur, res, sections, kw)
     return res
 
