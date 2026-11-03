@@ -27,6 +27,7 @@ PER_TOPIC = 5  # verified pages kept for a topic
 PER_DOC = 2  # of one document
 MAX_LEVEL = 8  # the organization standards and higher: methodical documents and books are not key norms
 FIRST = 4  # key norm pages put first in an answer
+FIRST_DOC = 2  # of one document
 CANDIDATES = 20  # pages of shelf N looked at per search of a topic
 
 
@@ -260,15 +261,24 @@ def match(data, query):
 
 
 def entries_for(data, query, n=FIRST):
-    """The key norm pages of the topics of a question, the highest level first, n at most, no page twice."""
-    got, seen = [], set()
+    """The key norm pages of the topics of a question, the highest level first, n at most, no page twice and FIRST_DOC
+    pages of one document at most (the places of the answer go to the search too)."""
+    got, seen, ws = [], set(), words(query)
     for t in match(data, query):
+        fit = sum(1 for g in t["ask"] for s in g if any(w.startswith(s) for w in ws))  # the words of the question
         for e in t["entries"]:
             if (e["code"], e["pdf_page"]) not in seen:
                 seen.add((e["code"], e["pdf_page"]))
-                got.append(e)
-    got.sort(key=lambda e: e["level"] if e.get("level") is not None else 99)
-    return got[:n]
+                got.append((e, fit))
+    # the highest level first; within a level the topic that has more words of the question (the settling time of
+    # water before the injection of water, for "how long is water held in the apparatus")
+    got = [e for e, _ in sorted(got, key=lambda x: (x[0]["level"] if x[0].get("level") is not None else 99, -x[1]))]
+    out, per = [], {}
+    for e in got:
+        if per.get(e["code"], 0) < FIRST_DOC:
+            per[e["code"]] = per.get(e["code"], 0) + 1
+            out.append(e)
+    return out[:n]
 
 
 def read(path):

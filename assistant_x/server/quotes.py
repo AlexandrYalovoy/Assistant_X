@@ -182,10 +182,12 @@ def line(query, r):
     """«quote» — [code, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
     if r.get("kind") in ("card", "card_q") or not r.get("page"):
         return None
-    if r.get("quote"):  # a key norm: its verified quote, "header: row" for a table row of an older list
-        quote, header = r["quote"], r.get("header") or ""
-        if not header and ": " in quote and " | " in quote.split(": ", 1)[0]:
-            header, quote = quote.split(": ", 1)
+    given = r.get("quote") or r.get("evidence") or ""  # a key norm: the quote that verified its topic on the page
+    header = r.get("header") or ""
+    if given and not header and ": " in given and " | " in given.split(": ", 1)[0]:  # "header: row" of a table
+        header, given = given.split(": ", 1)
+    if r.get("quote") or (given and found(stems(query), given) and value_rx().search(CLAUSE.sub("", given))):
+        quote = given  # the evidence answers the question: it has a word of it and a value
     else:
         quote, header = pick_parts(query, r.get("text") or "")
     quote = quote.replace("«", '"').replace("»", '"')
