@@ -12,6 +12,9 @@ language of the user.
    N], title`, grouped by the level of the hierarchy of documents, the highest first, as given. Never change the
    words or the numbers of a quote, never write a quote that is not in the results.
 3. **Sources**: one line per document cited: code, title.
+4. One last line, in the user's language: "All the files and pages of the references into a folder: "copy the
+   references to D:\…"." When the user asks so, call `export_references(folder, [the lines of your answer])`; if it
+   names files there already, ask before `overwrite=true`.
 
 Lines ending in a mark such as `[US]` are foreign national norms, a supplement: put them after the others.
 

@@ -131,7 +131,8 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
 | `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
 | `book_map` | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | reader | no |
-| `page_image` | Image of a page of the original (PDF page number) to check figures, tables, formulas and charts. | reader | no |
+| `page_image` | Image of a page of the original (PDF page number) to check figures, tables, formulas and charts, or to show the user the page of a reference. | reader | no |
+| `export_references` | Copy the files of the documents cited into a folder of the user and make there one PDF of the pages cited, a page a sheet, each with its reference and title on top and its quote marked in yellow. | reader | no: writes copies into a folder the user names |
 | `verify_quote` | Check a quote before citing it word for word, or a number taken from a table: is the text on that PDF page of the document (or the page before or after it)? | reader | no |
 | `document_info` | The card of a document: designation, title, authors, year, type and shelf, scope, summary, topics, keywords, terms, tables, references, other versions, page numbering. | reader | no |
 | `list_documents` | List of the documents of the library with filters; text searches the titles, designations and topics. | reader | no |
@@ -152,7 +153,7 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | `base_status` | How far the check and the install of a base package are, the questions of the check, the report of the install. | all | no |
 | `base_list` | The base packages installed in this library (version, date, documents) and the user's own documents. | all | no |
 
-The reading tools (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`) are the set of DeepSeek Harness and LM Studio by default; every tool that
+The reading tools (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`) are the set of DeepSeek Harness and LM Studio by default; every tool that
 changes the library asks for the user's yes to a plan first.
 
 ## The commands

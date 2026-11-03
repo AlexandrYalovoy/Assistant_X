@@ -121,7 +121,7 @@ def test_three_apps_one_service_and_a_killed_one_comes_back(place, mini):
         r = init["result"]
         assert r["serverInfo"]["name"] == "Assistant X" and "library_guide" in r["instructions"]
     names = [{t["name"] for t in a.ask("tools/list")["result"]["tools"]} for a in apps]
-    assert len(names[0]) >= 23 and names[1] == set(bridge.toolsets.READER) and names[2] == set(bridge.toolsets.REFERENCE)
+    assert len(names[0]) >= 23 and names[1] == set(bridge.toolsets.READER + bridge.toolsets.EXPORT) and names[2] == set(bridge.toolsets.REFERENCE)
     found = [a.ask("tools/call", {"name": "search_library", "arguments": {"query": "обводнённости"}}) for a in apps]
     for f in found:
         assert "[N-00001, PDF" in " ".join(c["text"] for c in f["result"]["content"]), f

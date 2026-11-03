@@ -10,6 +10,7 @@ import pytest
 
 from assistant_x import clients as K
 from assistant_x.clients import codex, connect, dsh, lmstudio, skills
+from assistant_x.server import toolsets
 from assistant_x.setup import skill
 
 CODEX = """# my settings
@@ -365,7 +366,7 @@ def test_check_through_a_connected_app(home, mini, tmp_path, monkeypatch):
     connect.connect(["lmstudio"], python=sys.executable, root=mini["root"], say=lambda s: None)
     try:
         r = connect.check(["lmstudio"], say=lambda s: None)["lmstudio"]
-        assert r["tools"] == 3 and r["initialize_s"] < 5 and "search_s" in r, (r.get("answer"), r.get("error"))
+        assert r["tools"] == len(toolsets.REFERENCE) and r["initialize_s"] < 5 and "search_s" in r, (r.get("answer"), r.get("error"))
         assert not r["ok"] and "no meaning vectors" in r["error"]  # the mini library has none: said, not "in order"
     finally:
         from assistant_x.server import service

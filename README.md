@@ -43,7 +43,14 @@ Version 0.5.11 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the da
 - Every answer names the document and the place: `[code, cl. N, table N, p. N, PDF N]` (clause, table, printed page; a part not known is left out), with a code such as `N00012` that stays
   with the document for its whole life.
 - A verbatim quote is checked against the text of its page (`verify_quote`); a quote that does not match is caught.
-- The image of the original page (`page_image`): look at a table, a diagram or a formula with your own eyes.
+- The image of the original page (`page_image`): look at a table, a diagram or a formula with your own eyes; the
+  page of a reference comes with its quote marked in yellow ("show [N-00001, PDF 36]"; "without the mark" when you
+  want it clean).
+- The references of an answer gathered into a folder (`export_references`): "copy the references to D:\Project" puts
+  there the files of the documents cited and one PDF of the pages cited, a page a sheet, each with its reference on
+  top and its quote marked. Only words the text layer of a page has are marked: on a scan the sheet says the quote is
+  not marked, never a mark at a guessed place; the originals are never changed, a file there already is replaced
+  only when you agree.
 - The map of a book (`book_map`): its contents with page numbers, so the assistant reads the right section instead of
   guessing.
 - A "Source quality" warning when an answer rests on a weak scan.

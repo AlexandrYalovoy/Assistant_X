@@ -3,7 +3,8 @@
 """The tool sets of the library server and the compact mode for small local models: which tools an app gets and how
 long their answers may be. Light (standard library only): the stdio bridge (server/bridge.py) uses it on every message.
 
-    reader  the tools that read the library (READER): the default of DeepSeek Harness and LM Studio
+    reader  the tools that read the library (READER) and export_references (EXPORT, copies into a folder of the user):
+            the default of DeepSeek Harness and LM Studio
     all     every tool, the intake and the base packages too: the default of Claude and Codex
 
 compact: the first sentence of every tool description, and the answers of the reading tools cut at COMPACT_CHARS
@@ -21,10 +22,12 @@ READER = (
     "document_info",
     "list_documents",
 )
+# what a reading app may write, besides: copies of the files and pages cited, into a folder the user names
+EXPORT = ("export_references",)
 TOOLSETS = ("reader", "all")
 # the compact mode is the reference mode of a small local model (LM Studio): it finds and quotes, nothing else; the
 # other tools are hidden, their descriptions would only take its context
-REFERENCE = ("library_guide", "search_library", "read_pages")
+REFERENCE = ("library_guide", "search_library", "read_pages", "export_references")
 HIDDEN_ARGS = ("quotes", "reference", "context")  # set by the bridge in the compact mode, not shown to the model
 COMPACT_CHARS = 12000  # about 3 500-4 000 tokens of an answer: 15 quote lines of a search fit
 COMPACT_K = 3  # search_library results in the compact mode, at most: the best of the library
@@ -36,7 +39,7 @@ CUT_NOTE = (
 
 def allowed(name, toolset, compact=False):
     """Is the tool name in the set ("reader" | "all"), and in the compact mode one of the reference mode?"""
-    return (toolset == "all" or name in READER) and (not compact or name in REFERENCE)
+    return (toolset == "all" or name in READER + EXPORT) and (not compact or name in REFERENCE)
 
 
 def check(toolset):

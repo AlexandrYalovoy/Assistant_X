@@ -75,12 +75,20 @@ def tools_table(lang="en"):
     words = (
         r["change"]
         if r
-        else {"no": "no", "destructive": "yes, after the user's yes to a plan", "work": "writes its own work files"}
+        else {
+            "no": "no",
+            "destructive": "yes, after the user's yes to a plan",
+            "work": "writes its own work files",
+            "export": "no: writes copies into a folder the user names",
+        }
     )
     for name, _title, about, read, destructive in tools():
         change = words["no"] if read else words["destructive"] if destructive else words["work"]
+        change = words["export"] if name in toolsets.EXPORT else change
         about = r["tools"][name] if r else about
-        rows.append(f"| `{name}` | {about} | {'reader' if name in toolsets.READER else 'all'} | {change} |")
+        rows.append(
+            f"| `{name}` | {about} | {'reader' if name in toolsets.READER + toolsets.EXPORT else 'all'} | {change} |"
+        )
     return "\n".join(rows)
 
 
@@ -123,7 +131,7 @@ def values(lang="en"):
         "tools_table": tools_table(lang),
         "commands_table": commands_table(lang),
         "troubleshooting": problems_table(lang),
-        "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER),
+        "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER + toolsets.EXPORT),
         "apps": ", ".join(f"`{n}`" for n in __import__("assistant_x.clients", fromlist=["APPS"]).APPS),
     }
 

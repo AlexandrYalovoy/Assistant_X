@@ -792,9 +792,13 @@ def book_map(code: str, page: int | None = None) -> str:
 @tool("Page image")
 @logged
 @needs_base
-def page_image(code: str, page: int, zoom: float = 1.6):
-    """Image of a page of the original (PDF page number) to check figures, tables, formulas and charts."""
+def page_image(code: str, page: int, zoom: float = 1.6, quote: str = "", highlight: bool = True):
+    """Image of a page of the original (PDF page number) to check figures, tables, formulas and charts, or to show
+    the user the page of a reference. quote: the words cited from it, marked in yellow on the image (highlight=False
+    when the user asks for the page without the mark); only words the text layer of the page has are marked."""
     import pymupdf as fitz
+
+    from assistant_x.server import highlight as hl
 
     busy = common.maintenance(lib().cfg["index_dir"])
     if busy:
@@ -807,14 +811,85 @@ def page_image(code: str, page: int, zoom: float = 1.6):
         pdf = _open_pdf(path)
         if not 1 <= page <= pdf.page_count:
             return f"{code} has {pdf.page_count} PDF pages."
-        p = pdf[page - 1]
+        one, status = hl.marked_page(pdf, page, quote if highlight else "")
+        p = one[0]
         z = page_zoom(zoom, p.rect.width, p.rect.height)
         pix = p.get_pixmap(matrix=fitz.Matrix(z, z))
+        one.close()
         data = pix.tobytes("png")
-        note = IMAGE_NOTE.format(code=code, page=page)
+        note = IMAGE_NOTE.format(code=code, page=page) + MARK_NOTES.get(status, "")
         if len(data) > MAX_PNG:  # a dense scan: JPEG is several times smaller and reads just as well
             return [note, Image(data=pix.tobytes("jpeg", jpg_quality=85), format="jpeg")]
     return [note, Image(data=data, format="png")]
+
+
+@tool("Gather the references into a folder", read=False)
+@logged
+@needs_base
+def export_references(folder: str, references: list[str], highlight: bool = True, overwrite: bool = False) -> str:
+    """Copy the files of the documents cited into a folder of the user and make there one PDF of the pages cited,
+    a page a sheet, each with its reference and title on top and its quote marked in yellow. references: the lines
+    of the answer with their references ("«quote» — [code, …, PDF N], title"), or the whole answer. highlight=False:
+    the pages without the mark. A file there already is not replaced: the answer names it, and overwrite=True
+    replaces it once the user agrees. The originals of the library are never changed."""
+    from assistant_x.server import highlight as hl
+
+    refs = hl.references(references or [])
+    if not refs:
+        return "No reference [code, …, PDF N] in the lines given: give the lines of the answer with their references."
+    cfg = lib().cfg
+    try:
+        keep = [cfg.get(k) for k in ("library_root", "index_dir", "texts_dir", "cards_dir", "packages_dir", "models_dir")]
+        path = hl.safe_folder(folder, keep + [os.path.join(cfg.get("workspace") or "", "inbox")])
+    except ValueError as why:
+        return str(why)
+    lang = answer_lang()
+    from assistant_x.core import lang as packs
+
+    with _pdf_lock:
+        got = hl.export(
+            path,
+            refs,
+            lib().original,
+            lambda code, page, quote: _sheet_head(code, page, quote, lang),
+            packs.get(lang, "ref_file") or "References",
+            packs.get(lang, "ref_marks") or {},
+            highlight=highlight,
+            overwrite=overwrite,
+        )
+    if got["exists"] and not overwrite:
+        return (
+            f"Nothing written: there are files of the same names in {path} already:\n"
+            + "\n".join(got["exists"])
+            + "\nAsk the user: replace them (overwrite=True), or another folder."
+        )
+    lines = [f"Folder: {path}", f"Files of the documents copied: {len(got['files'])}"]
+    if got["pdf"]:
+        lines.append(f"The pages cited: {got['pdf']}")
+        if highlight:
+            lines.append(
+                f"Quotes marked: {got['marked']}, in part: {got['partial']}, not marked (a scan or another "
+                f"spelling): {got['none']}"
+            )
+    lines += [f"Not gathered: {m}" for m in got["missing"]]
+    return "\n".join(lines)
+
+
+def _sheet_head(code, page, quote, lang):
+    """The line above a page in the PDF of the references (HTML): the reference in the one form, the title, the
+    quote."""
+    import html
+
+    text = lib().page_text(code, page) or ""
+    at = quotes_mod.line_of(text, quote) if quote else -1
+    clause, table = quotes_mod.place(text, at) if at >= 0 else (None, None)
+    label = (lib().page_info(code, page, page).get(page) or (None,))[0]
+    title = (lib().doc(code) or {}).get("title") or ""
+    out = f"<b>{html.escape(quotes_mod.cite(code, page, label, clause, table, lang))}</b> {html.escape(title)}"
+    if quote:
+        q = quote if len(quote) <= 220 else quote[:220] + "…"
+        out += f"<br>«{html.escape(q)}»"
+    return out
 
 
 @tool("Check a quote")
@@ -851,6 +926,12 @@ def verify_quote(code: str, page: int, text: str) -> str:
     return out + (f"\nPage: {note}" if note else "")
 
 
+MARK_NOTES = {
+    "marked": " The quote is marked in yellow.",
+    "partial": " The quote is marked in part: some of its words are not in the text layer of the page; tell the user.",
+    "none": " The quote is not marked: the text layer of the page does not have it (a scan or another spelling); "
+    "tell the user to find it on the page.",
+}
 IMAGE_NOTE = (
     "The image of {code}, PDF {page}. If you cannot see images, read the page with read_pages({code!r}, {page}, {page}) "
     "and check numbers with verify_quote instead; tell the user to check the original."

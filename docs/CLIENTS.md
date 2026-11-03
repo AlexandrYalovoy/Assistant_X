@@ -18,7 +18,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **The service** (`assistant-x service`): one per workspace, the models loaded once (on the video card when there is
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
-- **The tool sets**: `all` (every tool: the intake, base packages) or `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`). `--compact`: one-sentence
+- **The tool sets**: `all` (every tool: the intake, base packages) or `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
   descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):
@@ -101,7 +101,8 @@ The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC
 | `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
 | `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
 | `book_map` | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | reader | no |
-| `page_image` | Image of a page of the original (PDF page number) to check figures, tables, formulas and charts. | reader | no |
+| `page_image` | Image of a page of the original (PDF page number) to check figures, tables, formulas and charts, or to show the user the page of a reference. | reader | no |
+| `export_references` | Copy the files of the documents cited into a folder of the user and make there one PDF of the pages cited, a page a sheet, each with its reference and title on top and its quote marked in yellow. | reader | no: writes copies into a folder the user names |
 | `verify_quote` | Check a quote before citing it word for word, or a number taken from a table: is the text on that PDF page of the document (or the page before or after it)? | reader | no |
 | `document_info` | The card of a document: designation, title, authors, year, type and shelf, scope, summary, topics, keywords, terms, tables, references, other versions, page numbering. | reader | no |
 | `list_documents` | List of the documents of the library with filters; text searches the titles, designations and topics. | reader | no |
