@@ -141,3 +141,12 @@ def test_a_filter_of_the_caller_holds_for_the_key_norms_and_the_supplement(monke
     assert [r["code"] for r in m.find_fragments("расстояния от факела", 8, {}, codes=["N-02200"])] == ["N-02200"]
     got = [r["code"] for r in m.find_fragments("расстояния от факела", 8, {})]
     assert got == ["N-00001", "N-02200", "N-02004"]  # no filter: the key norm, the answer, the supplement
+
+
+def test_a_short_ask_word_names_a_jurisdiction_only_as_a_whole_word():
+    """Audit N-07: "energy", "end", "entry" are no EN norm; "EN 13480" and "API 5L" are."""
+    j = J.load("oil-gas-ru")
+    for q in ("energy consumption of the pump", "end of the pipeline", "entry pressure of a separator"):
+        assert j.asked(q) == [], q
+    assert j.asked("EN 13480 piping") == ["EU"] and j.asked("API 5L pipe") == ["US"]
+    assert j.asked("американские нормы") == ["US"]

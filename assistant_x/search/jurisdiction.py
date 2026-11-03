@@ -12,6 +12,7 @@ import functools, json, re
 from assistant_x.core import config
 
 FILE = "jurisdictions.json"
+SHORT_ASK = 4  # an ask word this short or shorter names a jurisdiction only as a whole word of the question
 
 
 class Jurisdictions:
@@ -35,9 +36,14 @@ class Jurisdictions:
         return self.default
 
     def asked(self, query):
-        """The jurisdictions a question names by their words (the start of a word of the question)."""
+        """The jurisdictions a question names by their words (the start of a word of the question; a short ask word,
+        "en" or "api", the whole word only: "energy" names no jurisdiction)."""
         words = re.findall(r"\w+", (query or "").lower())
-        return [jid for jid, _, ask in self.rules if any(w.startswith(a) for a in ask for w in words)]
+        return [
+            jid
+            for jid, _, ask in self.rules
+            if any(w == a or (len(a) > SHORT_ASK and w.startswith(a)) for a in ask for w in words)
+        ]
 
     def room(self):
         """The places the supplements may take after the k answers."""
