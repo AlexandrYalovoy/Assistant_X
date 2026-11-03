@@ -72,6 +72,10 @@ def units(text):
 
 
 CLAUSE = re.compile(r"^\s*\d+(?:\.\d+)+\.?\s")  # the number of a clause at the start of a line: no value
+# a clause that heads a line: its number, then a word with a capital or of 4 letters at least ("6.2.1.9 The speeds",
+# "3.1 pipeline: a ..."), never a date ("01.07.2021 entered") or a value with its unit ("2.5 m is")
+HEAD_CLAUSE = re.compile(r"^\s*(\d+(?:\.\d+)+)\.?\s+[\W\d_]*([^\W\d_]+)")
+DATE = re.compile(r"^\d{1,2}\.\d{1,2}\.\d{2,4}$")
 _value = []
 
 
@@ -177,14 +181,14 @@ def place(text, at):
     at = max(0, min(at, len(lines) - 1))
     clause = table = None
     for i in range(at, max(-1, at - 40), -1):
-        m = CLAUSE.match(clean(lines[i]) + " ")
-        if m:
-            clause = m.group(0).strip().rstrip(".")
+        m = HEAD_CLAUSE.match(clean(lines[i]))
+        if m and (m.group(2)[0].isupper() or len(m.group(2)) >= 4) and not DATE.match(m.group(1)):
+            clause = m.group(1)
             break
     if lines[at].lstrip().startswith("|"):
         for i in range(at, max(-1, at - 60), -1):
             m = caption_rx().match(clean(lines[i]))
-            if m:
+            if m and any(ch.isdigit() for ch in m.group(1)):  # "Table 5.3", "Table A.1"; not "Table continued"
                 table = m.group(1).rstrip(".")
                 break
     return clause, table
@@ -268,6 +272,16 @@ def cut(text, n):
     return text[: sp if sp > 0 else n].rstrip(" ,;:") + "…"
 
 
+def on_page(text, quote):
+    """Is every cell of a quote (a row "a | b", or a sentence) in the text of its page, spaces and marks aside?"""
+    page = squash_all(text)
+    return all(squash_all(x) in page for x in quote.split(" | ") if squash_all(x))
+
+
+def squash_all(s):
+    return re.sub(r"[\W_]+", "", re.sub(r"<br\s*/?>", " ", s or "")).lower()
+
+
 def line(query, r, lang="en"):
     """«quote» — [code, cl. N, table N, p. N, PDF N], short title of a page hit (None for the card of a document: it has no page)."""
     if r.get("kind") in ("card", "card_q") or not r.get("page"):
@@ -276,7 +290,9 @@ def line(query, r, lang="en"):
     header = r.get("header") or ""
     if given and not header and ": " in given and " | " in given.split(": ", 1)[0]:  # "header: row" of a table
         header, given = given.split(": ", 1)
-    if r.get("quote") or (given and found(stems(query), given) and value_rx().search(CLAUSE.sub("", given))):
+    if given and not on_page(r.get("text") or "", given):
+        given = ""  # a quote of a key norm the page text does not hold (a recognition slip, a glued caption): never shown
+    if (r.get("quote") and given) or (given and found(stems(query), given) and value_rx().search(CLAUSE.sub("", given))):
         quote = given  # the evidence answers the question: it has a word of it and a value
     else:
         quote, header = pick_parts(query, r.get("text") or "")

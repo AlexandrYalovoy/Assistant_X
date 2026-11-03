@@ -147,3 +147,24 @@ def test_one_form_of_a_reference_with_the_parts_known():
         "«Газуглеводородный в трубопроводах | 5-20» (табл.: Наименование потоков | Скорость, м/с) — "
         "[N-00001, п. 6.2.1.9, табл. 1, PDF 36], ГОСТ Р 58367-2019 Обустройство месторождений"
     )
+
+
+def test_no_clause_or_table_made_of_a_date_a_value_or_a_word():
+    """Audit N-14: a date, a value at the start of a line and a caption without a number give no part."""
+    assert quotes.place("01.07.2021 введен впервые", 0) == (None, None)
+    assert quotes.place("2.5 m is the least gap", 0) == (None, None)
+    assert quotes.place("4.3.5. При выборе диаметров", 0) == ("4.3.5", None)
+    assert quotes.place("Таблица продолжение\n|a|b|", 1) == (None, None)
+    assert quotes.place("Tables 1 and 2 show\n|a|b|", 1) == (None, None)
+    assert quotes.place("Таблица А.1 - Скорости\n|a|b|", 1) == (None, "А.1")
+
+
+def test_a_key_norm_quote_the_page_does_not_hold_is_never_shown():
+    """Audit P-04: the evidence of a key norm with a recognition slip gives way to a line of the page itself."""
+    page = "Для газопроводов максимально-допустимая скорость газа в шлейфах до 20 м/с."
+    bad = hit(page, evidence="Для газопроводов | озном | мз/с 20 м/с", label=None)
+    assert "озном" not in quotes.line("допустимая скорость газа", bad) and "до 20 м/с" in quotes.line(
+        "допустимая скорость газа", bad
+    )
+    good = hit(page, evidence=page)
+    assert quotes.line("допустимая скорость газа", good).startswith("«" + page)
