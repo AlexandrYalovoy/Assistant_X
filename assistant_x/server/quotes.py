@@ -71,6 +71,25 @@ def units(text):
     return out
 
 
+CLAUSE = re.compile(r"^\s*\d+(?:\.\d+)+\.?\s")  # the number of a clause at the start of a line: no value
+VALUE = re.compile(r"\d+(?:[,.]\d+)?\s*(?:-|–|…|\.\.\.)\s*\d|\d\s*(?:%|°|мм|мин|м/с|МПа|кПа|м\b|ч\b|mm|min|m/s|MPa)")
+
+
+def worth(want, unit, header="", row=False):
+    """The score of a sentence or a table row for a question: the stems of the question in it, the ones only in the
+    header of its table a half; a value (a range, a number with its unit; not the number of a clause) one more, a
+    table row with a word of the question a quarter more, a line of a table of contents far less."""
+    got = found(want, unit)
+    sc = len(got) + 0.5 * len(found(want, header) - got)
+    if (got or found(want, header)) and VALUE.search(CLAUSE.sub("", unit)):
+        sc += 1.5
+    if row and got:
+        sc += 0.25
+    if not row and len(unit.split()) <= 12 and (TOC.search(unit) or re.search(r"\d\s+\D+\s\d{1,4}$", unit)):
+        sc -= 10
+    return sc
+
+
 def pick(query, text):
     """The quote of a fragment for a question with the header of its table in front of a table row (one string)."""
     quote, header = pick_parts(query, text)
@@ -88,14 +107,7 @@ def pick_parts(query, text):
         return "", ""
     best, score = 0, -1.0
     for i, (kind, u, header) in enumerate(us):
-        got = found(want, u)
-        sc = len(got) + 0.5 * len(found(want, header) - got)  # a row is read with the header of its table
-        if got and any(ch.isdigit() for ch in u):
-            sc += 0.5  # a value
-        if kind == "row" and got:
-            sc += 0.25  # the data of a table before the sentence that only names it
-        if kind == "text" and len(u.split()) <= 12 and (TOC.search(u) or re.search(r"\d\s+\D+\s\d{1,4}$", u)):
-            sc -= 10  # a line of a table of contents names a subject and a page, it answers nothing
+        sc = worth(want, u, header, kind == "row")
         if sc > score:
             best, score = i, sc
     kind, quote, header = us[best]
@@ -116,9 +128,14 @@ def window(query, text, n=WINDOW):
         return text
     lines = text.splitlines()
     want = stems(query)
+    header, heads = "", []
+    for x in lines:  # the header row of the table of each line ("" outside a table)
+        row = x.lstrip().startswith("|")
+        header = (header or clean(x)) if row else ""
+        heads.append(header if row else "")
     best = max(
         range(len(lines)),
-        key=lambda i: (len(found(want, lines[i])) + (0.5 if any(c.isdigit() for c in lines[i]) else 0), -i),
+        key=lambda i: (worth(want, clean(lines[i]), heads[i], lines[i].lstrip().startswith("|")), -i),
     )
     lo = hi = best
     size = len(lines[best])

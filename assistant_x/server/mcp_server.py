@@ -528,9 +528,7 @@ def key_hits(query):
         )
         if not row:
             continue  # a document taken out since the list was built
-        text = row["text"] or ""
-        at = text.find(e["quote"][:40])
-        part = text[max(0, at - 300) : at + 900] if at >= 0 else e["quote"]
+        text = (row["text"] or "").strip()  # the whole page: the answer shows the lines of the question (window)
         out.append(
             dict(
                 code=e["code"],
@@ -540,7 +538,7 @@ def key_hits(query):
                 year=row["year"],
                 page_numbering=row["page_offset"],
                 heading="key norm of the topic",
-                text=part.strip(),
+                text=text or e["quote"],
                 quality=row["quality"] or "",
                 issue=row["issue"] or "",
                 kind="text",
@@ -552,7 +550,7 @@ def key_hits(query):
                 level=e.get("level"),
                 designation=row["designation"] or "",
                 jurisdiction=row["jurisdiction"] or "",
-                quote=e["quote"],
+                evidence=e["quote"],  # why the page is a key norm of the topic; the quote is picked for the question
                 key=True,
             )
         )
