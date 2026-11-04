@@ -1,5 +1,5 @@
 {
-  "_comment": "English names in the inbox: personal papers by the name of a file or folder (tax returns, payslips, bank statements, identity papers, medical records: sent to _to_delete unopened; not the bare word 'passport'), and words of hidden text aimed at an AI. The folders of a kit of a national standard (kit_*) are a Russian registry's: none here. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one). admin_*: the administrative pages a file of only such pages is set aside for (intake/admin_filter.py); no order of entry into force or payment order words are common enough in English papers to name, so the lists are shorter.",
+  "_comment": "English names in the inbox: personal papers by the name of a file or folder (tax returns, payslips, bank statements, identity papers, medical records: sent to _to_delete unopened; not the bare word 'passport'), and words of hidden text aimed at an AI. The folders of a kit of a national standard (kit_*) are a Russian registry's: none here. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one). admin_*: the administrative pages a file of only such pages is set aside for (intake/admin_filter.py); no order of entry into force or payment order words are common enough in English papers to name, so the lists are shorter. admin_costs: prices of materials, equipment and works with an amount make a file substantive; admin_drawing: a drawing with an approval stamp is no cover page. admin_contract_keep: a contract with a scope of work or technical requirements is substantive.",
   "suspect_words": [
     "ignore",
     "instructions?",
@@ -52,12 +52,22 @@
     "meeting_minutes": "\\bminutes\\s+of\\s+(?:the\\s+)?meeting\\b|\\bmeeting\\s+minutes\\b",
     "explanatory_note": "\\bexplanatory\\s+note\\s+to\\s+the\\s+draft\\b",
     "transfer_act": "\\b(?:transfer|handover)\\s+(?:act|certificate)\\b",
-    "maintenance_schedule": "\\b(?:maintenance|inspection|overhaul|revision|turnaround)\\s+(?:plan\\s+and\\s+)?schedule\\b|\\bschedule\\s+of\\s+(?:maintenance|inspections?|overhauls?|repairs?)\\b"
+    "maintenance_schedule": "\\b(?:maintenance|inspection|overhaul|revision|turnaround)\\s+(?:plan\\s+and\\s+)?schedule\\b|\\bschedule\\s+of\\s+(?:maintenance|inspections?|overhauls?|repairs?)\\b",
+    "work_schedule": "^\\W*(?:\\w+\\W+){0,10}?(?:construction|delivery|works?)\\s+schedule\\b"
   },
   "admin_whole": {
     "meeting_letter": [
       "\\bdear\\b",
       "\\binvit\\w*\\s+(?:you\\s+)?to\\s+(?:a|the)\\s+meeting\\b"
+    ],
+    "power_of_attorney": [
+      "^\\W*(?:\\w+\\W+){0,12}?power\\s+of\\s+attorney\\b"
+    ],
+    "business_trip": [
+      "^\\W*(?:\\w+\\W+){0,20}?(?:travel\\s+(?:order|authori[sz]ation)|expense\\s+report)\\b"
+    ],
+    "contract": [
+      "^\\W*(?:\\w+\\W+){0,8}?(?:contract|agreement|amendment\\s+to\\s+(?:the\\s+)?contract)\\s+(?:no\\.?|number|#)\\s*\\d"
     ]
   },
   "admin_keep": {
@@ -90,8 +100,27 @@
     "explanatory_note": "explanatory note to a draft norm",
     "transfer_act": "transfer act",
     "payment_order": "order on payments",
-    "price_letter": "letter about prices",
     "meeting_letter": "letter about a meeting",
-    "maintenance_schedule": "maintenance or inspection schedule without results"
-  }
+    "maintenance_schedule": "maintenance or inspection schedule without results",
+    "power_of_attorney": "power of attorney",
+    "business_trip": "business trip paper",
+    "contract": "contract without technical requirements or prices",
+    "work_schedule": "work schedule"
+  },
+  "admin_costs": {
+    "mtr_price": [
+      "\\b(?:price|cost)s?\\b(?:\\W+\\w+){0,6}?\\W+(?:equipment|units?|package|materials?|pumps?|compressors?|pipes?|valves?|skids?|supply|works?|installation|spare\\s+parts)",
+      "(?:\\$|€|£)\\s?\\d|\\d[\\d,]*(?:\\.\\d+)?\\s*(?:usd|eur|gbp|rub)\\b"
+    ],
+    "price_document": [
+      "\\binvoice\\b|\\bprice\\s+list\\b|\\bbill\\s+of\\s+quantities\\b|\\bcost\\s+estimate\\b",
+      "(?:\\$|€|£)\\s?\\d|\\d[\\d,]*(?:\\.\\d+)?\\s*(?:usd|eur|gbp|rub)\\b"
+    ]
+  },
+  "admin_drawing": [
+    "\\b(?:process\\s+flow|p&id|piping\\s+and\\s+instrumentation|single[\\s-]line|layout|general\\s+arrangement)\\b|\\bdrawing\\b"
+  ],
+  "admin_contract_keep": [
+    "\\bscope\\s+of\\s+work\\b|\\btechnical\\s+(?:specification|requirements)\\b|\\bdata\\s*sheets?\\b"
+  ]
 }

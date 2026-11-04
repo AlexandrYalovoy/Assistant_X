@@ -85,6 +85,53 @@ def test_unreadable_scan_never_rejected_on_a_guess():
     assert A.classify("Скан титула.pdf", text("УТВЕРЖДАЮ", "", ""))["verdict"] is None
 
 
+def test_prices_of_equipment_and_works_are_technical_data():
+    """The author, 2026-11-04: commercial proposals and the prices of materials, equipment and works (МТР) stay, in a
+    letter or an invoice; a bare sum of a contract in an order on payments does not keep it."""
+    letter = (
+        "Уважаемый Ришат Радикович! О стоимости оборудования. Рассмотрев Ваше письмо, сообщаем: стоимость комплекта "
+        "стационарной установки УМЗ составляет 10,5 млн. руб. с НДС, срок поставки 120 дней. "
+    ) * 2
+    assert A.classify("стоимость УМЗ.pdf", text(letter))["rule"] == "keep:mtr_price"
+    invoice = "Счёт на оплату № 145 от 12.03.2024. Насос ЦНС 60-330, 1 шт., цена 1 250 000 руб. Итого с НДС. " * 2
+    assert A.classify("Счёт 145.pdf", text(TITLE, invoice))["verdict"] is None
+    order = "ПРИКАЗ О порядке предоставления отсрочек платежа по договорам. Утвердить порядок оплаты. " * 3
+    assert A.classify("Приказ 100-П.pdf", text(order))["verdict"] == "reject"
+    sums = order + " Стоимость договора свыше 5 000 000 руб. (с НДС): отсрочка 60 дней. "
+    assert A.classify("Приказ 100-П.pdf", text(sums))["verdict"] == "reject"
+
+
+def test_a_centrifugal_pump_is_no_price():
+    """ "цен…" of a centrifugal pump or of an assessment is no price: an implementation plan that names one goes aside."""
+    plan = PLAN_1 + " Насосы центробежные, оценка ценности, 1 шт. на сумму не указано. " + PLAN_2
+    assert A.classify("План.docx", text(plan + " Итого 5 000 руб.", PLAN_2))["verdict"] == "reject"
+
+
+def test_power_of_attorney_business_trip_and_a_bare_contract_rejected():
+    poa = "ДОВЕРЕННОСТЬ № 15 г. Тюмень. ООО «Нефтесервис» в лице директора уполномочивает Иванова И.И. " * 2
+    assert A.classify("Доверенность.pdf", text(poa))["verdict"] == "reject"
+    trip = "ПРИКАЗ (распоряжение) о направлении работника в командировку. Иванов И.И., цель командировки: совещание. " * 2
+    assert A.classify("Командировка.pdf", text(trip))["verdict"] == "reject"
+    contract = (
+        "ДОГОВОР № 12/24 г. Тюмень. Стороны заключили настоящий договор о нижеследующем. Предмет договора: "
+        "исполнитель оказывает услуги по сопровождению. Порядок расчётов, ответственность сторон, реквизиты. "
+    ) * 3
+    assert A.classify("Договор 12-24.pdf", text(contract))["verdict"] == "reject"
+
+
+def test_a_contract_with_a_scope_of_work_or_prices_accepted():
+    contract = "ДОГОВОР № 12/24 поставки. Стороны заключили договор. Предмет договора: поставка оборудования. " * 3
+    with_scope = contract + " Приложение 1. Техническое задание на поставку сепаратора НГС-1,6-3000. "
+    assert A.classify("Договор.pdf", text(with_scope))["verdict"] is None
+    with_price = contract + " Стоимость оборудования: сепаратор НГС-1,6-3000 — 12 500 000 руб. с НДС. "
+    assert A.classify("Договор.pdf", text(with_price))["verdict"] is None
+
+
+def test_a_work_schedule_alone_is_a_doubt():
+    schedule = "ГРАФИК строительства перехода ННБ через реку. Этап, срок начала, срок окончания, исполнитель. " * 3
+    assert A.classify("График ННБ.pdf", text(schedule))["verdict"] == "warn"
+
+
 def test_minutes_of_a_meeting_alone_are_a_doubt():
     minutes = "ПРОТОКОЛ совещания по вопросам проектирования объекта. Присутствовали: Иванов, Петров. РЕШИЛИ: " + PLAN_2
     assert A.classify("Протокол.pdf", text(minutes))["verdict"] == "warn"

@@ -1,5 +1,5 @@
 {
-  "_comment": "Russian names in the inbox: personal papers by the name of a file or folder (land register extracts, insurance numbers, tax statements, passports, certificates…: sent to _to_delete unopened; not the bare word for 'passport', the datasheets of equipment are called so too), words of hidden text aimed at an AI, and the folders of a kit of a Russian standard as the registry distributes it (the document file, its scan images, additional documents) with the names of its administrative pages. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one). admin_*: the administrative pages a file of only such pages is set aside for (intake/admin_filter.py): the page kinds named in the head of a page, the subjects of a short letter or order, the words of substantive papers never set aside, the start of real content, engineering words and quantities, the labels of the report.",
+  "_comment": "Russian names in the inbox: personal papers by the name of a file or folder (land register extracts, insurance numbers, tax statements, passports, certificates…: sent to _to_delete unopened; not the bare word for 'passport', the datasheets of equipment are called so too), words of hidden text aimed at an AI, and the folders of a kit of a Russian standard as the registry distributes it (the document file, its scan images, additional documents) with the names of its administrative pages. ai_phrases: phrases of a text addressed to an AI assistant (the search marks a fragment that has one). admin_*: the administrative pages a file of only such pages is set aside for (intake/admin_filter.py): the page kinds named in the head of a page, the subjects of a short letter or order, the words of substantive papers never set aside, the start of real content, engineering words and quantities, the labels of the report. admin_costs: the prices of materials, equipment and works (МТР) — a phrase of a price next to an amount, or a price document (an invoice, an estimate, a price list) with an amount — make a file substantive (the author, 2026-11-04); a bare sum of a contract or a payment does not. admin_drawing: a drawing or a scheme with an approval stamp is no title page. admin_contract_keep: a contract with these words (a scope of work, technical requirements, a specification, a data sheet) is substantive. A work schedule alone is a doubt (a warning).",
   "personal_papers": [
     "ЕГРН",
     "СНИЛС",
@@ -60,20 +60,26 @@
     "meeting_minutes": "протокол\\w*(?:\\W+\\S+){0,3}?\\W+(?:совещани|заседани)",
     "explanatory_note": "пояснительн\\w*\\W+записк\\w*\\W+к\\W+(?:проекту|окончательн\\w*\\W+редакции|первой\\W+редакции)\\W+(?:\\w+\\W+){0,3}?(?:нмд|нд\\b|стандарт|методическ|типов|ттт|ттр|тпр|м-|ск-|мп-|кр-|оск|гост|сп\\b|снип|\\d{4,5}\\b)",
     "transfer_act": "акт\\w*\\W+(?:при[её]ма[\\W-]+)?передачи",
-    "maintenance_schedule": "план\\w*[\\W-]+график\\w*\\W+(?:\\w+\\W+){0,3}?(?:ревизи|осмотр|ремонт|ппр\\b|то\\b|техническ\\w*\\W+(?:обслуживани|освидетельствовани|диагностировани))|график\\w*\\W+(?:\\w+\\W+){0,2}?(?:ппр\\b|планово[\\W-]*предупредительн|ремонт|ревизи|осмотр|техническ\\w*\\W+(?:обслуживани|освидетельствовани))"
+    "maintenance_schedule": "план\\w*[\\W-]+график\\w*\\W+(?:\\w+\\W+){0,3}?(?:ревизи|осмотр|ремонт|ппр\\b|то\\b|техническ\\w*\\W+(?:обслуживани|освидетельствовани|диагностировани))|график\\w*\\W+(?:\\w+\\W+){0,2}?(?:ппр\\b|планово[\\W-]*предупредительн|ремонт|ревизи|осмотр|техническ\\w*\\W+(?:обслуживани|освидетельствовани))",
+    "work_schedule": "^\\W*(?:\\w+\\W+){0,10}?(?:график\\w*\\W+(?:строительств|поставк|выполнени\\w*\\W+работ|производств\\w*\\W+работ|работ\\b)|календарн\\w*\\W+план\\w*\\W+(?:выполнени\\w*\\W+)?работ|сетев\\w*\\W+график)"
   },
   "admin_whole": {
     "payment_order": [
       "(?:приказ|распоряжени)",
-      "отсрочк\\w*\\W+(?:платеж|платёж|оплат)|порядк\\w*\\W+(?:оплат|расч[её]тов)"
-    ],
-    "price_letter": [
-      "уважаем\\w*",
-      "(?:^|\\W)[оo]б?\\W+(?:стоимост|ценах|цене)\\w*"
+      "отсроч\\w*\\W+(?:платеж|платёж|оплат)|порядк\\w*\\W+(?:оплат|расч[её]тов)"
     ],
     "meeting_letter": [
       "уважаем\\w*",
       "(?:^|\\W)[оo]б?\\W+(?:\\w+\\W+){0,3}?совещани\\w*"
+    ],
+    "power_of_attorney": [
+      "^\\W*(?:\\w+\\W+){0,12}?доверенност[ьи]\\b"
+    ],
+    "business_trip": [
+      "^\\W*(?:\\w+\\W+){0,25}?(?:командировочн\\w*\\W+удостоверени|служебн\\w*\\W+задани\\w*(?:\\W+\\w+){0,3}?\\W+командировк|(?:о|об)\\W+(?:направлени\\w*\\W+(?:\\w+\\W+){0,3}?)?в\\W+командировк|о\\W+командировани|авансов\\w*\\W+отч[её]т)"
+    ],
+    "contract": [
+      "^\\W*(?:\\w+\\W+){0,8}?(?:договор|дополнительн\\w*\\W+соглашени|контракт|протокол\\w*\\W+(?:разногласий|согласования\\W+(?:договорной\\W+)?цены))\\w*\\W+(?:№|n\\b|\\d|поставки|подряда|оказания|на\\W+выполнени|аренды|купли)"
     ]
   },
   "admin_keep": {
@@ -107,8 +113,27 @@
     "explanatory_note": "пояснительная записка к проекту НД",
     "transfer_act": "акт передачи",
     "payment_order": "приказ о порядке оплаты или отсрочек платежа",
-    "price_letter": "письмо о стоимости",
     "meeting_letter": "письмо о совещании",
-    "maintenance_schedule": "план-график ревизии, осмотра, ремонта или ТО без результатов"
-  }
+    "maintenance_schedule": "план-график ревизии, осмотра, ремонта или ТО без результатов",
+    "power_of_attorney": "доверенность",
+    "business_trip": "командировочный документ",
+    "contract": "договор без технических требований и без цен",
+    "work_schedule": "график работ"
+  },
+  "admin_costs": {
+    "mtr_price": [
+      "(?:стоимост\\w*|\\bцен(?:а|ы|у|е|ой|ам|ах|ами|ник\\w*)?\\b|расценк\\w*)(?:\\W+\\w+){0,6}?\\W+(?:оборудовани|установк|материал|мтр\\b|насос|компрессор|труб|арматур|комплект|блок|поставк|изготовлени|работ|услуг|монтаж|сепаратор|резервуар|кабел|прибор|датчик|расходомер|запчаст|запасн)",
+      "\\d[\\d\\s]*(?:[.,]\\d+)?\\s*(?:руб|тыс\\.?\\s*руб|млн\\.?\\s*руб|млрд\\.?\\s*руб|₽|тенге|тыс\\.?\\s*тенге|млн\\.?\\s*тенге|₸|usd|eur)|(?:\\$|€)\\s?\\d"
+    ],
+    "price_document": [
+      "сч[её]т[\\W-]*фактур|сч[её]т\\w*\\W+на\\W+оплату|универсальн\\w*\\W+передаточн|товарн\\w*\\W+накладн|\\bсмет\\w*|прайс[\\W-]*лист|\\bкс-[23]\\b|ведомост\\w*\\W+(?:объ[её]мов|стоимост)|спецификаци\\w*(?:\\W+\\w+){0,4}?\\W+(?:\\bцен(?:а|ы|ой|ами)?\\b|стоимост)",
+      "\\d[\\d\\s]*(?:[.,]\\d+)?\\s*(?:руб|тыс\\.?\\s*руб|млн\\.?\\s*руб|млрд\\.?\\s*руб|₽|тенге|тыс\\.?\\s*тенге|млн\\.?\\s*тенге|₸|usd|eur)|(?:\\$|€)\\s?\\d"
+    ]
+  },
+  "admin_drawing": [
+    "(?:технологическ|фактическ|принципиальн|монтажн|однолинейн|расч[её]тн|структурн|функциональн)\\w*\\W+схем|схем\\w*\\W+(?:расположени|обвязки|подключени)|\\bчерт[её]ж|\\bгенплан|\\bгенеральн\\w*\\W+план"
+  ],
+  "admin_contract_keep": [
+    "техническ\\w*\\W+задани|техническ\\w*\\W+требовани|спецификаци|опросн\\w*\\W+лист|техническ\\w*\\W+характеристик|\\bтз\\b|ведомост\\w*\\W+(?:оборудовани|материал|объ[её]мов)"
+  ]
 }

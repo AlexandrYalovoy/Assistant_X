@@ -10,8 +10,9 @@ a table of contents, or much engineering text). The words are those of the langu
 
 Never rejected: a file with too little text to judge (a scan without its text), anything the packs name substantive
 (admin_keep: catalogs, reviews, the results or acts of pilot tests, methods, commercial proposals, notices of change,
-amendments, orders that approve rules), and a file whose text holds much engineering content unless all of it is an
-implementation plan. A doubt is a warning of the intake report, never a rejection.
+amendments, orders that approve rules; admin_costs: the prices and costs of materials, equipment and works anywhere in
+the text, technical data by the author's word of 2026-11-04), and a file whose text holds much engineering content
+unless all of it is an implementation plan. A doubt is a warning of the intake report, never a rejection.
 
     classify(name, text) → reject | warn | None; scan_library(index) → the documents of the library to warn of
     the intake sets such files aside: intake/admin_filter.py
@@ -31,6 +32,9 @@ MIN_WORDS = 20  # a file with less text is not judged (a scan without its text)
 TECH_KEEP = 25.0  # engineering terms and quantities per 1000 words: past it a file is no administrative paper
 TECH_PAGE = 40.0  # ... and a page past it is real content even inside an administrative section
 WHOLE_PAGES = 12  # a letter or an order judged by its subject is short
+CONTRACT_PAGES = 60  # a contract is longer
+# the minutes of a meeting and a work schedule alone may hold the technical decisions or volumes: a warning, taken in
+DOUBTS = {"meeting_minutes", "work_schedule"}
 # the kinds whose next pages go on with them (a plan, a letter, the minutes over several pages)
 SECTIONS = {
     "implementation_plan",
@@ -61,9 +65,13 @@ def rules():
     pages = {k: _rx(v) for k, v in lang.table("admin_pages").items() if v}
     whole = {k: _rx(v) for k, v in lang.table("admin_whole").items() if v}
     keep = {k: _rx(v) for k, v in lang.table("admin_keep").items() if v}
+    costs = {k: _rx(v) for k, v in lang.table("admin_costs").items() if v}  # all of a list, over the whole text
+    drawing = _rx(lang.alt("admin_drawing"))
+    contract_keep = _rx(lang.alt("admin_contract_keep"))
     restart = _rx(lang.alt("admin_restart"))
     tech = _rx(lang.alt("admin_tech"))
-    return {"pages": pages, "whole": whole, "keep": keep, "restart": restart, "tech": tech,
+    return {"pages": pages, "whole": whole, "keep": keep, "costs": costs, "drawing": drawing, "contract_keep": contract_keep, "restart": restart,
+            "tech": tech,
             "labels": lang.table("admin_labels")}  # fmt: skip
 
 
@@ -95,7 +103,9 @@ def page_kind(page, R):
     # a plan under the template "approved by" is a plan: the kinds that open a section are looked for first
     for kind, rx in sorted(R["pages"].items(), key=lambda kv: kv[0] not in SECTIONS):
         where = page[:SCHEDULE_HEAD] if kind == "maintenance_schedule" else head
-        if rx.search(where) and (kind != "title_page" or len(WORD_RX.findall(page)) <= TITLE_WORDS):
+        if kind == "title_page" and (len(WORD_RX.findall(page)) > TITLE_WORDS or R["drawing"] and R["drawing"].search(page)):
+            continue  # a long page or a drawing under an approval stamp is no title page
+        if rx.search(where):
             return kind
     return None
 
@@ -113,12 +123,22 @@ def classify(name, text, R=None):
     for k, rx in R["keep"].items():
         if rx.search(head):
             return dict(out, rule="keep:" + k)
+    # the prices of materials, equipment and works are technical data: a phrase of a price with an amount anywhere, or
+    # a price document (an invoice, an estimate) named in the name of the file or at the top of its first pages
+    top = (name or "") + " " + " ".join(p[:200] for p in pages[:2])
+    for k, rxs in R["costs"].items():
+        if rxs and all(rx.search(top if k == "price_document" and i == 0 else full) for i, rx in enumerate(rxs)):
+            return dict(out, rule="keep:" + k)
     dens = density(full, R["tech"])
     first = pages[0][:2000] if pages else ""
-    if len(pages) <= WHOLE_PAGES and dens < TECH_KEEP:
-        for k, rxs in R["whole"].items():
-            if rxs and all(rx.search(first) for rx in rxs):
-                return dict(out, verdict="reject", kinds=[k], rule=k, reason=R["labels"].get(k, k))
+    for k, rxs in R["whole"].items():
+        if k == "contract":  # its settlements count as calculations: judged by its scope of work, not by the density
+            if len(pages) > CONTRACT_PAGES or R["contract_keep"] and R["contract_keep"].search(full):
+                continue  # a contract with a scope of work, technical requirements or a specification is substantive
+        elif len(pages) > WHOLE_PAGES or dens >= TECH_KEEP:
+            continue
+        if rxs and all(rx.search(first) for rx in rxs):
+            return dict(out, verdict="reject", kinds=[k], rule=k, reason=R["labels"].get(k, k))
     kinds, section = [], False
     for p in pages:
         words = len(WORD_RX.findall(p))
@@ -137,7 +157,7 @@ def classify(name, text, R=None):
         return out
     reason = " + ".join(R["labels"].get(k, k) for k in kinds)
     # the minutes of a meeting alone often hold the technical decisions: a doubt, taken in with a warning
-    if dens >= TECH_KEEP and not set(kinds) <= PLANS or set(kinds) == {"meeting_minutes"}:
+    if dens >= TECH_KEEP and not set(kinds) <= PLANS or set(kinds) & DOUBTS:
         return dict(out, verdict="warn", kinds=kinds, rule="tech", reason=reason)
     return dict(out, verdict="reject", kinds=kinds, rule=kinds[0], reason=reason)
 
