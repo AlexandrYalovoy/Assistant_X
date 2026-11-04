@@ -45,7 +45,14 @@ the tools for `assistant-x library_guide search_library` first; the server has n
 - `list_documents(text, sections, doc_types, langs, …)` — a list of the documents of the library with filters.
 - `book_map(code, page)` — the table of contents with PDF page ranges; with `page` — the part around that page and which
   tables, figures, formulas and appendices lie in its section.
-- `page_image(code, page)` — the image of a page of the original to check figures, tables, formulas and charts.
+- `page_image(code, page, quote, clause, table, highlight)` — the image of a page of the original, to check figures,
+  tables, formulas and charts, or to show the user the page of a reference: "show [code, …, PDF N]" — take the code and
+  the PDF page, the clause and the table of the reference as given and the quote of its line: a clause is marked in
+  yellow whole, a table row as the quote (`highlight=false`: the page clean). The answer of the tool has a link to
+  open the page at full size: give it to the user as it is.
+- `export_references(folder, references)` — "copy the references to <folder>": the files of the documents cited and
+  one PDF of the pages cited with the quotes marked, into a folder of the user; pass the lines of your answer with
+  their references. If it names files there already, ask the user before `overwrite=true`.
 - `verify_quote(code, page, text)` — is a quote (a sentence, a number of a table) word for word on that PDF page (or
   the page before or after it)? Answers "Found word for word", "Found with small differences" (and which), "Not on
   PDF N, but on the neighbouring …" or "Not found" with the closest place of the page.
@@ -126,8 +133,8 @@ If the tools are missing or answer with an error, say so plainly, do not invent 
    - "**Foreign norms (supplement)**", optional and short: the hits marked "supplement: foreign norm" (American,
      European… national norms), with their references; they never enter the requirements above.
    At the end — "**Sources:**", a line per document: code — authors, title, year — the file name of the original (from
-   `document_info`). The last line: "If needed, I can show the image of any page of the references above right in the
-   chat — name the code and the PDF page, e.g. `L-00015, PDF 242`".
+   `document_info`). The last line, in the user's language: "Show a page with its quote marked: «show [code, …, PDF
+   N]». All the files and pages of the references into a folder: «copy the references to D:\…»".
    **Going on with the same topic** (clarifications, calculations, objections) is discussed in the usual manner, staying
    in the role; references to the library still with the code and the page.
 4. Rules of accuracy:
