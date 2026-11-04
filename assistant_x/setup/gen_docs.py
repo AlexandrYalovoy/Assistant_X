@@ -80,15 +80,15 @@ def tools_table(lang="en"):
             "destructive": "yes, after the user's yes to a plan",
             "work": "writes its own work files",
             "export": "no: writes copies into a folder the user names",
+            "one": "as the command it carries",
         }
     )
     for name, _title, about, read, destructive in tools():
         change = words["no"] if read else words["destructive"] if destructive else words["work"]
-        change = words["export"] if name in toolsets.EXPORT else change
+        change = words["export"] if name in toolsets.EXPORT else words["one"] if name == toolsets.ONE else change
         about = r["tools"][name] if r else about
-        rows.append(
-            f"| `{name}` | {about} | {'reader' if name in toolsets.READER + toolsets.EXPORT else 'all'} | {change} |"
-        )
+        tset = "one" if name == toolsets.ONE else "reader" if name in toolsets.READER + toolsets.EXPORT else "all"
+        rows.append(f"| `{name}` | {about} | {tset} | {change} |")
     return "\n".join(rows)
 
 
