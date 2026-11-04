@@ -852,7 +852,7 @@ def marks(code, page, quote, clause="", table=""):
 
 
 def ref_marks(code, page, quote, parts):
-    """marks() of a reference by the parts it names (\", п. 5.9, стр. 22\"), in either language."""
+    """marks() of a reference by the parts it names (\", cl. 5.9, p. 22\"), in either language."""
     from assistant_x.server import highlight as hl
 
     clause, table = hl.parts_of(parts, [quotes_mod.labels(x) for x in ("en", "ru")])

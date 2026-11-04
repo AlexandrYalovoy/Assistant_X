@@ -180,7 +180,7 @@ def test_a_moved_inbox_is_a_folder_of_the_library_too(tmp_path, monkeypatch):
 
 def test_the_page_shown_is_kept_as_a_file_to_open_at_full_size(tmp_path, monkeypatch):
     """The author, 2026-11-04: the chat of Claude Desktop shows the image of a tool as a small thumbnail; the image is
-    also saved in pages\ of the folder of the PC (the last 50) and the answer gives a link to open it."""
+    also saved in the pages folder of the folder of the PC (the last 50) and the answer gives a link to open it."""
     from assistant_x.core import workspace
     from assistant_x.server import mcp_server
 

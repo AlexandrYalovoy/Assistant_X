@@ -135,7 +135,7 @@ def clause_text(text, clause):
 
 
 def parts_of(parts, labels):
-    """(clause, table) named in the parts of a reference (\", п. 5.9, табл. 1, стр. 22\"): labels [(clause, table, page)]
+    """(clause, table) named in the parts of a reference (\", cl. 5.9, table 1, p. 22\"): labels [(clause, table, page)]
     of the languages; "" for a part not named."""
     clause = table = ""
     for x in (parts or "").split(", "):
@@ -166,7 +166,7 @@ def marked_page(src, page_no, quote, whole=False):
 def references(texts):
     """[(code, PDF page, quote or "", parts)] of every reference in the lines of texts (an answer, or reference lines),
     in their order, each once; the quote of a reference is the «…» before it on its line, after the reference before;
-    parts: what it names between the code and the PDF page (\", п. 5.9, стр. 22\")."""
+    parts: what it names between the code and the PDF page (\", cl. 5.9, p. 22\")."""
     out, seen = [], set()
     for text in texts:
         for line in str(text).splitlines():
