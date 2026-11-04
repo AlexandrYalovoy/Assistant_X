@@ -22,7 +22,7 @@ WORDS = 6  # a part of a quote not found whole is looked for in runs of this man
 NEAR = 60  # points: a part of a quote counts only this near (up or down) to its longest part
 SHORT = 5  # letters and digits: a shorter part of a quote is marked only as whole words
 MAX_REFS = 200  # references of one export at most
-REF = re.compile(r"\[([A-Z]-\d{5}(?:-\d{2})?)(?:, [^\]\n]*?)?, PDF (\d+)\]")
+REF = re.compile(r"\[([A-Z]-\d{5}(?:-\d{2})?)((?:, [^\]\n]*?)?), PDF (\d+)\]")
 QUOTE = re.compile(r"«([^»\n]+)»")
 
 
@@ -85,9 +85,9 @@ def look(page, words, text):
     return page.search_for(text) or by_words(words, text)
 
 
-def find(page, quote):
+def find(page, quote, whole=False):
     """(rects, status) of a quote on a PyMuPDF page: status "marked" (every part found near the others), "partial"
-    or "none"."""
+    or "none". whole: the text of a whole clause, its runs kept wherever on the page they are."""
     pieces = parts(quote)
     if not pieces or not page.get_text("text").strip():
         return [], "none"
@@ -106,6 +106,8 @@ def find(page, quote):
         return [], "none"
     anchor = found[max(found, key=len)]
     top, bottom = min(r.y0 for r in anchor) - NEAR, max(r.y1 for r in anchor) + NEAR
+    if whole:
+        top, bottom = float("-inf"), float("inf")
     near = {k: [r for r in got if r.y1 >= top and r.y0 <= bottom] for k, got in found.items()}
     near = {k: v for k, v in near.items() if v}
     rects = [r for v in near.values() for r in v]
@@ -117,7 +119,35 @@ def mark(page, rects):
         page.draw_rect(r, color=None, fill=MARK, fill_opacity=OPACITY, overlay=True)
 
 
-def marked_page(src, page_no, quote):
+def clause_text(text, clause):
+    """The text of clause (\"5.9\") on a page text: from the line it starts up to the line the next clause starts, or
+    "" when the page has no line that starts it."""
+    from assistant_x.server import quotes
+
+    lines = (text or "").splitlines()
+    start = re.compile(rf"^[\W_]*{re.escape(clause)}\.?\s")
+    i = next((k for k, x in enumerate(lines) if start.match(quotes.clean(x) + " ")), None)
+    if i is None:
+        return ""
+    j = next((k for k in range(i + 1, len(lines)) if quotes.HEAD_CLAUSE.match(quotes.clean(lines[k]))), len(lines))
+    body = [x for x in lines[i:j] if x.strip() and not re.fullmatch(r"\W*\d{1,4}\W*", x.strip())]  # no page number
+    return " ".join(" ".join(body).split())
+
+
+def parts_of(parts, labels):
+    """(clause, table) named in the parts of a reference (\", п. 5.9, табл. 1, стр. 22\"): labels [(clause, table, page)]
+    of the languages; "" for a part not named."""
+    clause = table = ""
+    for x in (parts or "").split(", "):
+        for cl, tb, _ in labels:
+            if x.startswith(cl + " "):
+                clause = x[len(cl) + 1 :].strip()
+            elif x.startswith(tb + " "):
+                table = x[len(tb) + 1 :].strip()
+    return clause, table
+
+
+def marked_page(src, page_no, quote, whole=False):
     """(a one-page PDF with the quote marked, status) from page page_no (1-based) of the open PDF src; status None
     when no quote is given, "rotated" on a turned page (its text layer and its drawing do not share places)."""
     import pymupdf
@@ -128,14 +158,15 @@ def marked_page(src, page_no, quote):
         return one, None
     if one[0].rotation:
         return one, "rotated"
-    rects, status = find(one[0], quote)
+    rects, status = find(one[0], quote, whole)
     mark(one[0], rects)
     return one, status
 
 
 def references(texts):
-    """[(code, PDF page, quote or "")] of every reference in the lines of texts (an answer, or reference lines), in
-    their order, each once; the quote of a reference is the «…» before it on its line, after the reference before."""
+    """[(code, PDF page, quote or "", parts)] of every reference in the lines of texts (an answer, or reference lines),
+    in their order, each once; the quote of a reference is the «…» before it on its line, after the reference before;
+    parts: what it names between the code and the PDF page (\", п. 5.9, стр. 22\")."""
     out, seen = [], set()
     for text in texts:
         for line in str(text).splitlines():
@@ -144,7 +175,7 @@ def references(texts):
             for m in REF.finditer(line):
                 own = [q for end, q in quotes if since <= end <= m.start()]
                 since = m.end()
-                key = (m[1], int(m[2]), own[-1] if own else "")
+                key = (m[1], int(m[3]), own[-1] if own else "", m[2])
                 if key not in seen:
                     seen.add(key)
                     out.append(key)
@@ -178,16 +209,17 @@ def names(paths):
     return {c: n if count[n.lower()] == 1 or n.startswith(c) else f"{c}_{n}" for c, n in base.items()}
 
 
-def export(folder, refs, originals, head, file_name, unmarked, highlight=True, overwrite=False):
+def export(folder, refs, originals, head, file_name, unmarked, highlight=True, overwrite=False, marks=None):
     """Copy the files of the documents of refs [(code, page, quote)] into folder and make file_name there, one page a
     sheet. originals(code) -> (path, why); head(code, page, quote) -> the line above a page (HTML); unmarked:
     {status: the note under it when a quote is not marked, or only in part}. Without overwrite nothing is written
     when a file is there already: the answer names them. A file that does not open as a PDF is left out before
-    anything is written. -> dict(folder, files, pdf, marked, partial, none, missing, exists)."""
+    anything is written. marks(code, page, quote, parts) -> (the text to mark, whole: a clause); the quote alone when
+    not given. -> dict(folder, files, pdf, marked, partial, none, missing, exists)."""
     import pymupdf
 
     paths, missing, failed = {}, [], set()
-    for code, _, _ in refs:
+    for code, *_ in refs:
         if code in paths or code in failed:
             continue
         path, why = originals(code)
@@ -214,14 +246,15 @@ def export(folder, refs, originals, head, file_name, unmarked, highlight=True, o
             shutil.copy2(p, targets[code])
         out["files"].append(targets[code])
     book = pymupdf.open()
-    for code, page, quote in refs:
+    for code, page, quote, *rest in refs:
         if code not in paths:
             continue
+        text, whole = marks(code, page, quote, rest[0] if rest else "") if marks else (quote, False)
         with pymupdf.open(paths[code]) as src:
             if not 1 <= page <= src.page_count:
                 out["missing"].append(f"{code}: no PDF page {page}")
                 continue
-            one, status = marked_page(src, page, quote if highlight else "")
+            one, status = marked_page(src, page, text if highlight else "", whole)
         if status:
             out["none" if status == "rotated" else status] += 1
         r = one[0].rect

@@ -50,7 +50,7 @@ def test_the_references_of_an_answer():
         "«At most 7 m/s.» — [N-02201, cl. 4.4.18, p. 15, PDF 135], SP RK\n"
         "Sources: [N-00001, PDF 36]; [E-00006-02, PDF 3]"
     )
-    assert hl.references([answer]) == [
+    assert [r[:3] for r in hl.references([answer])] == [
         ("N-00001", 36, "Gas | 5-20"),
         ("N-02201", 135, "At most 7 m/s."),
         ("N-00001", 36, ""),
@@ -61,10 +61,17 @@ def test_the_references_of_an_answer():
 def test_a_full_reference_as_an_answer_prints_it():
     """The user pastes the reference of an answer as it is: the code and the PDF page count, the other parts in either
     language are skipped; the quote of the line, when there is one."""
-    assert hl.references(["покажи [N-00001, п. 6.2.1.9, табл. 1, стр. 30, PDF 36]"]) == [("N-00001", 36, "")]
-    assert hl.references(["show [E-00006-02, cl. 4.4.18, table 6, p. 15, PDF 135]"]) == [("E-00006-02", 135, "")]
+    assert hl.references(["покажи [N-00001, п. 6.2.1.9, табл. 1, стр. 30, PDF 36]"]) == [
+        ("N-00001", 36, "", ", п. 6.2.1.9, табл. 1, стр. 30")
+    ]
+    assert hl.references(["show [E-00006-02, cl. 4.4.18, table 6, p. 15, PDF 135]"]) == [
+        ("E-00006-02", 135, "", ", cl. 4.4.18, table 6, p. 15")
+    ]
+    labels = [("cl.", "table", "p."), ("п.", "табл.", "стр.")]
+    assert hl.parts_of(", п. 6.2.1.9, табл. 1, стр. 30", labels) == ("6.2.1.9", "1")
+    assert hl.parts_of(", cl. 5.9, p. 22", labels) == ("5.9", "")
     line = "«Газуглеводородный в трубопроводах | 5-20» (табл.: Наименование) — [N-00001, п. 6.2.1.9, табл. 1, PDF 36], ГОСТ"
-    assert hl.references([line]) == [("N-00001", 36, "Газуглеводородный в трубопроводах | 5-20")]
+    assert [r[:3] for r in hl.references([line])] == [("N-00001", 36, "Газуглеводородный в трубопроводах | 5-20")]
 
 
 def test_a_folder_of_the_user_only(tmp_path):
@@ -114,7 +121,7 @@ def test_short_parts_only_as_whole_words_and_far_parts_count_as_missing(tmp_path
 def test_the_quote_of_each_reference_and_the_runs_to_the_last_word():
     """Audit N-13, N-15."""
     line = "«alpha beta» — [N-00001, PDF 3], T1; see also [N-00002, PDF 7], T2"
-    assert hl.references([line]) == [("N-00001", 3, "alpha beta"), ("N-00002", 7, "")]
+    assert [r[:3] for r in hl.references([line])] == [("N-00001", 3, "alpha beta"), ("N-00002", 7, "")]
     assert hl.runs("one two three four five six seven eight nine")[-1].endswith("nine")
 
 
@@ -169,3 +176,45 @@ def test_a_moved_inbox_is_a_folder_of_the_library_too(tmp_path, monkeypatch):
     monkeypatch.setattr(mcp_server, "lib", lambda: SimpleNamespace(cfg={}))
     with pytest.raises(ValueError):
         hl.safe_folder(str(inbox / "refs"), mcp_server.library_folders())
+
+
+def test_the_page_shown_is_kept_as_a_file_to_open_at_full_size(tmp_path, monkeypatch):
+    """The author, 2026-11-04: the chat of Claude Desktop shows the image of a tool as a small thumbnail; the image is
+    also saved in pages\ of the folder of the PC (the last 50) and the answer gives a link to open it."""
+    from assistant_x.core import workspace
+    from assistant_x.server import mcp_server
+
+    monkeypatch.setattr(workspace, "machine_dir", lambda: tmp_path)
+    p = mcp_server.keep_page("N-00580", 27, b"png-bytes", "png", marked=True)
+    assert p.name == "N-00580 PDF 27 marked.png" and p.read_bytes() == b"png-bytes"
+    assert p.as_uri().startswith("file:///") and "N-00580" in mcp_server.PAGE_LINK.format(
+        code="N-00580", page=27, url=p.as_uri()
+    )
+    for i in range(mcp_server.PAGES_KEPT + 5):
+        mcp_server.keep_page("N-00001", i + 1, b"x", "jpeg")
+    assert len(list((tmp_path / "pages").iterdir())) == mcp_server.PAGES_KEPT
+
+
+def test_a_clause_named_is_marked_whole_a_table_row_alone():
+    """The author, 2026-11-04: «покажи [N-00580, п. 5.9, стр. 22, PDF 27]» marked only «2 - 6 м/с» of a clause that also
+    names 20 м/с; a clause named without a table is marked whole, from its number to the next clause."""
+    lines = [
+        "5.8 Гидравлический расчет следует производить по методикам.",
+        "",
+        "5.9 Гидравлический расчет трубопроводов должен выполняться с учетом:",
+        "- минимально-допустимой скорости газа в шлейфах (2 - 6 м/с);",
+        "- максимально-допустимой скорости газа в шлейфах (~ 20 м/с);",
+        "",
+        "5.10 Прочее положение.",
+        "22",
+    ]
+    text = "\n".join(lines)
+    got = hl.clause_text(text, "5.9")
+    assert got.startswith("5.9 Гидравлический") and "2 - 6 м/с" in got and "20 м/с" in got and "5.10" not in got
+    assert hl.clause_text(text, "7.1") == ""
+    doc = pymupdf.open()
+    p = doc.new_page()
+    p.insert_htmlbox(pymupdf.Rect(50, 50, 550, 700), "<br>".join(lines))
+    rects, status = hl.find(p, got, whole=True)
+    ys = sorted({round(r.y0) for r in rects})
+    assert status == "marked" and len(ys) >= 3  # every line of the clause

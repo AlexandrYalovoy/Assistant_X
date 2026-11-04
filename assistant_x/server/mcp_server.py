@@ -797,10 +797,14 @@ def book_map(code: str, page: int | None = None) -> str:
 @tool("Page image")
 @logged
 @needs_base
-def page_image(code: str, page: int, zoom: float = 1.6, quote: str = "", highlight: bool = True):
+def page_image(
+    code: str, page: int, zoom: float = 1.6, quote: str = "", highlight: bool = True, clause: str = "", table: str = ""
+):
     """Image of a page of the original (PDF page number) to check figures, tables, formulas and charts, or to show
-    the user the page of a reference. quote: the words cited from it, marked in yellow on the image (highlight=False
-    when the user asks for the page without the mark); only words the text layer of the page has are marked."""
+    the user the page of a reference. quote: the words cited from it, marked in yellow on the image; clause and table:
+    the clause and the table the reference names ("5.9", "1"), from the reference as it is: a clause without a table is
+    marked whole on the page, a table row as the quote (highlight=False when the user asks for the page without the
+    mark); only words the text layer of the page has are marked."""
     import pymupdf as fitz
 
     from assistant_x.server import highlight as hl
@@ -818,16 +822,60 @@ def page_image(code: str, page: int, zoom: float = 1.6, quote: str = "", highlig
             return f"{code} has {pdf.page_count} PDF pages."
         if pdf.needs_pass:
             return f"{code}: the PDF is protected by a password; open the original."
-        one, status = hl.marked_page(pdf, page, quote if highlight else "")
+        text, whole = marks(code, page, quote, clause, table)
+        one, status = hl.marked_page(pdf, page, text if highlight else "", whole)
         p = one[0]
         z = page_zoom(zoom, p.rect.width, p.rect.height)
         pix = p.get_pixmap(matrix=fitz.Matrix(z, z))
         one.close()
         data = pix.tobytes("png")
         note = IMAGE_NOTE.format(code=code, page=page) + MARK_NOTES.get(status, "")
+        fmt = "png"
         if len(data) > MAX_PNG:  # a dense scan: JPEG is several times smaller and reads just as well
-            return [note, Image(data=pix.tobytes("jpeg", jpg_quality=85), format="jpeg")]
-    return [note, Image(data=data, format="png")]
+            data, fmt = pix.tobytes("jpeg", jpg_quality=85), "jpeg"
+    shown = keep_page(code, page, data, fmt, marked=status == "marked")
+    if shown:  # the app shows the image small: the file opens it at full size
+        note += PAGE_LINK.format(code=code, page=page, url=shown.as_uri())
+    return [note, Image(data=data, format=fmt)]
+
+
+def marks(code, page, quote, clause="", table=""):
+    """(the text to mark on a page, whole): the whole clause a reference names, when it names no table and the page
+    starts that clause (the quote with it: the clause holds it); else the quote alone."""
+    from assistant_x.server import highlight as hl
+
+    if clause and not table:
+        text = hl.clause_text(lib().page_text(code, page) or "", clause)
+        if text:
+            return text, True
+    return quote, False
+
+
+def ref_marks(code, page, quote, parts):
+    """marks() of a reference by the parts it names (\", п. 5.9, стр. 22\"), in either language."""
+    from assistant_x.server import highlight as hl
+
+    clause, table = hl.parts_of(parts, [quotes_mod.labels(x) for x in ("en", "ru")])
+    return marks(code, page, quote, clause, table)
+
+
+def keep_page(code, page, data, fmt, marked=False):
+    """The image of a page shown to the user, saved in the folder of this PC (pages\\, the last PAGES_KEPT): its path, or
+    None when it cannot be written. A chat app shows the image of a tool small; this file opens it at full size."""
+    from assistant_x.core import workspace
+
+    try:
+        folder = workspace.machine_dir() / "pages"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / f"{code} PDF {page}{' marked' if marked else ''}.{'jpg' if fmt == 'jpeg' else 'png'}"
+        path.write_bytes(data)
+        old = sorted(folder.glob("*.*"), key=lambda p: p.stat().st_mtime, reverse=True)[PAGES_KEPT:]
+        for p in old:
+            p.unlink(missing_ok=True)
+        return path
+    except OSError as e:
+        debuglog.log_error("page image file", e)
+        return None
 
 
 @tool("Gather the references into a folder", read=False)
@@ -866,6 +914,7 @@ def export_references(folder: str, references: list[str], highlight: bool = True
             packs.get(lang, "ref_marks") or {},
             highlight=highlight,
             overwrite=overwrite,
+            marks=ref_marks,
         )
     if got["exists"] and not overwrite:
         return (
@@ -953,6 +1002,11 @@ MARK_NOTES = {
     "tell the user to find it on the page.",
     "rotated": " The quote is not marked: the page is turned; tell the user to find it on the page.",
 }
+PAGES_KEPT = 50  # images of pages kept in the folder of the PC for the user to open
+PAGE_LINK = (
+    " The app may show this image small: give the user the link to open it at full size, as it is: "
+    "[{code}, PDF {page}]({url})"
+)
 IMAGE_NOTE = (
     "The image of {code}, PDF {page}. If you cannot see images, read the page with read_pages({code!r}, {page}, {page}) "
     "and check numbers with verify_quote instead; tell the user to check the original."
