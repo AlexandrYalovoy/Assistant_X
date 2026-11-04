@@ -28,7 +28,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 
 | Приложение | Имя для `connect` | Что записывается | Набор инструментов | Навык |
 | --- | --- | --- | --- | --- |
-| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (и папка Microsoft Store), `mcpServers` | all | zip-архив, который загружает пользователь (`assistant-x skill`) |
+| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (и папка Microsoft Store), `mcpServers` | one | zip-архив, который загружает пользователь (`assistant-x skill`) |
 | Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | all | `~/.claude/skills/assistant-x` |
 | Codex и приложение ChatGPT для компьютера | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
 | DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): патч `insert` для `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
@@ -122,6 +122,7 @@ Codex CLI, его расширение для IDE и приложение ChatGP
 | `library_hierarchy` | Иерархия документов, по которой строятся ответы (какой вид документа главнее): показать действующую или записать свою иерархию пользователя в рабочую папку. | all | пишет только свои рабочие файлы |
 | `library_remove` | Убрать документы из библиотеки (попавшие туда по ошибке): ничего не удаляется, оригиналы, карточки и тексты уходят в inbox\_to_delete\removed_<шифр>_<дата>, шифры остаются занятыми, база по словам пересобирается. | all | да, после «да» пользователя на план |
 | `intake_reindex` | Достроить поисковую базу для новых документов. | all | пишет только свои рабочие файлы |
+| `library` | Все команды библиотеки одним инструментом (для чата Claude Desktop): action — имя команды, как её называет руководство (search_library, read_pages, page_image, export_references…), args — её аргументы по именам. | all | пишет только свои рабочие файлы |
 | `base_export` | Библиотека в виде файла базового пакета (out: путь, оканчивающийся на .axbase). | all | пишет только свои рабочие файлы |
 | `base_inspect` | Что сделает установка базового пакета (файла .axbase или его распакованной папки): проблемы, предупреждения, чьи шифры сохраняются, какие документы уже есть в библиотеке и вопросы к пользователю. | all | нет |
 | `base_install` | Установить базовый пакет. | all | да, после «да» пользователя на план |

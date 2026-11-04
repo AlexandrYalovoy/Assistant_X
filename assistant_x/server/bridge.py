@@ -47,6 +47,7 @@ class Bridge:
         self._up_lock = threading.Lock()
         self.calls = {}  # id -> tool name of a tools/call in work (for --tools and --compact on its answer)
         self.lists = set()  # ids of tools/list requests in work
+        self.retired = None  # the pid of a service of older code this bridge asked to stop
         self.weak = 0  # search_library answers with the weak-match note in a row (the compact mode)
         self.budget = (0, None)  # searches of the question in work, time of the last call (toolsets.search_budget)
         self.first = (None, None)  # the first search of the question in work and the time of the last call
@@ -98,11 +99,28 @@ class Bridge:
             c = http.client.HTTPConnection("127.0.0.1", int(info["port"]), timeout=timeout)
             c.request("GET", "/health", headers={"Authorization": f"Bearer {self.token()}"})
             r = c.getresponse()
-            ok = r.status == 200 and json.loads(r.read() or b"{}").get("pid") == info.get("pid")
+            health = json.loads(r.read() or b"{}")
+            ok = r.status == 200 and health.get("pid") == info.get("pid")
             c.close()
+            if ok and health.get("code") != service.code_stamp():  # the service kept older code: a new one is started
+                self.retire(info)
+                return False
             return ok
         except (OSError, ValueError, http.client.HTTPException):
             return False
+
+    def retire(self, info):
+        """Ask a service of other code to stop (POST /shutdown: it exits once no request is in work), once a bridge."""
+        if self.retired == info.get("pid"):
+            return
+        self.retired = info.get("pid")
+        try:
+            c = http.client.HTTPConnection("127.0.0.1", int(info["port"]), timeout=QUICK)
+            c.request("POST", "/shutdown", headers={"Authorization": f"Bearer {self.token()}"})
+            c.getresponse().read()
+            c.close()
+        except (OSError, ValueError, http.client.HTTPException):
+            pass
 
     def start(self):
         """Start the service of the workspace unless another bridge does it now; wait until it answers."""

@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from assistant_x.server import bridge
+from assistant_x.server import bridge, service
 
 
 class FakeService:
@@ -25,7 +25,7 @@ class FakeService:
                 pass
 
             def do_GET(self):
-                self._json({"pid": 4242})
+                self._json({"pid": 4242, "code": service.code_stamp()})  # a service of this code
 
             def do_POST(self):
                 msg = json.loads(self.rfile.read(int(self.headers["Content-Length"])))

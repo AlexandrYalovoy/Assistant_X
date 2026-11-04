@@ -5,7 +5,9 @@ long their answers may be. Light (standard library only): the stdio bridge (serv
 
     reader  the tools that read the library (READER) and export_references (EXPORT, copies into a folder of the user):
             the default of DeepSeek Harness and LM Studio
-    all     every tool, the intake and the base packages too: the default of Claude and Codex
+    all     every tool, the intake and the base packages too: the default of Codex and Claude Code
+    one     one tool, `library`, that carries every command (its action and its arguments): the chat of Claude Desktop
+            asks once a tool before the first call, so one tool asks once (the author, 2026-11-04)
 
 compact: the first sentence of every tool description, and the answers of the reading tools cut at COMPACT_CHARS
 characters with a note how to get the rest: one answer with a quote fits a context of 16 000 tokens."""
@@ -24,7 +26,8 @@ READER = (
 )
 # what a reading app may write, besides: copies of the files and pages cited, into a folder the user names
 EXPORT = ("export_references",)
-TOOLSETS = ("reader", "all")
+TOOLSETS = ("reader", "all", "one")
+ONE = "library"  # the one tool of the set "one"
 # the compact mode is the reference mode of a small local model (LM Studio): it finds and quotes, nothing else; the
 # other tools are hidden, their descriptions would only take its context
 REFERENCE = ("library_guide", "search_library", "read_pages", "export_references")
@@ -38,7 +41,9 @@ CUT_NOTE = (
 
 
 def allowed(name, toolset, compact=False):
-    """Is the tool name in the set ("reader" | "all"), and in the compact mode one of the reference mode?"""
+    """Is the tool name in the set ("reader" | "all" | "one"), and in the compact mode one of the reference mode?"""
+    if name == ONE or toolset == "one":
+        return name == ONE and toolset == "one"
     return (toolset == "all" or name in READER + EXPORT) and (not compact or name in REFERENCE)
 
 

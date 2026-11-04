@@ -546,3 +546,42 @@ def test_lmstudio_asks_no_confirmation_for_the_library(home):
     assert lmstudio.skip_confirmation(False)[1] == "unchanged"
     lmstudio.disconnect(False)
     assert json.loads(s.read_text(encoding="utf-8"))["chat"]["skipToolConfirmationPatterns"] == ["mcp/x:a"]
+
+
+def test_one_tool_for_the_chat_of_claude_desktop():
+    """The author, 2026-11-04: the chat of Claude Desktop asks once a tool, nine questions at the first use. The set
+    "one" is the tool `library` alone; it carries every command by its name and arguments, names a wrong one, and the
+    other sets never show it."""
+    from assistant_x.clients import claude_desktop
+    from assistant_x.server import mcp_server, toolsets
+
+    assert toolsets.allowed("library", "one") and not toolsets.allowed("search_library", "one")
+    assert not toolsets.allowed("library", "all") and not toolsets.allowed("library", "reader")
+    assert claude_desktop.TOOLSET == "one" and "--tools" in K.entry(toolset="one")["args"]
+    assert {"search_library", "page_image", "export_references", "intake_apply"} <= mcp_server.ONE_ACTIONS
+    assert "library" not in mcp_server.ONE_ACTIONS
+    assert mcp_server.library("nope").startswith("No command 'nope'")
+    assert mcp_server.library("search_library", {"qery": "x"}).startswith("search_library takes no qery")
+    assert "query" in mcp_server.library("search_library", {"qery": "x"})
+
+
+def test_a_service_of_older_code_is_asked_to_stop():
+    """A running service kept the code of before an update: its /health names its code stamp, a bridge of another
+    stamp sends POST /shutdown, and the service exits once no request is in work (no process is killed)."""
+    import asyncio
+
+    from assistant_x.server import service
+
+    assert service.code_stamp() == service.code_stamp() and len(service.code_stamp()) == 12
+    sent = []
+
+    async def app(scope, receive, send):
+        sent.append("app")
+
+    a = service.Activity(app, {"version": "x", "code": "old"})
+
+    async def send(m):
+        sent.append(m)
+
+    asyncio.run(a({"type": "http", "path": "/shutdown", "method": "POST"}, None, send))
+    assert a.stop and sent[-1]["body"] == b'{"stopping": true}' and "app" not in sent

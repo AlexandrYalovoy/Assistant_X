@@ -26,7 +26,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 
 | App | `connect` name | Settings written | Tool set | Skill |
 | --- | --- | --- | --- | --- |
-| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers` | all | a zip the user uploads (`assistant-x skill`) |
+| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers` | one | a zip the user uploads (`assistant-x skill`) |
 | Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | all | `~/.claude/skills/assistant-x` |
 | Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
 | DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
@@ -118,6 +118,7 @@ The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC
 | `library_hierarchy` | The hierarchy of the documents the answers follow (which kind rules over which; a higher level wins a conflict): without levels, the levels in force and where they come from. | all | writes its own work files |
 | `library_remove` | Take documents out of the library (a document that got in by mistake): nothing is deleted, the originals, the cards and the texts go to inbox\_to_delete\removed_<code>_<date>, the codes stay reserved and the base by words is rebuilt. | all | yes, after the user's yes to a plan |
 | `intake_reindex` | Finish the search base for new documents. | all | writes its own work files |
+| `library` | Every command of the library in one tool: action is the name of a command as the guide names it (library_guide, search_library, read_pages, book_map, page_image, verify_quote, document_info, list_documents, export_references, library_hierarchy, the intake_* and base_* commands, library_remove), args its arguments by name, e.g. | all | writes its own work files |
 | `base_export` | The library as a base package file (out: a path ending in .axbase). | all | writes its own work files |
 | `base_inspect` | What installing a base package (an .axbase file or its unpacked folder) would do: problems, warnings, who keeps the codes, the documents the library has already, and the questions for the user. | all | no |
 | `base_install` | Install a base package. | all | yes, after the user's yes to a plan |

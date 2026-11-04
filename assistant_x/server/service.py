@@ -14,7 +14,7 @@ connects through its stdio bridge (assistant-x mcp, server/bridge.py), which sta
 - It exits after --idle minutes without a request (default 30): the video memory is free again for a local model.
 - The bridge starts it hidden (core/proc.py, no console window); its log is service-<id>.log beside the lock."""
 
-import argparse, hashlib, json, logging, os, socket, sys, threading, time
+import argparse, functools, hashlib, json, logging, os, socket, sys, threading, time
 
 from assistant_x.core import lock, workspace
 
@@ -37,6 +37,24 @@ def files(root=None):
         "log": str(d / f"service-{k}.log"),
         "start": str(d / f"service-{k}.start.lock"),
     }
+
+
+@functools.lru_cache(maxsize=1)
+def code_stamp():
+    """The stamp of the code of the program this process runs: its version and the sizes and times of its .py files.
+    A bridge that finds a service of another stamp (a running service kept the code of before an update) asks it to
+    stop (POST /shutdown) and starts a new one, so a new version is live without killing anything."""
+
+    from assistant_x import __version__
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    h = hashlib.sha1(__version__.encode())
+    for dp, dirs, fns in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d != "__pycache__")
+        for fn in sorted(f for f in fns if f.endswith(".py")):
+            st = os.stat(os.path.join(dp, fn))
+            h.update(f"{os.path.relpath(os.path.join(dp, fn), root)}:{st.st_size}:{st.st_mtime_ns};".encode())
+    return h.hexdigest()[:12]
 
 
 def read_info(root=None):
@@ -71,6 +89,7 @@ class Activity:
     def __init__(self, app, health):
         self.app, self.health = app, health
         self.active, self.last = 0, time.monotonic()
+        self.stop = False  # POST /shutdown: a bridge of newer code asked; the service exits once no request is in work
         self._lock = threading.Lock()
 
     def idle(self):
@@ -81,6 +100,11 @@ class Activity:
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
+        if scope.get("path") == "/shutdown" and scope.get("method") == "POST":
+            self.stop = True
+            await send({"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"application/json")]})
+            await send({"type": "http.response.body", "body": b'{"stopping": true}'})
+            return
         if scope.get("path") == "/health":
             body = json.dumps(self.health).encode()
             await send({"type": "http.response.start", "status": 200, "headers": [(b"content-type", b"application/json")]})
@@ -205,7 +229,7 @@ def main(argv=None):
     for name in ("mcp", "sentence_transformers"):  # no line per session or per model file unless asked for
         logging.getLogger(name).setLevel(level)
     token, token_path = S.http_token()
-    health = {"version": __version__, "pid": os.getpid(), "workspace": str(workspace.find())}
+    health = {"version": __version__, "code": code_stamp(), "pid": os.getpid(), "workspace": str(workspace.find())}
     app = Activity(S.mcp_app(port), health)
     first = S.take_models_lock()
     debuglog.log_call("service start", 0, True, {"pid": os.getpid(), "port": port, "models": first})
@@ -215,9 +239,15 @@ def main(argv=None):
 
     def watch():
         while not server.should_exit:
-            time.sleep(min(30.0, a.idle * 60 / 4 or 1))
+            for _ in range(int(min(30.0, a.idle * 60 / 4 or 1) * 2)):  # a request to stop is heard within half a second
+                if app.stop:
+                    break
+                time.sleep(0.5)
             if app.idle() >= a.idle * 60:
                 print(f"library service: {a.idle:g} min without a request, exiting", file=sys.stderr)
+                server.should_exit = True
+            elif app.stop and app.idle() > 0:
+                print("library service: a bridge of newer code asked it to stop, exiting", file=sys.stderr)
                 server.should_exit = True
 
     threading.Thread(target=watch, daemon=True).start()
