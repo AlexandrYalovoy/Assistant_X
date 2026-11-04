@@ -656,3 +656,32 @@ def test_a_bridge_older_than_the_code_on_the_disk_keeps_a_service_of_that_code(m
     finally:
         srv.shutdown()
     assert len(service.disk_stamp()) == 12 and service.disk_stamp() == now
+
+
+def test_lmstudio_models_load_with_a_context_of_32768(home):
+    """The author, 2026-11-04: a model picked in the chat of LM Studio loaded with 8192 and the answers lost their
+    quotes. connect sets the default load context of every model in LM Studio's own per-model files, keeps their
+    other settings, never lowers a larger one and writes no backup beside them (LM Studio would read it as a model)."""
+    lm = home / ".lmstudio"
+    (lm / "hub" / "models" / "qwen" / "qwen3.5-9b").mkdir(parents=True)
+    (lm / "hub" / "models" / "qwen" / "qwen3.5-9b" / "model.yaml").write_text("x", encoding="utf-8")
+    g = lm / "models" / "pub" / "Repo-GGUF"
+    g.mkdir(parents=True)
+    (g / "Model-Q4.gguf").write_bytes(b"x")
+    (g / "mmproj-Model.gguf").write_bytes(b"x")
+    base = lm / ".internal" / "user-concrete-model-default-config"
+    (base / "pub" / "Repo-GGUF").mkdir(parents=True)
+    keep = {"preset": "mine", "operation": {"fields": [{"key": "x", "value": 1}]}, "load": {"fields": []}}
+    (base / "pub" / "Repo-GGUF" / "Model-Q4.gguf.json").write_text(json.dumps(keep), encoding="utf-8")
+    assert lmstudio.model_keys() == ["qwen/qwen3.5-9b", "pub/Repo-GGUF/Model-Q4.gguf"]
+    out = lmstudio.model_context(False)
+    assert [s for _, s in out] == ["context 32768", "context 32768"]
+    hub = json.loads((base / "qwen" / "qwen3.5-9b.json").read_text(encoding="utf-8"))
+    assert hub["load"]["fields"] == [{"key": "llm.load.contextLength", "value": 32768}]
+    gguf = json.loads((base / "pub" / "Repo-GGUF" / "Model-Q4.gguf.json").read_text(encoding="utf-8"))
+    assert gguf["preset"] == "mine" and gguf["operation"] == keep["operation"]
+    assert sorted(p.name for p in (base / "pub" / "Repo-GGUF").iterdir()) == ["Model-Q4.gguf.json"]
+    assert lmstudio.model_context(False) == []  # already right: nothing written
+    big = {"load": {"fields": [{"key": "llm.load.contextLength", "value": 65536}]}}
+    (base / "qwen" / "qwen3.5-9b.json").write_text(json.dumps(big), encoding="utf-8")
+    assert lmstudio.model_context(False) == []  # a larger context is the user's: kept

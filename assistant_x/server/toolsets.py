@@ -149,10 +149,17 @@ FORM_HINT = (
 )
 
 
+FORM_END = (
+    "Now answer: the lines above that are about the question, each copied as it is with its reference and title. No "
+    "summary line of your own, no quotation marks around your own words, no list of sources instead of the quotes."
+)
+
+
 def with_form(content):
-    """The content of a search_library or read_pages answer with FORM_HINT before it: a small local model that got
-    no system prompt (LM Studio without the preset) sees the form of the answer at every result."""
-    return [{"type": "text", "text": FORM_HINT}] + list(content)
+    """The content of a search_library or read_pages answer with FORM_HINT before it and FORM_END after it: a small
+    local model that got no system prompt (LM Studio without the preset, its thinking on) sees the form of the answer
+    at every result; the author, 2026-11-04: Qwen wrote one line of its own and a list of sources, no quote."""
+    return [{"type": "text", "text": FORM_HINT}] + list(content) + [{"type": "text", "text": FORM_END}]
 
 
 SEARCH_LIMIT = 3  # searches of one question after which the reference mode tells a small model to answer

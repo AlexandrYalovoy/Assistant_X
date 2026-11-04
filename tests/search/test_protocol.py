@@ -246,3 +246,38 @@ def test_the_compact_bridge_unwraps_the_one_tool():
     assert short == toolsets.ONE_COMPACT and all(n in short for n in toolsets.REFERENCE)
     assert toolsets.unwrap("search_library", {"query": "q"}) == ("search_library", {"query": "q"})
     assert toolsets.unwrap("library", {"action": " read_pages ", "args": "not json"}) == ("read_pages", {})
+
+
+def test_the_reference_mode_ends_every_result_with_the_order_to_quote():
+    """The author, 2026-11-04: Qwen without the preset and with its thinking on wrote a line of its own and a list
+    of sources instead of the quote lines; the form now comes before and after every result of the reference mode."""
+    out = toolsets.with_form([{"type": "text", "text": "«a» — [N-00001, PDF 1], t"}])
+    assert out[0]["text"] == toolsets.FORM_HINT and out[-1]["text"] == toolsets.FORM_END and len(out) == 3
+
+
+def test_a_reference_search_waits_for_the_models_being_loaded(monkeypatch):
+    """Qwen's first question went by words only while a new service loaded its models: the reference mode waits."""
+    import threading
+
+    from assistant_x.server import mcp_server
+
+    class Lib:
+        no_wait, dense_error, _reranker = True, None, None
+        dense_ready = threading.Event()
+
+        def may_rerank(self):
+            return True
+
+    lib = Lib()
+    monkeypatch.setattr(mcp_server, "lib", lambda: lib)
+    threading.Timer(0.3, lambda: (lib.dense_ready.set(), setattr(lib, "_reranker", object()))).start()
+    import time
+
+    t = time.monotonic()
+    mcp_server.wait_models(5)
+    assert lib.dense_ready.is_set() and lib._reranker is not None and time.monotonic() - t < 3
+    lib.dense_ready.clear()
+    lib.dense_error = "no model"
+    t = time.monotonic()
+    mcp_server.wait_models(5)
+    assert time.monotonic() - t < 1  # a model that failed is not waited for

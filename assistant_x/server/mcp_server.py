@@ -400,6 +400,8 @@ def search_library(
     if light:
         cpu_mode()
     reference = COMPACT if quotes is None else quotes
+    if reference:  # a small model answers from the first search: it waits for the meaning model, not words only
+        wait_models(REFERENCE_WAIT)
     want = int(lib().cfg.get("reference_quotes", REFERENCE_QUOTES)) if reference else 0
     if reference:  # the reference mode quotes up to want lines: the search finds enough for them, of more documents
         k = max(k, (want * 3 + 4) // 5)
@@ -1273,6 +1275,23 @@ def library(action: str, args: dict | str | None = None, ctx: Context | None = N
     if "ctx" in params:
         args["ctx"] = ctx
     return fn(**args)
+
+
+REFERENCE_WAIT = 60.0  # s a search of the reference mode waits for the models a new service is still loading
+
+
+def wait_models(limit):
+    """Wait up to limit seconds for the meaning model (and the reranker, where this PC reranks) that the background
+    warm-up is loading. The author, 2026-11-04: Qwen's first question went by words only while the models loaded,
+    and the small model summed up the stray documents of that search instead of quoting."""
+    import time
+
+    L = lib()
+    end = time.monotonic() + limit
+    if L.no_wait and not L.dense_ready.is_set() and not L.dense_error:
+        L.dense_ready.wait(max(0.0, end - time.monotonic()))
+    while L.no_wait and L.may_rerank() and L._reranker is None and not L.dense_error and time.monotonic() < end:
+        time.sleep(0.5)
 
 
 def _warm_up():
