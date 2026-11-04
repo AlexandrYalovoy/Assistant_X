@@ -21,6 +21,7 @@ from assistant_x.server import service, texts, toolsets
 PROTOCOLS = ("2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25")  # answered by the bridge itself at the start
 DEFAULT_PROTOCOL = "2025-06-18"
 START_TIMEOUT = 180  # s: a cold start imports the server and the search libraries
+RETIRE_WAIT = 15.0  # s a bridge waits for a service of older code to stop before it uses it as it is
 QUICK = 0.8  # s: how long initialize waits for a running service before the bridge answers it itself
 CALL_TIMEOUT = 900  # s: one request (a base recalculation answers at once, a search in seconds)
 
@@ -47,7 +48,7 @@ class Bridge:
         self._up_lock = threading.Lock()
         self.calls = {}  # id -> tool name of a tools/call in work (for --tools and --compact on its answer)
         self.lists = set()  # ids of tools/list requests in work
-        self.retired = None  # the pid of a service of older code this bridge asked to stop
+        self.retired = None  # (pid, time) of a service of older code this bridge asked to stop
         self.weak = 0  # search_library answers with the weak-match note in a row (the compact mode)
         self.budget = (0, None)  # searches of the question in work, time of the last call (toolsets.search_budget)
         self.first = (None, None)  # the first search of the question in work and the time of the last call
@@ -102,18 +103,20 @@ class Bridge:
             health = json.loads(r.read() or b"{}")
             ok = r.status == 200 and health.get("pid") == info.get("pid")
             c.close()
-            if ok and health.get("code") != service.code_stamp():  # the service kept older code: a new one is started
-                self.retire(info)
-                return False
-            return ok
+            if ok and "code" in health and health["code"] != service.code_stamp():
+                return not self.retire(info)  # the service kept older code: asked to stop, a new one starts after it
+            return ok  # a service of before the stamps cannot be asked: it serves until it exits by itself
         except (OSError, ValueError, http.client.HTTPException):
             return False
 
     def retire(self, info):
-        """Ask a service of other code to stop (POST /shutdown: it exits once no request is in work), once a bridge."""
-        if self.retired == info.get("pid"):
-            return
-        self.retired = info.get("pid")
+        """Ask a service of other code to stop (POST /shutdown: it exits once no request is in work), once a bridge:
+        True while the bridge waits for it to go, False once RETIRE_WAIT passed (a request in work holds it: the bridge
+        uses it as it is rather than fail)."""
+        pid, now = info.get("pid"), time.monotonic()
+        if self.retired and self.retired[0] == pid:
+            return now - self.retired[1] < RETIRE_WAIT
+        self.retired = (pid, now)
         try:
             c = http.client.HTTPConnection("127.0.0.1", int(info["port"]), timeout=QUICK)
             c.request("POST", "/shutdown", headers={"Authorization": f"Bearer {self.token()}"})
@@ -121,6 +124,7 @@ class Bridge:
             c.close()
         except (OSError, ValueError, http.client.HTTPException):
             pass
+        return True
 
     def start(self):
         """Start the service of the workspace unless another bridge does it now; wait until it answers."""
@@ -294,6 +298,8 @@ class Bridge:
         result = m.get("result")
         if rid in self.lists and isinstance(result, dict) and isinstance(result.get("tools"), list):
             self.lists.discard(rid)
+            if self.toolset == "one" and not any(t.get("name") == toolsets.ONE for t in result["tools"]):
+                self.toolset = "all"  # a service of before the one tool: its tools as they are, rather than none
             tools = [t for t in result["tools"] if toolsets.allowed(t.get("name"), self.toolset, self.compact)]
             m = dict(m, result=dict(result, tools=toolsets.compact_tools(tools) if self.compact else tools))
         elif rid in self.calls and isinstance(result, dict):
