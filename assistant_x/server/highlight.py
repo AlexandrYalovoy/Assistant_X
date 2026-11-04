@@ -111,7 +111,48 @@ def find(page, quote, whole=False):
     near = {k: [r for r in got if r.y1 >= top and r.y0 <= bottom] for k, got in found.items()}
     near = {k: v for k, v in near.items() if v}
     rects = [r for v in near.values() for r in v]
+    if whole:  # a whole clause, filled as one run: a misread word inside it is marked too
+        run = solid(words, rects, anchor)
+        return run, "marked" if run is not rects or len(near) == wanted else "partial"
     return rects, "marked" if len(near) == wanted else "partial"
+
+
+FILL_GAP = 30  # words: marks of a whole clause further apart than this from the rest are matches elsewhere
+
+
+def solid(words, rects, anchor):
+    """The marks of a whole clause as one solid run, line by line: every word of the page from the first mark to the
+    last, so a word the text layer of a scan misread is marked too (the author, 2026-11-04: 2 - 6 m/s and ~ 20 m/s of
+    clause 5.9 were left with holes); a mark more than FILL_GAP words away from the run of the anchor stays out."""
+    import pymupdf
+
+    def inside(w, rs):
+        cx, cy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
+        return any(r.x0 - 1 <= cx <= r.x1 + 1 and r.y0 - 1 <= cy <= r.y1 + 1 for r in rs)
+
+    hit = [i for i, w in enumerate(words) if inside(w, rects)]
+    core = [i for i, w in enumerate(words) if inside(w, anchor)]
+    if not hit or not core:
+        return rects
+    lo, hi = min(core), max(core)
+    for i in sorted(hit):  # grow the run of the anchor by the marks near it, both ways
+        if lo - FILL_GAP <= i < lo:
+            lo = i
+    for i in sorted(hit, reverse=True):
+        if hi < i <= hi + FILL_GAP:
+            hi = i
+    grew = True
+    while grew:
+        grew = False
+        for i in hit:
+            if lo - FILL_GAP <= i < lo or hi < i <= hi + FILL_GAP:
+                lo, hi, grew = min(lo, i), max(hi, i), True
+    lines = {}
+    for w in words[lo : hi + 1]:
+        key = (w[5], w[6])
+        r = pymupdf.Rect(w[:4])
+        lines[key] = lines[key] | r if key in lines else r
+    return list(lines.values())
 
 
 def mark(page, rects):

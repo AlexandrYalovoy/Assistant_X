@@ -218,3 +218,27 @@ def test_a_clause_named_is_marked_whole_a_table_row_alone():
     rects, status = hl.find(p, got, whole=True)
     ys = sorted({round(r.y0) for r in rects})
     assert status == "marked" and len(ys) >= 3  # every line of the clause
+
+
+def test_a_whole_clause_is_one_solid_mark_over_a_misread_word():
+    """The author, 2026-11-04: clause 5.9 of a scan was marked with holes where the text layer misread a word; a whole
+    clause is marked as one run, line by line, its misread words too, and nothing of the clause before it."""
+    lines = [
+        "5.8 Hydraulic calculation follows the approved methods of the company.",
+        "5.9 The hydraulic calculation of pipelines takes into account:",
+        "- the minimum gas velocity in the lines (2 - 6 m/s);",
+        "- the maximum gas vel0city in the lines (~ 20 m/s);",
+        "5.10 Other provisions of the standard.",
+    ]
+    doc = pymupdf.open()
+    p = doc.new_page()
+    p.insert_htmlbox(pymupdf.Rect(50, 50, 550, 700), "<br>".join(lines))
+    clause = " ".join(x.replace("vel0city", "velocity") for x in lines[1:4])  # the clause as the text should read
+    rects, status = hl.find(p, clause, whole=True)
+    words = p.get_text("words")
+    misread = next(w for w in words if w[4] == "vel0city")
+    cx, cy = (misread[0] + misread[2]) / 2, (misread[1] + misread[3]) / 2
+    assert status == "marked" and any(r.contains(pymupdf.Point(cx, cy)) for r in rects)
+    first = next(w for w in words if w[4] == "5.8")
+    assert not any(r.contains(pymupdf.Point((first[0] + first[2]) / 2, (first[1] + first[3]) / 2)) for r in rects)
+    assert len({round(r.y0) for r in rects}) == 3  # one mark a line
