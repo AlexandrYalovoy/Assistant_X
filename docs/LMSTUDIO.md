@@ -14,6 +14,11 @@ library: it searches, reads the pages and cites the document and the page.
 - Memory for the model: about 8 GB of RAM or video memory for a model of 8 billion parameters in 4 bits, more for a
   larger one, besides the memory of the search of the library.
 
+**Said plainly.** A small local model is much weaker than Claude or ChatGPT: the quality of the assistant in LM
+Studio is much lower and not guaranteed. It works as a narrow reference desk (quotes of the library with their
+references); the engineering answer, a page shown with its quote marked and the intake of documents are for Claude
+or ChatGPT (Codex).
+
 ## Install without a command line
 
 The program comes as one archive (`AssistantX_<version>_setup.zip`), a base of documents, when you have one, as a

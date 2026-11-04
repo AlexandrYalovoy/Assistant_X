@@ -6,8 +6,9 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
-- Known limitation: a small model in LM Studio (the reference mode) does not show pages: `page_image` is not among
-  its commands, so «show [code, …, PDF N]» there is answered with the quote alone; ask Claude or Codex to show a page.
+- LM Studio, said plainly: a small local model (Qwen) is much weaker than Claude or ChatGPT, so the quality of the
+  assistant there is much lower and not guaranteed. It is kept to a narrow reference mode (quotes with references);
+  getting more out of it is not a goal of this version.
 - The installer connects Claude Desktop with the one tool `library` (it wrote every tool apart: 25 questions), and
   says the one tool at its end. An online install that fails names an antivirus that scans HTTPS (Kaspersky) and the
   sites to allow.
