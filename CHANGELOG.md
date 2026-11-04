@@ -4,7 +4,7 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.5.12 — not released
+## 0.6 — 2026-11-04
 
 - docs/API.md: the library from a program of one's own, with no AI: the service, its entry points (`/mcp`,
   `/health`, `/shutdown`), the token, every command with its parameters (made from the schemas of the server by
