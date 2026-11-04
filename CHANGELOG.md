@@ -6,6 +6,11 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- Known limitation: a small model in LM Studio (the reference mode) does not show pages: `page_image` is not among
+  its commands, so «show [code, …, PDF N]» there is answered with the quote alone; ask Claude or Codex to show a page.
+- The installer connects Claude Desktop with the one tool `library` (it wrote every tool apart: 25 questions), and
+  says the one tool at its end. An online install that fails names an antivirus that scans HTTPS (Kaspersky) and the
+  sites to allow.
 - The skill is thin: it switches the assistant on by the key `AX:` and calls `library_guide` with its id; the
   rules of the answers come from the program, always current, and replace any older skill (an older skill uploaded
   in Claude Desktop kept «Independent assessment»). A skill of another id, or Claude Desktop passing none, is told

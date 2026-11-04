@@ -459,8 +459,8 @@ def test_the_installer_records_claude_desktop_and_update_moves_it(home, tmp_path
     old = r"C:\OLD\venv\Scripts\python.exe"
     (home / "AppData" / "Roaming" / "Claude").mkdir(parents=True)
     install.register_desktop(old, False)
-    assert K.connections()["claude_desktop"]["toolset"] == "all"
-    assert claude_desktop.read()["command"] == old
+    assert K.connections()["claude_desktop"]["toolset"] == "one"  # the one tool: one question (colleague test 2026-11-04)
+    assert claude_desktop.read()["command"] == old and claude_desktop.read()["args"][-2:] == ["--tools", "one"]
     assert list(connect.update(say=lambda s: None)) == ["claude_desktop"]
     assert claude_desktop.read()["command"] == K.windowless(sys.executable)
     K.remember("claude_desktop", None)  # an install before the record: the entry in the settings alone
@@ -469,6 +469,7 @@ def test_the_installer_records_claude_desktop_and_update_moves_it(home, tmp_path
     e = claude_desktop.read()
     assert e["command"] == K.windowless(sys.executable) and e["env"]["AX_WORKSPACE"] == lib
     assert K.connections()["claude_desktop"]["workspace"] == lib
+    assert e["args"][-2:] == ["--tools", "one"]  # an older install with every tool apart moves to the one tool
 
 
 @pytest.mark.parametrize("app", ["gemini", "kimi"])

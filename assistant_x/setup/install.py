@@ -895,13 +895,15 @@ def register_desktop(py, dry):
         say(
             "   Claude Desktop is not found on this PC: writing the setting in advance, it is picked up once Claude is installed."
         )
-    changed, e = False, clients.entry(py, "all", False, P.ROOT)
+    # the set of the app: the one tool `library` (the chat asks once a tool; the colleague install test 2026-11-04
+    # found this entry written with every tool apart, 25 questions)
+    changed, e = False, clients.entry(py, claude_desktop.TOOLSET, claude_desktop.COMPACT, P.ROOT)
     done = claude_desktop.connect(e, dry)
     for path, status in done:
         say(f"   {path}: {status}")
         changed |= status == "written"
     if not dry and any(s in ("written", "unchanged") for _, s in done):
-        connect.record(claude_desktop.NAME, "all", e)
+        connect.record(claude_desktop.NAME, claude_desktop.TOOLSET, e)
     return changed
 
 
@@ -1122,7 +1124,7 @@ def main():
     if changed:
         say(
             "\nRestart Claude Desktop: close it completely (the icon by the clock → Quit) and open it again.\n"
-            "After that the library commands (search_library and others) appear in the list of tools."
+            "After that the tool of the library (library) appears in the list of tools."
         )
     if not dry:
         from assistant_x.setup import skill
