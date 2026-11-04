@@ -262,7 +262,7 @@ def test_claude_desktop_left_alone_when_unreadable(home):
     (d / "claude_desktop_config.json").write_text("{not json", encoding="utf-8")
     from assistant_x.clients import claude_desktop
 
-    [(path, status)] = claude_desktop.connect(entry(), False)
+    (path, status), _ = claude_desktop.connect(entry(), False)
     assert status.startswith("left alone") and '"assistant-x"' in status
     assert (d / "claude_desktop_config.json").read_text(encoding="utf-8") == "{not json"
     (d / "claude_desktop_config.json").write_text('{"mcpServers": {}}', encoding="utf-8")
@@ -501,3 +501,27 @@ def test_one_app_that_fails_never_stops_the_installer(home, tmp_path, monkeypatc
     install.register_others(sys.executable, False)
     assert any("Gemini CLI: not connected (ZeroDivisionError" in s for s in said)
     assert K.app("kimi").read() and list(K.connections()) == ["kimi"]
+
+
+def test_claude_desktop_allows_the_reading_tools_of_its_code_tab(home, monkeypatch):
+    """The author, 2026-11-04: the Code tab of Claude Desktop asked before every search ("no prompt, or one at the first
+    start"). Connecting Claude Desktop allows the reading tools in ~/.claude/settings.json (a temporary home here);
+    export_references, which writes files, still asks; disconnecting takes the rules out unless Claude Code itself is
+    connected."""
+    from assistant_x.clients import claude_code, claude_desktop
+
+    d = home / "AppData" / "Roaming" / "Claude" if os.name == "nt" else home / ".config" / "Claude"
+    d.mkdir(parents=True)
+    (home / ".claude").mkdir()
+    (home / ".claude" / "settings.json").write_text('{"model": "x", "permissions": {"allow": ["Bash(ls)"]}}', "utf-8")
+    monkeypatch.setattr(claude_code, "read", lambda: None)
+    claude_desktop.connect(entry(), False)
+    conf = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
+    rules = conf["permissions"]["allow"]
+    assert conf["model"] == "x" and rules[0] == "Bash(ls)" and set(claude_code.allowed_tools()) <= set(rules)
+    assert "mcp__assistant-x__export_references" not in rules and "mcp__assistant-x__search_library" in rules
+    assert claude_desktop.connect(entry(), False)[-1][1] == "unchanged"
+    claude_desktop.disconnect(False)
+    assert json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))["permissions"]["allow"] == [
+        "Bash(ls)"
+    ]

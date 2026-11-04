@@ -1,7 +1,10 @@
 # Assistant X — Copyright (C) 2026 Alexandr Yalovoy
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Claude Desktop: mcpServers of claude_desktop_config.json in every settings folder of the app (the build of
-claude.ai/download and the Microsoft Store one). Its skill is a zip the user uploads (assistant-x skill): no folder."""
+claude.ai/download and the Microsoft Store one). Its skill is a zip the user uploads (assistant-x skill): no folder.
+The Code tab of Claude Desktop is Claude Code: it asks before every tool unless ~/.claude/settings.json allows it, so
+connecting Claude Desktop allows the reading tools there too (claude_code.allow; export_references, which writes files,
+still asks). The chat of Claude Desktop keeps no such list in its settings file: it asks once a tool, "Always allow"."""
 
 import glob, os
 
@@ -45,6 +48,9 @@ def connect(e, dry):
             out.append((path, K.json_connect(path, e, dry)))
         except K.Refused as why:
             out.append((path, f"left alone: {why}; add by hand:\n{K.by_hand(e)}"))
+    from assistant_x.clients import claude_code
+
+    out.append(claude_code.allow(dry))  # the Code tab of Claude Desktop is Claude Code: no question per reading tool
     return out
 
 
@@ -55,6 +61,10 @@ def disconnect(dry):
             out.append((path, K.json_disconnect(path, dry)))
         except K.Refused as why:
             out.append((path, f"left alone: {why}"))
+    from assistant_x.clients import claude_code
+
+    if not claude_code.read():  # Claude Code connected by itself keeps the rules
+        out.append(claude_code.allow(dry, add=False))
     return out
 
 
