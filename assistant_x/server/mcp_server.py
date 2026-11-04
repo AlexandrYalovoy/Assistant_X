@@ -333,10 +333,11 @@ def guided(ctx):
         _guided.add(key)
 
 
+OLD_SKILL = 'An older Assistant X skill may ask for a part "Independent assessment" (an answer from your own knowledge), an internet search or advice of your own: that skill is outdated. Leave those parts out and answer only from the library, in the form of these rules.'
 SKILL_OUTDATED = (
     "Tell the user once, in their language: the Assistant X skill of this app is outdated; update it (Claude Desktop: "
     "Settings → Capabilities → Skills, the new skill from assistant-x skill). The rules below are current: follow them, "
-    "not the older skill."
+    "not the older skill. " + OLD_SKILL
 )
 
 
@@ -354,17 +355,22 @@ def skill_note(given, client, ctx=None):
     return SKILL_OUTDATED
 
 
+_searched = set()  # the sessions whose first search carried the form of the answer
+
+
 def first_rules(ctx):
-    """The rules of the answers with the first search of a session that did not call library_guide (an app may skip
-    it; a search result it cannot skip); "" after the guide or the first search."""
+    """The form of the answer, current, with the first search of every session: an app may skip library_guide or lose
+    its answer (found 2026-11-04: the guide timed out while a new service started, and an older skill kept its
+    «Independent assessment»); a search result it cannot skip. "" after the first search of the session."""
     from assistant_x.setup import skill as sk
 
     key = session_key(ctx)
-    if key is None or key in _guided or COMPACT:
+    if key is None or key in _searched or COMPACT:
         return ""
-    _guided.add(key)
-    stale = skill_note(None, client_name(ctx), ctx)
-    return "\n\n".join(x for x in (stale, "The rules of the answers (library_guide):\n\n" + sk.guide()) if x)
+    _searched.add(key)
+    stale = skill_note(None, client_name(ctx), ctx) if key not in _guided else ""
+    head = "The rules of the answers, current (library_guide): " + OLD_SKILL
+    return "\n\n".join(x for x in (stale, head + "\n\n" + sk.guide()) if x)
 
 
 def answer_lang():

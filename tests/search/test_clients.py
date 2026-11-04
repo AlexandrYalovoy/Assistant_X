@@ -718,7 +718,9 @@ def test_the_thin_skill_and_its_outdated_copy():
     old = Ctx("claude-ai")
     first = mcp_server.first_rules(old)
     assert first.startswith(mcp_server.SKILL_OUTDATED) and "The rules of the answers" in first
-    assert mcp_server.first_rules(old) == ""  # once a session
+    assert "Independent assessment" in first and mcp_server.first_rules(old) == ""  # once a session
     guided = Ctx("claude-code")
     mcp_server.guided(guided)
-    assert mcp_server.first_rules(guided) == ""  # the guide came already
+    again = mcp_server.first_rules(guided)  # the form comes with the first search even after the guide
+    assert again.startswith("The rules of the answers") and mcp_server.SKILL_OUTDATED not in again
+    assert "Independent assessment" in skill.rules("general") and "Independent assessment" in mcp_server.OLD_SKILL

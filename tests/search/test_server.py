@@ -355,7 +355,7 @@ def test_a_hit_carries_its_reference_and_the_guide_its_answer_form(server):
     assert "\nCite: [" in out
     guide = server.library_guide()
     assert guide.index("## How to answer a question") < guide.index("**1. Requirements from the library**")
-    assert "Build the answer only from the documents of the library" in guide and "Independent" not in guide
+    assert "Build the answer only from the documents of the library" in guide and "2. Independent assessment" not in guide
 
 
 def test_printed_pages_and_page_notes(rich, monkeypatch):
