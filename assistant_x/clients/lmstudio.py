@@ -4,7 +4,9 @@
 is saved. No skills: the rules reach the model through the tool library_guide and the preset "Assistant X" written
 beside the servers (config-presets: the guide as the system prompt, thinking off so that it cannot eat the answer; the
 user picks it once in the chat). The reading tools and the compact answers by default: the models of LM Studio are
-small and local."""
+small and local. LM Studio asks before every tool call unless settings.json lists it in
+chat.skipToolConfirmationPatterns: connect adds "mcp/assistant-x:*" there (the author, 2026-11-04: no question, or one at
+the first start), disconnect takes it out; the other settings stay."""
 
 import json
 
@@ -39,7 +41,31 @@ def connect(e, dry):
         out = [(path, K.json_connect(path, e, dry))]
     except K.Refused as why:
         out = [(path, f"left alone: {why}; add by hand:\n{K.by_hand(e)}")]
-    return out + [write_preset(dry)]
+    return out + [write_preset(dry), skip_confirmation(dry)]
+
+
+PATTERN = f"mcp/{K.SERVER}:*"
+
+
+def skip_confirmation(dry, add=True):
+    """(path, status) of PATTERN added to (or taken out of) chat.skipToolConfirmationPatterns of ~/.lmstudio/settings.json;
+    a file that is not a JSON object, or missing (LM Studio not started yet), is left alone."""
+    p = folder() / "settings.json"
+    if not p.exists():
+        return (str(p), "left alone: LM Studio has not written its settings yet")
+    try:
+        conf = json.loads(p.read_text(encoding="utf-8-sig") or "{}")
+    except (OSError, ValueError) as why:
+        return (str(p), f"left alone: the settings file cannot be read ({why})")
+    chat = conf.get("chat", {}) if isinstance(conf, dict) else None
+    pats = chat.get("skipToolConfirmationPatterns", []) if isinstance(chat, dict) else None
+    if not isinstance(pats, list):
+        return (str(p), "left alone: the settings file is not a JSON object with chat.skipToolConfirmationPatterns")
+    new = pats + [PATTERN] if add and PATTERN not in pats else [x for x in pats if x != PATTERN] if not add else pats
+    if new == pats:
+        return (str(p), "unchanged")
+    conf.setdefault("chat", {})["skipToolConfirmationPatterns"] = new
+    return (str(p), K.put(p, K.json_text(conf), dry))
 
 
 def disconnect(dry):
@@ -53,7 +79,7 @@ def disconnect(dry):
         if not dry:
             ours.unlink()
         out.append((str(ours), "removed"))
-    return out
+    return out + [skip_confirmation(dry, add=False)]
 
 
 def preset_path():

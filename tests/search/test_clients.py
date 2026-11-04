@@ -506,7 +506,7 @@ def test_one_app_that_fails_never_stops_the_installer(home, tmp_path, monkeypatc
 def test_claude_desktop_allows_the_reading_tools_of_its_code_tab(home, monkeypatch):
     """The author, 2026-11-04: the Code tab of Claude Desktop asked before every search ("no prompt, or one at the first
     start"). Connecting Claude Desktop allows the reading tools in ~/.claude/settings.json (a temporary home here);
-    export_references, which writes files, still asks; disconnecting takes the rules out unless Claude Code itself is
+    export_references too (no question at all); disconnecting takes the rules out unless Claude Code itself is
     connected."""
     from assistant_x.clients import claude_code, claude_desktop
 
@@ -519,9 +519,30 @@ def test_claude_desktop_allows_the_reading_tools_of_its_code_tab(home, monkeypat
     conf = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))
     rules = conf["permissions"]["allow"]
     assert conf["model"] == "x" and rules[0] == "Bash(ls)" and set(claude_code.allowed_tools()) <= set(rules)
-    assert "mcp__assistant-x__export_references" not in rules and "mcp__assistant-x__search_library" in rules
+    assert "mcp__assistant-x__export_references" in rules and "mcp__assistant-x__search_library" in rules
     assert claude_desktop.connect(entry(), False)[-1][1] == "unchanged"
     claude_desktop.disconnect(False)
     assert json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))["permissions"]["allow"] == [
         "Bash(ls)"
     ]
+
+
+def test_lmstudio_asks_no_confirmation_for_the_library(home):
+    """The author, 2026-11-04: LM Studio asked before every tool call; connect lists the server in
+    chat.skipToolConfirmationPatterns of its settings, the other settings and patterns stay; disconnect takes it out;
+    a settings file LM Studio has not written yet is left alone."""
+    from assistant_x.clients import lmstudio
+
+    (home / ".lmstudio").mkdir()
+    assert lmstudio.skip_confirmation(False)[1].startswith("left alone")
+    s = home / ".lmstudio" / "settings.json"
+    s.write_text(
+        json.dumps({"chat": {"neverAskForToolConfirmation": False, "skipToolConfirmationPatterns": ["mcp/x:a"]}, "y": 1}),
+        "utf-8",
+    )
+    lmstudio.connect(entry("reader", True), False)
+    conf = json.loads(s.read_text(encoding="utf-8"))
+    assert conf["y"] == 1 and conf["chat"]["skipToolConfirmationPatterns"] == ["mcp/x:a", "mcp/assistant-x:*"]
+    assert lmstudio.skip_confirmation(False)[1] == "unchanged"
+    lmstudio.disconnect(False)
+    assert json.loads(s.read_text(encoding="utf-8"))["chat"]["skipToolConfirmationPatterns"] == ["mcp/x:a"]

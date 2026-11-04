@@ -261,7 +261,9 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
 3. Claude Desktop only: zip the folder `skill` of the workspace (it holds `SKILL.md`) and upload it in Claude →
    Settings → Capabilities → Skills, then restart Claude Desktop (the icon by the clock → Quit, then open it again).
    Codex, Claude Code and DeepSeek Harness got their skill from `connect`; in LM Studio any model learns the rules from
-   the tool `library_guide`.
+   the tool `library_guide`. Questions before a tool call: none in the Code tab of Claude Desktop, in Claude Code and in
+   LM Studio (`connect` allows the tools of the library there); the chat of Claude Desktop keeps its permissions to
+   itself: at the first call of a tool press "Always allow", it does not ask again.
 4. Put documents into `inbox` of the workspace and write to your assistant "AX: sort my documents" (or double-click
    [`intake.bat`](intake.bat) and let the assistant write the cards afterwards).
 5. Ask, starting the message with "AX:" (or "connect to the library"). The answers cite `[code, cl. N, table N, p. N, PDF N]`.

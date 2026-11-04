@@ -1108,6 +1108,9 @@ def main():
         }.get(device, "on the processor (about 2 s a question), the reranker on the best candidates only.")
     )
     say('Your own documents: put them into the inbox folder, then write to Claude "AX: sort my documents".')
+    say(
+        'The chat of Claude Desktop: at the first call of a tool of the library press "Always allow"; it does not ask again.'
+    )
     if changed:
         say(
             "\nRestart Claude Desktop: close it completely (the icon by the clock → Quit) and open it again.\n"
