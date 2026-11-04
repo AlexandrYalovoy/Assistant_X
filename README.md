@@ -312,6 +312,11 @@ The intake runs from the command line too: `assistant-x intake run` makes the te
   entry of every app and says which part fails; `assistant-x connect APP` writes the entry again.
 - **The intake apply was interrupted**: `assistant-x intake apply --resume`.
 - **"the machine lock is busy"**: another heavy task runs (`assistant-x lock` says which); wait, or add `--wait`.
+- **Setup.bat stops on the packages with SSL, CERTIFICATE_VERIFY_FAILED or a connection error**: an antivirus that
+  scans HTTPS (Kaspersky and others) may hold pypi.org, files.pythonhosted.org and download.pytorch.org (and
+  huggingface.co when the models are downloaded). When it asks about one of these sites ("the site may be shown
+  incorrectly"), choose to allow it (Kaspersky: "Add to exclusions"), then run Setup.bat once more; or install from
+  the medium, without internet.
 - **Anything else**: `assistant-x debug-report` makes a file to pass on to whoever helps you (read it first: it
   names the folders and the last questions).
 

@@ -31,7 +31,9 @@ separate file (`<name>.axbase`).
    choose the `.axbase` file, or press Cancel to go on without a base.
 4. Open LM Studio, start a chat with the model, pick the preset "Assistant X" in the settings of the chat and turn on
    the server `assistant-x` among its tools (integrations).
-5. Check the context: the number under the field of the message reads `0/32768`. If it reads `0/8192`, the model was
+5. Integrations (the panel on the right of the chat): only `mcp/assistant-x` is on; the built-in `rag-v1` and
+   `js-code-sandbox` stay off, or the model searches its own way instead of the library.
+6. Check the context: the number under the field of the message reads `0/32768`. If it reads `0/8192`, the model was
    loaded with a smaller context: click the gear beside the name of the model at the top, set Context Length to 32768
    and reload the model (`Setup.bat` once more sets it as the default). With 8192 the rules and the quotes do not fit
    and the answers lose their references.

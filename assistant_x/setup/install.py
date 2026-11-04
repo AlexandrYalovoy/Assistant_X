@@ -383,7 +383,7 @@ def install_packages(py, offline, dry, device="cpu"):
         )
     rc = rc or (install_self(py, offline, dry) if offline else 0)
     if rc:
-        raise Stop("The packages did not install (see the pip messages above).")
+        raise Stop("The packages did not install (see the pip messages above)." + ("" if offline else NETWORK_HINT))
     if dry:
         return device
     ok, out = check(py, IMPORTS, timeout=600)
@@ -859,6 +859,14 @@ def claude_running():
 def is_desktop(paths):
     """Paths of running claude.exe -> is one of them Claude Desktop."""
     return any(d in p.lower() for p in paths for d in DESKTOP_DIRS)
+
+
+NETWORK_HINT = (
+    "\nIf the messages say SSL, CERTIFICATE_VERIFY_FAILED or a connection error: an antivirus that scans HTTPS (Kaspersky "
+    "and others) may hold the downloads of pypi.org, files.pythonhosted.org and download.pytorch.org. When it asks about "
+    "one of these sites, allow it (Kaspersky: «Add to exclusions»), or install from the medium without internet; then "
+    "run Setup.bat once more: what is done is not done again."
+)
 
 
 def wait_claude_closed(dry):
