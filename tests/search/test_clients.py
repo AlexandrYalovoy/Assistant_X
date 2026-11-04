@@ -614,3 +614,45 @@ def connect_allowed():
     from assistant_x.clients import claude_code
 
     return claude_code.allowed_tools()
+
+
+def test_a_bridge_older_than_the_code_on_the_disk_keeps_a_service_of_that_code(monkeypatch):
+    """Found 2026-11-04: a bridge started before an update compared a service with its own code and stopped every
+    service of the new code, the one it started too, again and again. It compares with the code on the disk now."""
+    import http.server
+    import threading
+
+    from assistant_x.server import bridge, service
+
+    now = service.disk_stamp()
+    stops = []
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = json.dumps({"pid": 7, "code": self.server.code}).encode()
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            stops.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *a):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setattr(service, "code_stamp", lambda: "older-bridge")  # the code this bridge loaded
+        b = bridge.Bridge(out=None)
+        info = {"pid": 7, "port": srv.server_address[1]}
+        srv.code = now
+        assert b.healthy(info) and stops == []  # a service of the code on the disk: kept
+        srv.code = "older-service"
+        assert not b.healthy(info) and stops == ["/shutdown"]  # a service of older code: asked to stop
+    finally:
+        srv.shutdown()
+    assert len(service.disk_stamp()) == 12 and service.disk_stamp() == now

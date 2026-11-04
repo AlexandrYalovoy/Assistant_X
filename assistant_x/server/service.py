@@ -41,14 +41,35 @@ def files(root=None):
 
 @functools.lru_cache(maxsize=1)
 def code_stamp():
-    """The stamp of the code of the program this process runs: its version and the sizes and times of its .py files.
-    A bridge that finds a service of another stamp (a running service kept the code of before an update) asks it to
-    stop (POST /shutdown) and starts a new one, so a new version is live without killing anything."""
+    """The stamp of the code of the program this process runs (taken once, at its first use: the code it loaded)."""
+    return disk_stamp.__wrapped__()
 
-    from assistant_x import __version__
 
+def _ttl(seconds):
+    def deco(fn):
+        memo = {}
+
+        @functools.wraps(fn)
+        def get():
+            now = time.monotonic()
+            if "at" not in memo or now - memo["at"] > seconds:
+                memo["v"], memo["at"] = fn(), now
+            return memo["v"]
+
+        return get
+
+    return deco
+
+
+@_ttl(5.0)
+def disk_stamp():
+    """The stamp of the code on the disk now, the code a process started now would run: the sizes and
+    times of the .py files. A bridge that finds a service of another stamp (a running service kept the code of before
+    an update) asks it to stop (POST /shutdown) and starts a new one, so a new version is live without killing
+    anything. The bridge compares with the disk, not with its own code: a bridge started before an update would
+    otherwise stop every service of the new code, the one it started too, again and again (found 2026-11-04)."""
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    h = hashlib.sha1(__version__.encode())
+    h = hashlib.sha1()  # no __version__: a long-running bridge keeps the one it imported; __init__.py is in the walk
     for dp, dirs, fns in os.walk(root):
         dirs[:] = sorted(d for d in dirs if d != "__pycache__")
         for fn in sorted(f for f in fns if f.endswith(".py")):

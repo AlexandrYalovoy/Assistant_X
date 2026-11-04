@@ -103,7 +103,7 @@ class Bridge:
             health = json.loads(r.read() or b"{}")
             ok = r.status == 200 and health.get("pid") == info.get("pid")
             c.close()
-            if ok and "code" in health and health["code"] != service.code_stamp():
+            if ok and "code" in health and health["code"] != service.disk_stamp():
                 return not self.retire(info)  # the service kept older code: asked to stop, a new one starts after it
             return ok  # a service of before the stamps cannot be asked: it serves until it exits by itself
         except (OSError, ValueError, http.client.HTTPException):
