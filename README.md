@@ -204,7 +204,9 @@ assistant "my hierarchy is: …": it shows the levels and, on your yes, writes `
 
 A local model in LM Studio answers as a reference desk: up to 15 verbatim quotes of the library, each with its
 reference `[code, cl. N, table N, p. N, PDF N]`, grouped by the level of the documents, then the sources; no analysis of its own. The number
-is a setting: `reference_quotes = 15` under `[search]` in `assistant_x.toml`.
+is a setting: `reference_quotes = 15` under `[search]` in `assistant_x.toml`. The model needs a context of 32768
+tokens: the number under the field of the message reads `0/32768` (the installer sets it as the default of every
+model; with `0/8192` the answers lose their quotes, see [docs/LMSTUDIO.md](docs/LMSTUDIO.md)).
 
 Every reference, in every app and mode, has one form: the code, the clause, the table, the printed page and the PDF
 page that are known, e.g. `[N-00001, cl. 6.2.1.9, table 1, PDF 36]` (in Russian `[N-00001, п. 6.2.1.9, табл. 1,

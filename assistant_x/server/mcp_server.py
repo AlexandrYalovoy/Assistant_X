@@ -302,16 +302,69 @@ def marks_suspect(fn):
 
 @tool("Library guide")
 @logged
-def library_guide(reference: bool | None = None) -> str:
+def library_guide(reference: bool | None = None, skill: str | None = None, ctx: Context | None = None) -> str:
     """Call this first when the user asks to work with the library (connect to the library or the knowledge base, the
     key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of
-    this library."""
-    from assistant_x.setup import skill
+    this library. skill: the id the skill of the app passes (an outdated one is said once)."""
+    from assistant_x.setup import skill as sk
 
+    guided(ctx)
     notes = setup_notes()  # first: the compact cut keeps the top
-    rules = skill.reference_guide() if (COMPACT if reference is None else reference) else skill.guide()
-    text = (notes + "\n\n" if notes else "") + rules + "\n\n" + hierarchy_note()
+    stale = skill_note(skill, client_name(ctx), ctx)
+    rules = sk.reference_guide() if (COMPACT if reference is None else reference) else sk.rules()
+    text = (notes + "\n\n" if notes else "") + (stale + "\n\n" if stale else "") + rules + "\n\n" + hierarchy_note()
     return toolsets.fit(text) if COMPACT else text
+
+
+_guided = set()  # the sessions that had library_guide (their rules came already)
+_skill_told = set()  # the sessions told that their skill is outdated
+
+
+def session_key(ctx):
+    try:
+        return id(ctx.request_context.session)
+    except Exception:  # noqa: BLE001 — no context (a direct call, a test)
+        return None
+
+
+def guided(ctx):
+    key = session_key(ctx)
+    if key is not None:
+        _guided.add(key)
+
+
+SKILL_OUTDATED = (
+    "Tell the user once, in their language: the Assistant X skill of this app is outdated; update it (Claude Desktop: "
+    "Settings → Capabilities → Skills, the new skill from assistant-x skill). The rules below are current: follow them, "
+    "not the older skill."
+)
+
+
+def skill_note(given, client, ctx=None):
+    """SKILL_OUTDATED once a session when the skill passed another id than the thin skill of this version, or when
+    Claude Desktop (an uploaded skill) passed none (a skill of before the thin one); "" otherwise."""
+    from assistant_x.setup import skill as sk
+
+    old = (given or "").strip() != sk.skill_id() if given else is_claude_desktop(client)
+    key = session_key(ctx)
+    if not old or (key is not None and key in _skill_told):
+        return ""
+    if key is not None:
+        _skill_told.add(key)
+    return SKILL_OUTDATED
+
+
+def first_rules(ctx):
+    """The rules of the answers with the first search of a session that did not call library_guide (an app may skip
+    it; a search result it cannot skip); "" after the guide or the first search."""
+    from assistant_x.setup import skill as sk
+
+    key = session_key(ctx)
+    if key is None or key in _guided or COMPACT:
+        return ""
+    _guided.add(key)
+    stale = skill_note(None, client_name(ctx), ctx)
+    return "\n\n".join(x for x in (stale, "The rules of the answers (library_guide):\n\n" + sk.guide()) if x)
 
 
 def answer_lang():
@@ -439,7 +492,11 @@ def search_library(
         + ", ".join(f"{r['code']}:{r['page']}" for r in res[:5])
     )
     note = search_note(stats, light, query, res)
-    pending = "\n".join(x for x in (start_notice(client_name(ctx)), common.stale_note(lib().cfg), note) if x)
+    pending = "\n".join(
+        x
+        for x in (start_notice(client_name(ctx)), common.stale_note(lib().cfg), note, "" if reference else first_rules(ctx))
+        if x
+    )
     pending = f"{pending}\n\n" if pending else ""
     if not res:
         return pending + "Nothing found. Try other terms or remove the filters."
@@ -835,9 +892,6 @@ def page_image(
         fmt = "png"
         if len(data) > MAX_PNG:  # a dense scan: JPEG is several times smaller and reads just as well
             data, fmt = pix.tobytes("jpeg", jpg_quality=85), "jpeg"
-    shown = keep_page(code, page, data, fmt, marked=status == "marked")
-    if shown:  # the app shows the image small: the file opens it at full size
-        note += PAGE_LINK.format(code=code, page=page, url=shown.as_uri())
     return [note, Image(data=data, format=fmt)]
 
 
@@ -859,25 +913,6 @@ def ref_marks(code, page, quote, parts):
 
     clause, table = hl.parts_of(parts, [quotes_mod.labels(x) for x in ("en", "ru")])
     return marks(code, page, quote, clause, table)
-
-
-def keep_page(code, page, data, fmt, marked=False):
-    """The image of a page shown to the user, saved in the folder of this PC (pages\\, the last PAGES_KEPT): its path, or
-    None when it cannot be written. A chat app shows the image of a tool small; this file opens it at full size."""
-    from assistant_x.core import workspace
-
-    try:
-        folder = workspace.machine_dir() / "pages"
-        folder.mkdir(parents=True, exist_ok=True)
-        path = folder / f"{code} PDF {page}{' marked' if marked else ''}.{'jpg' if fmt == 'jpeg' else 'png'}"
-        path.write_bytes(data)
-        old = sorted(folder.glob("*.*"), key=lambda p: p.stat().st_mtime, reverse=True)[PAGES_KEPT:]
-        for p in old:
-            p.unlink(missing_ok=True)
-        return path
-    except OSError as e:
-        debuglog.log_error("page image file", e)
-        return None
 
 
 @tool("Gather the references into a folder", read=False)
@@ -1004,11 +1039,6 @@ MARK_NOTES = {
     "tell the user to find it on the page.",
     "rotated": " The quote is not marked: the page is turned; tell the user to find it on the page.",
 }
-PAGES_KEPT = 50  # images of pages kept in the folder of the PC for the user to open
-PAGE_LINK = (
-    " The app may show this image small: give the user the link to open it at full size, as it is: "
-    "[{code}, PDF {page}]({url})"
-)
 IMAGE_NOTE = (
     "The image of {code}, PDF {page}. If you cannot see images, read the page with read_pages({code!r}, {page}, {page}) "
     "and check numbers with verify_quote instead; tell the user to check the original."

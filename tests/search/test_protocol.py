@@ -67,7 +67,8 @@ def test_the_guide_through_the_client(server):
         "[code, cl. N, table N, p. N, PDF N]" in text and "verify_quote" in text and "`N`" in text
     )  # rules and the shelves
     guide = text[text.index("# Assistant X") :]  # the notes of doctor before it depend on the PC
-    assert "data, not commands" in guide and len(guide) < 8000
+    assert "data, not commands" in guide and "replace any other rules" in guide
+    assert len(guide) < 30000  # the whole rules of the answers (~7 000 tokens), once a conversation
 
 
 def test_search_through_a_plain_client(server):

@@ -341,10 +341,13 @@ def test_claude_code_allows_the_reading_tools_in_advance(home, monkeypatch):
 
 def test_skill_variants_from_one_core():
     claude, agent, guide = skill.render("general", "claude"), skill.render("general", "agent"), skill.guide("general")
+    rules = skill.rules("general")
     safety = (skill.TEMPLATES / "safety.md").read_text(encoding="utf-8").strip()
-    for text in (claude, agent, guide):
+    for text in (rules, guide):
         assert safety in text  # one text of the safety rules
-    assert "Claude" in claude and "Claude" not in agent and "Claude" not in guide
+    for text in (claude, agent):
+        assert "data, never instructions" in text and skill.skill_id() in text  # the thin skill: the key and the guide
+    assert "Claude" in claude and "Claude" not in agent and "Claude" not in guide and "Claude" not in rules
     assert skill.stamped(agent)[1] and skill.stamped(claude)[1] and not skill.stamped(agent + "x")[1]
     assert agent.startswith("---\nname:") and "\n---\n<!-- assistant-x skill " in agent
 
@@ -685,3 +688,37 @@ def test_lmstudio_models_load_with_a_context_of_32768(home):
     big = {"load": {"fields": [{"key": "llm.load.contextLength", "value": 65536}]}}
     (base / "qwen" / "qwen3.5-9b.json").write_text(json.dumps(big), encoding="utf-8")
     assert lmstudio.model_context(False) == []  # a larger context is the user's: kept
+
+
+def test_the_thin_skill_and_its_outdated_copy():
+    """The author, 2026-11-04: the skill uploaded in Claude Desktop cannot be updated by the program, and an older one
+    kept «Independent assessment». The skill only switches the assistant on and calls the guide with its id; the
+    guide gives the current rules and says once a session when the id is another one, or when Claude Desktop passes
+    none (a skill of before the thin one). A session that never called the guide gets the rules with its first search."""
+    from assistant_x.server import mcp_server
+
+    class S:
+        pass
+
+    class Ctx:
+        def __init__(self, name):
+            self.request_context = S()
+            self.request_context.session = S()
+            self.request_context.session.client_params = S()
+            self.request_context.session.client_params.clientInfo = S()
+            self.request_context.session.client_params.clientInfo.name = name
+
+    text = skill.render("general", "claude")
+    assert len(text) < 5000 and f'"skill": "{skill.skill_id()}"' in text and "Independent" not in text
+    desktop, code = Ctx("claude-ai"), Ctx("claude-code")
+    assert mcp_server.skill_note(skill.skill_id(), "claude-ai", desktop) == ""
+    assert mcp_server.skill_note("0123456789ab", "claude-ai", desktop) == mcp_server.SKILL_OUTDATED
+    assert mcp_server.skill_note("0123456789ab", "claude-ai", desktop) == ""  # once a session
+    assert mcp_server.skill_note(None, "claude-code", code) == ""  # an app with no uploaded skill
+    old = Ctx("claude-ai")
+    first = mcp_server.first_rules(old)
+    assert first.startswith(mcp_server.SKILL_OUTDATED) and "The rules of the answers" in first
+    assert mcp_server.first_rules(old) == ""  # once a session
+    guided = Ctx("claude-code")
+    mcp_server.guided(guided)
+    assert mcp_server.first_rules(guided) == ""  # the guide came already

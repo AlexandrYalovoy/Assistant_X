@@ -178,21 +178,13 @@ def test_a_moved_inbox_is_a_folder_of_the_library_too(tmp_path, monkeypatch):
         hl.safe_folder(str(inbox / "refs"), mcp_server.library_folders())
 
 
-def test_the_page_shown_is_kept_as_a_file_to_open_at_full_size(tmp_path, monkeypatch):
-    """The author, 2026-11-04: the chat of Claude Desktop shows the image of a tool as a small thumbnail; the image is
-    also saved in the pages folder of the folder of the PC (the last 50) and the answer gives a link to open it."""
-    from assistant_x.core import workspace
+def test_the_page_shown_leaves_no_file_and_no_link():
+    """The author, 2026-11-04: the link to open the page at full size was plain text in the chat of Claude Desktop,
+    and the thumbnail stays as it is: no image file is kept and the answer gives no link."""
     from assistant_x.server import mcp_server
 
-    monkeypatch.setattr(workspace, "machine_dir", lambda: tmp_path)
-    p = mcp_server.keep_page("N-00580", 27, b"png-bytes", "png", marked=True)
-    assert p.name == "N-00580 PDF 27 marked.png" and p.read_bytes() == b"png-bytes"
-    assert p.as_uri().startswith("file:///") and "N-00580" in mcp_server.PAGE_LINK.format(
-        code="N-00580", page=27, url=p.as_uri()
-    )
-    for i in range(mcp_server.PAGES_KEPT + 5):
-        mcp_server.keep_page("N-00001", i + 1, b"x", "jpeg")
-    assert len(list((tmp_path / "pages").iterdir())) == mcp_server.PAGES_KEPT
+    assert not hasattr(mcp_server, "keep_page") and not hasattr(mcp_server, "PAGE_LINK")
+    assert "full size" not in mcp_server.IMAGE_NOTE
 
 
 def test_a_clause_named_is_marked_whole_a_table_row_alone():

@@ -10,4 +10,4 @@ from assistant_x.setup import skill
 
 def test_the_instructions_and_the_skill_say_how_to_find_hidden_tools():
     for text in (texts.INSTRUCTIONS, skill.render("general", "agent"), skill.render("general", "claude")):
-        assert "search of tools" in text and "library_guide search_library" in text and "no resources" in text
+        assert "search of tools" in text and "assistant-x library library_guide" in text and "no resources" in text

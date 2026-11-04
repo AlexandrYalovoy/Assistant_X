@@ -24,11 +24,17 @@ separate file (`<name>.axbase`).
    beside `Setup.bat`.
 3. Double-click `Setup.bat`. It installs the program and the models of the search, makes the library
    `Documents\Assistant X` and writes the library into the settings of LM Studio (`~/.lmstudio/mcp.json`) in the reference
-   mode made for small local models: `library_guide`, `search_library`, `read_pages` and `export_references`, with
-   short answers, and the preset "Assistant X" (its rules as the system prompt). At its end it names the base beside it ("A base package was
+   mode made for small local models: the one tool `library` with `library_guide`, `search_library`, `read_pages` and
+   `export_references`, with short answers, the preset "Assistant X" (its rules as the system prompt), and a context
+   of 32768 tokens as the default of every model of LM Studio. At its end it names the base beside it ("A base package was
    found: ... Install it? [Y/N]"): answer Y. With no base beside it, the Windows window "Open a file" asks for one:
    choose the `.axbase` file, or press Cancel to go on without a base.
-4. Open LM Studio, start a chat with the model and turn on the server `assistant-x` among its tools (integrations).
+4. Open LM Studio, start a chat with the model, pick the preset "Assistant X" in the settings of the chat and turn on
+   the server `assistant-x` among its tools (integrations).
+5. Check the context: the number under the field of the message reads `0/32768`. If it reads `0/8192`, the model was
+   loaded with a smaller context: click the gear beside the name of the model at the top, set Context Length to 32768
+   and reload the model (`Setup.bat` once more sets it as the default). With 8192 the rules and the quotes do not fit
+   and the answers lose their references.
 
 A base you get later: double-click `Install-Base.bat` in the folder of the program (the window "Open a file" asks for
 the file, or it takes the one beside it); it shows what it installs, asks once and ends with "Base installed: N

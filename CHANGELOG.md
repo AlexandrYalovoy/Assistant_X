@@ -6,6 +6,14 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- The skill is thin: it switches the assistant on by the key `AX:` and calls `library_guide` with its id; the
+  rules of the answers come from the program, always current, and replace any older skill (an older skill uploaded
+  in Claude Desktop kept «Independent assessment»). A skill of another id, or Claude Desktop passing none, is told
+  once a session to update it; a session that never calls the guide gets the rules with its first search.
+- Qwen in LM Studio: a search of the reference mode waits for the models a new service loads (the first answer went
+  by words only); the order to answer with the quote lines comes after the results too; `connect lmstudio` and the
+  installer set a context of 32768 as the default of every model of LM Studio (the GUI loaded 8192).
+- A page shown leaves no image file and no link: the link to open it at full size was plain text in Claude Desktop.
 - One tool, `library`, for every app (Claude Desktop, Claude Code, Codex, LM Studio, DeepSeek Harness, Gemini,
   Antigravity, Cursor, Cline, Kimi): it carries every command by its name and arguments
   (`library(action="search_library", args={"query": "..."})`), so an app asks once, or keeps one rule to allow it,

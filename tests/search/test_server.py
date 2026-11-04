@@ -354,8 +354,8 @@ def test_a_hit_carries_its_reference_and_the_guide_its_answer_form(server):
     out = server.search_library("обводнённости газового фактора")
     assert "\nCite: [" in out
     guide = server.library_guide()
-    assert guide.index("The form of every answer (mandatory)") < guide.index("## How to answer")
-    assert "Never answer a question about the library without references" in guide
+    assert guide.index("## How to answer a question") < guide.index("**1. Requirements from the library**")
+    assert "Build the answer only from the documents of the library" in guide and "Independent" not in guide
 
 
 def test_printed_pages_and_page_notes(rich, monkeypatch):

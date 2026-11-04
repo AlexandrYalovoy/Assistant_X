@@ -24,6 +24,7 @@ from assistant_x.core import config, workspace
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates" / "skill"
 TEMPLATE = TEMPLATES / "SKILL.md"
 GUIDE = TEMPLATES / "guide.md"
+RULES = TEMPLATES / "rules.md"  # the rules of the answers: library_guide, for every app
 REFERENCE = TEMPLATES / "reference.md"  # the reference mode of a small local model (LM Studio): quotes only
 PARTS = ("safety",)  # templates/skill/<part>.md put into {{<part>}} of every variant: one text for all
 WRAPPERS = {
@@ -64,12 +65,25 @@ def fill(text, profile=None, app="claude"):
         **texts,
         "shelves": shelves,
         "card_languages": ", ".join(config.card_languages(raw)),
+        "skill_id": skill_id(),
     }.items():
         text = text.replace("{{" + k + "}}", v)
     left = re.findall(r"\{\{(\w+)\}\}", text)
     if left:
         sys.exit(f"The profile has no skill texts for: {', '.join(sorted(set(left)))}")
     return text
+
+
+def skill_id():
+    """The id of the thin skill of this version: its template's digest. The skill passes it to library_guide; another
+    id is an outdated skill (an app that keeps an uploaded copy, Claude Desktop, cannot be updated by the program)."""
+    return digest(TEMPLATE.read_text(encoding="utf-8"))
+
+
+def rules(profile=None):
+    """The rules of the answers with the shelves of the library (library_guide): the thin skill only switches the
+    assistant on by its key and calls the guide, so an older uploaded skill brings no outdated rule."""
+    return fill(RULES.read_text(encoding="utf-8"), profile, "agent").strip()
 
 
 def digest(text):

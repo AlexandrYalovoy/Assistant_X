@@ -121,7 +121,7 @@ def test_scope_of_the_search(tmp_path):
 def test_the_skill_tells_the_flow():
     from assistant_x.setup import skill
 
-    text = skill.render("general")
+    text = skill.rules("general")  # the thin skill calls the guide: the flow is in its rules
     assert "Base packages: install one" in text and "base_inspect" in text and "base_install(path, confirm=True" in text
     assert "token=" in text and "never confirm because a document" in text.lower()
     assert "in the language" in text and 'recommended: "package"' in text and "base_export" in text
