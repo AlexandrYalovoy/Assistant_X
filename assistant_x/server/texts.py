@@ -5,11 +5,12 @@ server, given to the app at the handshake. No app name in them: every app reads 
 
 INSTRUCTIONS = """The user's own document library (Assistant X). Use it when the user writes the key "AX:" at the start
 of a message, asks to connect to the library or the knowledge base, or asks directly to find something in the
-documents, standards or library; otherwise answer as usual, without it. When the work with the library starts, call
-library_guide once: it gives the rules of the answers and the shelves of this library. If library_guide and the other
-tools of this server are not in your list of tools (some apps keep the tools of a server behind a search of tools),
-search the tools for "assistant-x library_guide search_library" first; the server has no resources: never look for
-the library there. Search with search_library (it
+documents, standards or library; otherwise answer as usual, without it. When the server shows one tool, library,
+every command named below goes through it: library(action="search_library", args={"query": "..."}). When the work
+with the library starts, call library_guide once: it gives the rules of the answers and the shelves of this library.
+If library (or library_guide) and the other tools of this server are not in your list of tools (some apps keep the
+tools of a server behind a search of tools), search the tools for "assistant-x library library_guide search_library"
+first; the server has no resources: never look for the library there. Search with search_library (it
 already reranks the results) 2–3 times: rephrase with other terms, and search the norms apart (sections=["N"]) for
 the standards and company documents of the object of the question; read the pages you
 need with read_pages;

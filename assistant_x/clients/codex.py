@@ -3,7 +3,7 @@
 """Codex (the CLI, the IDE extension) and the ChatGPT desktop app: they share ~/.codex/config.toml (CODEX_HOME moves
 it). The entry is the table [mcp_servers.assistant-x] with its [mcp_servers.assistant-x.env], written as text: the
 other tables and every comment of the file stay as they are. startup_timeout_sec is raised (Codex waits 10 s by
-default); the skill goes to ~/.agents/skills/assistant-x."""
+default); the skill goes to ~/.agents/skills/assistant-x. The one tool `library` by default (one approval)."""
 
 import os, re, tomllib
 from pathlib import Path
@@ -11,7 +11,7 @@ from pathlib import Path
 from assistant_x import clients as K
 
 NAME, TITLE = "codex", "Codex and the ChatGPT desktop app"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60`"
 SKILL = "`~/.agents/skills/assistant-x`"
 TABLE = f"mcp_servers.{K.SERVER}"
@@ -98,8 +98,11 @@ def block(e):
         f"startup_timeout_sec = {K.STARTUP_TIMEOUT}\n",
         f"tool_timeout_sec = {K.TOOL_TIMEOUT}\n",
     ]
-    if "--tools" in e["args"]:
-        lines.append(f"enabled_tools = {value(list(toolsets.READER + toolsets.EXPORT))}\n")
+    if "--tools" in e["args"][:-1]:  # the tools the set shows: Codex hides any other
+        ts = e["args"][e["args"].index("--tools") + 1]
+        shown = [toolsets.ONE] if ts == "one" else list(toolsets.READER + toolsets.EXPORT) if ts == "reader" else None
+        if shown:
+            lines.append(f"enabled_tools = {value(shown)}\n")
     lines.append(f"\n[{TABLE}.env]\n")
     lines += [f"{k} = {value(v)}\n" for k, v in e["env"].items()]
     return lines

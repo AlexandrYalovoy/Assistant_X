@@ -44,7 +44,7 @@ def windowless(py):
     return str(py)
 
 
-def entry(python=None, toolset="all", compact=False, root=None):
+def entry(python=None, toolset="one", compact=False, root=None):
     """{command, args, env} of the bridge: the same for every app."""
     from assistant_x.core import workspace
 

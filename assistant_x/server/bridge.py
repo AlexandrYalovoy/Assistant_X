@@ -376,16 +376,30 @@ class Bridge:
             self.lists.add(msg.get("id"))
         elif method == "tools/call":
             params = msg.get("params") or {}
-            name = params.get("name")
-            if not toolsets.allowed(name, self.toolset, self.compact):
-                return self.error(msg.get("id"), -32602, f"Unknown tool: {name}")
+            tool = params.get("name")
+            if not toolsets.allowed(tool, self.toolset, self.compact):
+                return self.error(msg.get("id"), -32602, f"Unknown tool: {tool}")
+            name, args = toolsets.unwrap(tool, params.get("arguments"))  # the command a call of `library` carries
+            if self.compact and tool == toolsets.ONE and name not in toolsets.REFERENCE:
+                return self.write(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": msg.get("id"),
+                        "result": {
+                            "content": [{"type": "text", "text": f"No command {name!r}: {', '.join(toolsets.REFERENCE)}."}],
+                            "isError": True,
+                        },
+                    }
+                )
             self.calls[msg.get("id")] = name
             if self.compact:
-                args = toolsets.compact_arguments(name, params.get("arguments"))
+                args = toolsets.compact_arguments(name, args)
                 if name == "search_library" and isinstance(args, dict):
                     self.first, context = toolsets.first_search(self.first, args.get("query"), time.monotonic())
                     if context:
                         args = dict(args, context=context)
+                if tool == toolsets.ONE:
+                    args = toolsets.wrap(params.get("arguments"), name, args)
                 msg = dict(msg, params=dict(params, arguments=args))
         if method and method.startswith("notifications/") and self.upstream is not True:
             return  # nothing to tell a service that has not started yet

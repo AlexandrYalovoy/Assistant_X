@@ -3,8 +3,8 @@
 """LM Studio: mcpServers of ~/.lmstudio/mcp.json (the notation of Cursor); LM Studio reloads its servers when the file
 is saved. No skills: the rules reach the model through the tool library_guide and the preset "Assistant X" written
 beside the servers (config-presets: the guide as the system prompt, thinking off so that it cannot eat the answer; the
-user picks it once in the chat). The reading tools and the compact answers by default: the models of LM Studio are
-small and local. LM Studio asks before every tool call unless settings.json lists it in
+user picks it once in the chat). The one tool `library` with the commands of the reference mode, and the compact
+answers, by default: the models of LM Studio are small and local. LM Studio asks before every tool call unless settings.json lists it in
 chat.skipToolConfirmationPatterns: connect adds "mcp/assistant-x:*" there (the author, 2026-11-04: no question, or one at
 the first start), disconnect takes it out; the other settings stay."""
 
@@ -13,7 +13,7 @@ import json
 from assistant_x import clients as K
 
 NAME, TITLE = "lmstudio", "LM Studio"
-TOOLSET, COMPACT = "reader", True
+TOOLSET, COMPACT = "one", True
 SETTINGS = "`~/.lmstudio/mcp.json`, `mcpServers`"
 SKILL = "the preset `~/.lmstudio/config-presets/Assistant X.preset.json` (the guide as the system prompt)"
 PRESET = "Assistant X.preset.json"

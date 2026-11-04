@@ -4,7 +4,7 @@
 the user patch layer of every profile of the PC (DSH_HOME moves the folder). The file is a YAML array of patches: the
 entry goes in as a block between two marker comments, so the patches and comments of others stay and disconnect takes
 out exactly what connect put in. dsh reloads an edited entry by itself; its tools are mcp__assistant-x__*. The skill
-goes to ~/.dsh/skills/assistant-x (watched, no restart). The reading tools by default."""
+goes to ~/.dsh/skills/assistant-x (watched, no restart). The one tool `library` by default."""
 
 import os, re
 from pathlib import Path
@@ -12,7 +12,7 @@ from pathlib import Path
 from assistant_x import clients as K
 
 NAME, TITLE = "dsh", "DeepSeek Harness"
-TOOLSET, COMPACT = "reader", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = (
     "`~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x`"
 )

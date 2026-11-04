@@ -64,7 +64,7 @@ PROBLEMS = {
     ),
     "tools-hidden": (
         "The app keeps the tools of the server behind its search of tools (Codex).",
-        'search the tools for "assistant-x library_guide search_library"; the server has no resources',
+        'search the tools for "assistant-x library library_guide search_library"; the server has no resources',
     ),
     "sign-in-limits": (
         "The plan or the sign-in of the app limits it: on the Free plan of ChatGPT, Codex runs in the desktop app only, "

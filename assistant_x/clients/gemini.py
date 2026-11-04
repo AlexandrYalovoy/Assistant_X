@@ -10,7 +10,7 @@ import re
 from assistant_x import clients as K
 
 NAME, TITLE = "gemini", "Gemini CLI"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md`"
 SKILL = "a block of the short rules in `~/.gemini/GEMINI.md`"
 BEGIN = "<!-- >>> assistant-x (assistant-x connect gemini; assistant-x disconnect gemini removes it) -->\n"

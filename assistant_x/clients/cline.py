@@ -11,7 +11,7 @@ from pathlib import Path
 from assistant_x import clients as K
 
 NAME, TITLE = "cline", "Cline (VS Code)"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = (
     r"`%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` "
     "(`timeout`, `disabled`, `autoApprove`)"

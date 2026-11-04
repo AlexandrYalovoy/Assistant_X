@@ -8,7 +8,8 @@
   failure a stable `code` and a `fix` (the command to run; ask the user before a download or a change of their
   settings); run them again after each fix. The codes: [docs/CLIENTS.md](docs/CLIENTS.md#when-something-does-not-work).
 - The tools of the server `assistant-x` not in your list (Codex keeps them behind its search of tools): search the
-  tools for "assistant-x library_guide search_library".
+  tools for "assistant-x library library_guide search_library". The server shows one tool, `library`: every command goes through it,
+  `library(action="search_library", args={"query": "..."})`.
 - Working on the code: everything in the repository is in US English; the Python code has no Cyrillic (a test checks
   it); `scripts/check.ps1` runs ruff, `ruff format --check` and the tests (`python scripts/check.py` the same where
   PowerShell scripts may not run; `--log FOLDER` keeps a full record). `INSTALL_FOR_AI.md`, this section and

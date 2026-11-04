@@ -109,8 +109,10 @@ settings are never touched. Tell the user to restart the apps; the old environme
 
 {{tools_table}}
 
-The reading tools ({{reader_tools}}) are the set of DeepSeek Harness and LM Studio by default; every tool that
-changes the library asks for the user's yes to a plan first.
+Every app gets the one tool `library` by default: it carries every command of the table by its name and
+arguments (`library(action="search_library", args={"query": "..."})`), so the app asks once or keeps one rule to
+allow it; LM Studio gets the commands of the reference mode. `--full` gives every tool apart, `--reader` the reading
+tools apart ({{reader_tools}}). Every command that changes the library asks for the user's yes to a plan first.
 
 ## The commands
 

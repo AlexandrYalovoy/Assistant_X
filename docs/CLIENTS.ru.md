@@ -19,7 +19,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **Сервис** (`assistant-x service`): один на рабочую папку, модели загружаются один раз (на видеокарту, если она
   есть), каждый запрос — с токеном, принимаются только Host и Origin 127.0.0.1 и localhost; после 30 минут без
   запросов сервис закрывается, и локальная модель снова получает видеопамять.
-- **Наборы инструментов**: `all` (все инструменты: разбор, базовые пакеты) или `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`).
+- **Наборы инструментов**: `one` (по умолчанию у всех приложений: один инструмент `library`, который выполняет
+  любую команду по её имени и аргументам, поэтому приложение спрашивает один раз или хранит одно правило), `all` (все
+  инструменты по отдельности: разбор, базовые пакеты) или `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`).
   `--compact`: описания в одно предложение, не больше 4 результатов поиска, ответы обрезаются на 6 000 символов с
   подсказкой, как получить остальное.
 - **Правила для модели**: инструкции сервера при рукопожатии, навык — если у приложения есть папка навыков, и
@@ -29,17 +31,19 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Приложение | Имя для `connect` | Что записывается | Набор инструментов | Навык |
 | --- | --- | --- | --- | --- |
 | Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (и папка Microsoft Store), `mcpServers` | one | zip-архив, который загружает пользователь (`assistant-x skill`) |
-| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | all | `~/.claude/skills/assistant-x` |
-| Codex и приложение ChatGPT для компьютера | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
-| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): патч `insert` для `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
-| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | reader, компактный | нет: `library_guide`; `assistant-x skill --app guide` пишет системный промпт для пресета |
-| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); правила в `~/.gemini/GEMINI.md` | all | блок кратких правил в `~/.gemini/GEMINI.md` |
-| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | нет: `library_guide` |
-| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | нет: `library_guide` |
-| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | нет: `library_guide` |
-| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | all | блок кратких правил в `AGENTS.md` папки (читает ли Kimi CLI глобальный файл, не проверено; инструкции сервера и `library_guide` передают правила в любом случае) |
+| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one | `~/.claude/skills/assistant-x` |
+| Codex и приложение ChatGPT для компьютера | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one | `~/.agents/skills/assistant-x` |
+| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): патч `insert` для `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one | `~/.dsh/skills/assistant-x` |
+| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | one, компактный | нет: `library_guide`; `assistant-x skill --app guide` пишет системный промпт для пресета |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); правила в `~/.gemini/GEMINI.md` | one | блок кратких правил в `~/.gemini/GEMINI.md` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one | нет: `library_guide` |
+| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one | нет: `library_guide` |
+| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one | нет: `library_guide` |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | one | блок кратких правил в `AGENTS.md` папки (читает ли Kimi CLI глобальный файл, не проверено; инструкции сервера и `library_guide` передают правила в любом случае) |
 
-`--full` даёт приложению все инструменты без компактных ответов, `--reader` — только инструменты чтения, `--compact` —
+`--full` даёт приложению все инструменты по отдельности без компактных ответов, `--reader` — только инструменты
+чтения по отдельности (выбранный набор сохраняется при `assistant-x update`, набор по умолчанию следует версии),
+`--compact` —
 короткие ответы. Перед изменением рядом с файлом настроек сохраняется его копия (`<name>.backup-<date>`, три
 последние), записи и комментарии других программ остаются, повторный `connect` ничего не меняет, а файл, который не
 удаётся прочитать, не трогается: команда печатает запись, которую нужно добавить вручную. `assistant-x disconnect APP`
@@ -93,7 +97,7 @@ Codex CLI, его расширение для IDE и приложение ChatGP
 | `service-light` | Сервис библиотеки ищет на процессоре без переранжирования: видеокарту держит другой сервер библиотеки, поэтому ответы менее точные. | закройте приложения библиотеки на минуту (сервис библиотеки тогда остановится) и откройте одно снова; если не помогло: assistant-x doctor --json и assistant-x debug-report |
 | `gpu-memory-low` | На видеокарте мало свободной памяти: модели поиска и локальная языковая модель тормозят друг друга. | в assistant_x.toml в разделе [search] задайте device = "cpu" (тогда библиотека оставит видеокарту локальной модели) или загрузите локальную модель с меньшим числом параллельных потоков |
 | `skill-outdated` | Навык, загруженный в Claude Desktop, старше программы. | assistant-x skill; заархивируйте папку {folder} в zip и загрузите в Claude (Settings, Capabilities, Skills) |
-| `tools-hidden` | Приложение прячет инструменты сервера за своим поиском инструментов (Codex). | найдите инструменты по запросу «assistant-x library_guide search_library»; ресурсов у сервера нет |
+| `tools-hidden` | Приложение прячет инструменты сервера за своим поиском инструментов (Codex). | найдите инструменты по запросу «assistant-x library library_guide search_library»; ресурсов у сервера нет |
 | `sign-in-limits` | Тариф или вход ограничивают приложение: на бесплатном тарифе ChatGPT Codex работает только в приложении для компьютера, а при входе может попросить номер телефона. | используйте приложение ChatGPT для компьютера или подключите другое приложение: assistant-x connect auto |
 
 ## Чего нельзя

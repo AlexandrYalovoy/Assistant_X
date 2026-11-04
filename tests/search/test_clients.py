@@ -178,7 +178,7 @@ def test_lmstudio_json(home):
     lmstudio.connect(e, False)
     conf = json.loads(p.read_text(encoding="utf-8"))
     assert conf["mcpServers"]["hf"] == {"url": "https://example.org/mcp"}
-    assert conf["mcpServers"]["assistant-x"]["args"][-3:] == ["--tools", "reader", "--compact"]
+    assert conf["mcpServers"]["assistant-x"]["args"][-3:] == ["--tools", "one", "--compact"]
     assert lmstudio.connect(e, False)[0][1] == "unchanged"
     lmstudio.disconnect(False)
     assert json.loads(p.read_text(encoding="utf-8")) == {"mcpServers": {"hf": {"url": "https://example.org/mcp"}}}
@@ -283,7 +283,7 @@ def test_auto_takes_the_apps_found_and_the_skills(home, monkeypatch):
     text = skill_file.read_text(encoding="utf-8")
     assert "Claude" not in text and skill.stamped(text) == (skill.stamped(text)[0], True)
     rows = {r["app"]: r for r in connect.listing()}
-    assert rows["dsh"]["connected"] and rows["dsh"]["tools"] == "reader" and rows["lmstudio"]["compact"]
+    assert rows["dsh"]["connected"] and rows["dsh"]["tools"] == "one" and rows["lmstudio"]["compact"]
     assert not rows["codex"]["found"] and rows["dsh"]["through_service"]
     skill_file.write_text(text + "\nMy own rule.\n", encoding="utf-8")  # edited by hand: kept
     assert skills.state("dsh") == "edited"
@@ -366,7 +366,7 @@ def test_check_through_a_connected_app(home, mini, tmp_path, monkeypatch):
     connect.connect(["lmstudio"], python=sys.executable, root=mini["root"], say=lambda s: None)
     try:
         r = connect.check(["lmstudio"], say=lambda s: None)["lmstudio"]
-        assert r["tools"] == len(toolsets.REFERENCE) and r["initialize_s"] < 5 and "search_s" in r, (
+        assert r["tools"] == 1 and r["initialize_s"] < 5 and "search_s" in r, (  # the one tool `library`
             r.get("answer"),
             r.get("error"),
         )
@@ -388,7 +388,10 @@ def test_update_and_the_skills_refreshed_by_the_service(home, tmp_path, monkeypa
     (home / ".codex").mkdir()
     connect.connect(["dsh", "codex"], python=sys.executable, say=lambda s: None)
     rec = K.connections()
-    assert rec["dsh"]["toolset"] == "reader" and rec["codex"]["toolset"] == "all" and rec["dsh"]["version"]
+    assert rec["dsh"]["toolset"] == "one" and rec["codex"]["toolset"] == "one" and rec["dsh"]["version"]
+    assert not rec["dsh"]["chosen"]
+    connect.connect(["codex"], toolset="all", python=sys.executable, say=lambda s: None)  # chosen by the user: kept
+    K.remember("dsh", dict(K.connections()["dsh"], toolset="reader", chosen=None))  # a record of an older version
     import assistant_x
 
     monkeypatch.setattr(assistant_x, "__version__", "9.9")
@@ -398,7 +401,8 @@ def test_update_and_the_skills_refreshed_by_the_service(home, tmp_path, monkeypa
     assert out == {str(home / ".dsh" / "skills" / "assistant-x" / "SKILL.md"): "skill updated"}
     assert codex_skill.read_text(encoding="utf-8").endswith("mine\n")
     assert sorted(connect.update(say=lambda s: None)) == ["codex", "dsh"]
-    assert K.connections()["dsh"]["version"] == "9.9" and dsh.read()["args"][-2:] == ["--tools", "reader"]
+    assert K.connections()["dsh"]["version"] == "9.9" and dsh.read()["args"][-2:] == ["--tools", "one"]
+    assert K.connections()["codex"]["toolset"] == "all" and "--tools" not in codex.read()["args"]
     connect.disconnect(["dsh"], say=lambda s: None)
     assert "dsh" not in K.connections()
 
@@ -585,3 +589,28 @@ def test_a_service_of_older_code_is_asked_to_stop():
 
     asyncio.run(a({"type": "http", "path": "/shutdown", "method": "POST"}, None, send))
     assert a.stop and sent[-1]["body"] == b'{"stopping": true}' and "app" not in sent
+
+
+def test_codex_shows_the_tools_of_its_set(home):
+    """Codex hides every tool not in enabled_tools: the set `one` lists `library`, `reader` the reading tools, `all`
+    no list."""
+    (home / ".codex").mkdir()
+    p = home / ".codex" / "config.toml"
+    for ts, shown in (("one", ["library"]), ("reader", list(toolsets.READER + toolsets.EXPORT)), ("all", None)):
+        codex.connect(entry(ts), False)
+        got = tomllib.loads(p.read_text(encoding="utf-8"))["mcp_servers"]["assistant-x"].get("enabled_tools")
+        assert got == shown, ts
+
+
+def test_the_library_takes_its_args_as_a_json_text():
+    from assistant_x.server import mcp_server
+
+    assert mcp_server.library("search_library", '{"qery": "x"}').startswith("search_library takes no qery")
+    assert mcp_server.library(" nope ").startswith("No command 'nope'")
+    assert set(connect_allowed()) >= {"mcp__assistant-x__library", "mcp__assistant-x__search_library"}
+
+
+def connect_allowed():
+    from assistant_x.clients import claude_code
+
+    return claude_code.allowed_tools()

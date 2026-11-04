@@ -103,7 +103,7 @@ their settings), then run both checks again. `ok: true` and every app `"ok": tru
 | `service-light` | The library service searches on the processor without the reranker: another server of the library holds the video card, so the answers are less accurate. | close the apps of the library for a minute (the library service then stops) and open one again; if it stays: assistant-x doctor --json and assistant-x debug-report |
 | `gpu-memory-low` | The video card has little free memory: the search models and a local language model slow each other down. | in assistant_x.toml under [search] set device = "cpu" (the library then leaves the video card to the local model), or load the local model with fewer parallel slots |
 | `skill-outdated` | The skill uploaded to Claude Desktop is older than the program. | assistant-x skill; zip the folder {folder} and upload it in Claude (Settings, Capabilities, Skills) |
-| `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library_guide search_library"; the server has no resources |
+| `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library library_guide search_library"; the server has no resources |
 | `sign-in-limits` | The plan or the sign-in of the app limits it: on the Free plan of ChatGPT, Codex runs in the desktop app only, and its sign-in may ask for a phone number. | use the ChatGPT desktop app, or connect another app: assistant-x connect auto |
 
 ## 10. Update ("update my assistant" and a link to GitHub or GitFlic)
@@ -145,7 +145,7 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | `library_hierarchy` | The hierarchy of the documents the answers follow (which kind rules over which; a higher level wins a conflict): without levels, the levels in force and where they come from. | all | writes its own work files |
 | `library_remove` | Take documents out of the library (a document that got in by mistake): nothing is deleted, the originals, the cards and the texts go to inbox\_to_delete\removed_<code>_<date>, the codes stay reserved and the base by words is rebuilt. | all | yes, after the user's yes to a plan |
 | `intake_reindex` | Finish the search base for new documents. | all | writes its own work files |
-| `library` | Every command of the library in one tool: action is the name of a command as the guide names it (library_guide, search_library, read_pages, book_map, page_image, verify_quote, document_info, list_documents, export_references, library_hierarchy, the intake_* and base_* commands, library_remove), args its arguments by name, e.g. | all | writes its own work files |
+| `library` | Every command of the library in one tool: action is the name of a command as the guide names it (library_guide, search_library, read_pages, book_map, page_image, verify_quote, document_info, list_documents, export_references, library_hierarchy, the intake_* and base_* commands, library_remove), args its arguments by name, as in library(action="search_library", args={"query": "gas velocity in a field pipeline"}). | all | writes its own work files |
 | `base_export` | The library as a base package file (out: a path ending in .axbase). | all | writes its own work files |
 | `base_inspect` | What installing a base package (an .axbase file or its unpacked folder) would do: problems, warnings, who keeps the codes, the documents the library has already, and the questions for the user. | all | no |
 | `base_install` | Install a base package. | all | yes, after the user's yes to a plan |
@@ -154,8 +154,10 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | `base_status` | How far the check and the install of a base package are, the questions of the check, the report of the install. | all | no |
 | `base_list` | The base packages installed in this library (version, date, documents) and the user's own documents. | all | no |
 
-The reading tools (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`) are the set of DeepSeek Harness and LM Studio by default; every tool that
-changes the library asks for the user's yes to a plan first.
+Every app gets the one tool `library` by default: it carries every command of the table by its name and
+arguments (`library(action="search_library", args={"query": "..."})`), so the app asks once or keeps one rule to
+allow it; LM Studio gets the commands of the reference mode. `--full` gives every tool apart, `--reader` the reading
+tools apart (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). Every command that changes the library asks for the user's yes to a plan first.
 
 ## The commands
 

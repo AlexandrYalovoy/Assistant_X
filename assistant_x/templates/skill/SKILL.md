@@ -30,10 +30,11 @@ from it comes with a reference to the document and the page. Answer in the langu
 
 The library lies on the user's computer and is connected to {{app}} as the MCP server `assistant-x`. Work with it only
 through its tools. If they are not in your list (some apps keep the tools of a server behind a search of tools), search
-the tools for `assistant-x library_guide search_library` first; the server has no resources, never look there. When the
-server shows one tool `library` (an app that asks before each tool), every command below goes through it:
-`library(action="search_library", args={"query": "…"})`, `library(action="read_pages", args={"code": "N-00001",
-"start_page": 36, "end_page": 36})`; the commands:
+the tools for `assistant-x library library_guide search_library` first; the server has no resources, never look
+there. The server shows one tool, `library` (one approval for every command), and every command below goes through
+it by its name and arguments: `library(action="library_guide")`, `library(action="search_library", args={"query":
+"…"})`, `library(action="read_pages", args={"code": "N-00001", "start_page": 36, "end_page": 36})`. An app connected
+with every tool apart calls the commands by their own names. The commands:
 
 - `search_library(query, k, sections, codes, doc_types, langs, year_from, year_to)` — a search of fragments by
   words and by meaning; returns the code, the PDF page and the text. `sections` — shelves of the library by name or

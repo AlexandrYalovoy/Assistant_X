@@ -22,7 +22,7 @@ from assistant_x import clients as K
 from assistant_x.clients import gemini
 
 NAME, TITLE = "kimi", "Kimi CLI / Kimi Code"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md`"
 SKILL = (
     "a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified;"

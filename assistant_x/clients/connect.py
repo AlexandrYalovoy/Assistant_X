@@ -10,15 +10,17 @@
     assistant-x update                                                          every connected app again
 
 APP: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline; auto: every one found on
-this PC. The tool set of an app is its default (the reading tools for DeepSeek Harness and LM Studio, all for the
-others) unless --full (all, no
-compact answers) or --reader; LM Studio gets the compact answers by default. Every connection is recorded in
+this PC. The tool set of every app is one tool, `library`, that carries every command (an app asks once, or
+keeps one rule to allow it; the author, 2026-11-04) unless --full (every tool apart, no compact answers) or --reader
+(the reading tools apart); LM Studio gets the compact answers by default. Every connection is recorded in
 connections.json of the machine folder: `update` writes them again (a new version of the program, another python),
-and the library service refreshes their outdated skills when it starts."""
+with the default of this version unless the tool set was chosen, and the library service refreshes their outdated
+skills when it starts."""
 
 import argparse, json, os, re, sys, threading, time
 
 from assistant_x import clients as K
+from assistant_x.server import toolsets
 from assistant_x.core import proc
 
 
@@ -43,7 +45,7 @@ def connect(names, toolset=None, compact=None, dry=False, python=None, root=None
         if a.skill_dir() is not None and not dry:
             done[name] += skills.install(name)
         if not dry and any(s in ("written", "unchanged") for _, s in done[name]):
-            record(name, ts, e)
+            record(name, ts, e, chosen=toolset is not None)
         for path, status in done[name]:
             say(f"{a.TITLE}: {path}: {status}")
     if not done:
@@ -51,14 +53,16 @@ def connect(names, toolset=None, compact=None, dry=False, python=None, root=None
     return done
 
 
-def record(name, toolset, e):
-    """connections.json: the app connected with the entry e (assistant-x update writes it again with a new python)."""
+def record(name, toolset, e, chosen=False):
+    """connections.json: the app connected with the entry e (assistant-x update writes it again with a new python;
+    with the default tool set of its version unless chosen: --full or --reader)."""
     from assistant_x import __version__
 
     K.remember(
         name,
         {
             "toolset": toolset,
+            "chosen": chosen,
             "compact": "--compact" in e["args"],
             "python": e["command"],
             "workspace": e["env"]["AX_WORKSPACE"],
@@ -96,7 +100,7 @@ def listing():
     for name in K.APPS:
         a = K.app(name)
         e = a.read()
-        tools = "reader" if e and "--tools" in (e.get("args") or []) else "all" if e else ""
+        tools = settings_of(e)["toolset"] if e else ""
         bridge = bool(e) and "assistant_x.server.bridge" in (e.get("args") or [])
         rows.append(
             {
@@ -161,9 +165,15 @@ def probe(e, query="pressure", timeout=240):
         out["initialize_s"] = round(time.monotonic() - t0, 2)
         p.stdin.write(b'{"jsonrpc":"2.0","method":"notifications/initialized"}\n')
         p.stdin.flush()
-        out["tools"] = len(ask(2, "tools/list", {})["tools"])
+        names = [t.get("name") for t in ask(2, "tools/list", {})["tools"]]
+        out["tools"] = len(names)
         t1 = time.monotonic()
-        r = ask(3, "tools/call", {"name": "search_library", "arguments": {"query": query, "k": 1}})
+        search = {"query": query, "k": 1}
+        if names == [toolsets.ONE]:  # the one tool: the search goes through it
+            call = {"name": toolsets.ONE, "arguments": {"action": "search_library", "args": search}}
+        else:
+            call = {"name": "search_library", "arguments": search}
+        r = ask(3, "tools/call", call)
         out["search_s"] = round(time.monotonic() - t1, 2)
         text = " ".join(c.get("text", "") for c in r.get("content", []))
         out["answer"] = text[:200]
@@ -277,7 +287,16 @@ def update(say=print):
             conns[name] = settings_of(e)
     for name, s in conns.items():
         if name in K.APPS:
-            done.update(connect([name], s.get("toolset"), s.get("compact"), root=s.get("workspace"), say=say))
+            mine = s.get("chosen")  # a tool set the user chose stays; a default one becomes the default of now
+            done.update(
+                connect(
+                    [name],
+                    s.get("toolset") if mine else None,
+                    s.get("compact") if mine else None,
+                    root=s.get("workspace"),
+                    say=say,
+                )
+            )
     if not done:
         say("No app is connected: assistant-x connect auto")
     return done

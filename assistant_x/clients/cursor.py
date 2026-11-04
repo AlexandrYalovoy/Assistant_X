@@ -6,7 +6,7 @@ No skills: the model learns the rules from the tool library_guide. All the tools
 from assistant_x import clients as K
 
 NAME, TITLE = "cursor", "Cursor"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`~/.cursor/mcp.json`, `mcpServers`"
 SKILL = "none: `library_guide`"
 

@@ -18,7 +18,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **The service** (`assistant-x service`): one per workspace, the models loaded once (on the video card when there is
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
-- **The tool sets**: `all` (every tool: the intake, base packages) or `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
+- **The tool sets**: `one` (the default of every app: one tool, `library`, that carries every command by its name
+  and arguments, so an app asks once or keeps one rule to allow it), `all` (every tool apart: the intake, base
+  packages) or `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
   descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):
@@ -27,17 +29,18 @@ app ──stdio──> assistant-x mcp ─────────────�
 | App | `connect` name | Settings written | Tool set | Skill |
 | --- | --- | --- | --- | --- |
 | Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers` | one | a zip the user uploads (`assistant-x skill`) |
-| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | all | `~/.claude/skills/assistant-x` |
-| Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | all | `~/.agents/skills/assistant-x` |
-| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | reader | `~/.dsh/skills/assistant-x` |
-| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | reader, compact | the preset `~/.lmstudio/config-presets/Assistant X.preset.json` (the guide as the system prompt) |
-| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | all | a block of the short rules in `~/.gemini/GEMINI.md` |
-| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | all | none: `library_guide` |
-| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | all | none: `library_guide` |
-| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | all | none: `library_guide` |
-| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | all | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
+| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one | `~/.claude/skills/assistant-x` |
+| Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one | `~/.agents/skills/assistant-x` |
+| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one | `~/.dsh/skills/assistant-x` |
+| LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | one, compact | the preset `~/.lmstudio/config-presets/Assistant X.preset.json` (the guide as the system prompt) |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | one | a block of the short rules in `~/.gemini/GEMINI.md` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one | none: `library_guide` |
+| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one | none: `library_guide` |
+| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one | none: `library_guide` |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | one | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
 
-`--full` gives an app every tool without the compact answers, `--reader` only the reading tools, `--compact` the short
+`--full` gives an app every tool apart without the compact answers, `--reader` only the reading tools apart (a
+chosen set stays at `assistant-x update`; the default one follows the version), `--compact` the short
 answers. A copy of a settings file is kept beside it before a change (`<name>.backup-<date>`, the newest three), the
 entries and comments of others stay, a second `connect` changes nothing, and a file that cannot be read is left alone:
 the command prints the entry to add by hand. `assistant-x disconnect APP` takes the entry and the skill out (a skill
@@ -89,7 +92,7 @@ the command that fixes it (the same table, core/problems.py):
 | `service-light` | The library service searches on the processor without the reranker: another server of the library holds the video card, so the answers are less accurate. | close the apps of the library for a minute (the library service then stops) and open one again; if it stays: assistant-x doctor --json and assistant-x debug-report |
 | `gpu-memory-low` | The video card has little free memory: the search models and a local language model slow each other down. | in assistant_x.toml under [search] set device = "cpu" (the library then leaves the video card to the local model), or load the local model with fewer parallel slots |
 | `skill-outdated` | The skill uploaded to Claude Desktop is older than the program. | assistant-x skill; zip the folder {folder} and upload it in Claude (Settings, Capabilities, Skills) |
-| `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library_guide search_library"; the server has no resources |
+| `tools-hidden` | The app keeps the tools of the server behind its search of tools (Codex). | search the tools for "assistant-x library library_guide search_library"; the server has no resources |
 | `sign-in-limits` | The plan or the sign-in of the app limits it: on the Free plan of ChatGPT, Codex runs in the desktop app only, and its sign-in may ask for a phone number. | use the ChatGPT desktop app, or connect another app: assistant-x connect auto |
 
 ## Not possible
@@ -118,7 +121,7 @@ The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC
 | `library_hierarchy` | The hierarchy of the documents the answers follow (which kind rules over which; a higher level wins a conflict): without levels, the levels in force and where they come from. | all | writes its own work files |
 | `library_remove` | Take documents out of the library (a document that got in by mistake): nothing is deleted, the originals, the cards and the texts go to inbox\_to_delete\removed_<code>_<date>, the codes stay reserved and the base by words is rebuilt. | all | yes, after the user's yes to a plan |
 | `intake_reindex` | Finish the search base for new documents. | all | writes its own work files |
-| `library` | Every command of the library in one tool: action is the name of a command as the guide names it (library_guide, search_library, read_pages, book_map, page_image, verify_quote, document_info, list_documents, export_references, library_hierarchy, the intake_* and base_* commands, library_remove), args its arguments by name, e.g. | all | writes its own work files |
+| `library` | Every command of the library in one tool: action is the name of a command as the guide names it (library_guide, search_library, read_pages, book_map, page_image, verify_quote, document_info, list_documents, export_references, library_hierarchy, the intake_* and base_* commands, library_remove), args its arguments by name, as in library(action="search_library", args={"query": "gas velocity in a field pipeline"}). | all | writes its own work files |
 | `base_export` | The library as a base package file (out: a path ending in .axbase). | all | writes its own work files |
 | `base_inspect` | What installing a base package (an .axbase file or its unpacked folder) would do: problems, warnings, who keeps the codes, the documents the library has already, and the questions for the user. | all | no |
 | `base_install` | Install a base package. | all | yes, after the user's yes to a plan |

@@ -7,7 +7,7 @@ learns the rules from the tool library_guide. All the tools."""
 from assistant_x import clients as K
 
 NAME, TITLE = "antigravity", "Antigravity"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`~/.gemini/antigravity/mcp_config.json`, `mcpServers`"
 SKILL = "none: `library_guide`"
 

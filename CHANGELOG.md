@@ -6,6 +6,16 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- One tool, `library`, for every app (Claude Desktop, Claude Code, Codex, LM Studio, DeepSeek Harness, Gemini,
+  Antigravity, Cursor, Cline, Kimi): it carries every command by its name and arguments
+  (`library(action="search_library", args={"query": "..."})`), so an app asks once, or keeps one rule to allow it,
+  instead of once a tool. LM Studio gets the commands of the reference mode through it, its answers cut and formed as
+  before. `--full` and `--reader` still give the tools apart; `assistant-x update` moves every connection to the new
+  default unless its tool set was chosen. Claude Code allows `library` (and the reading tools for a service of an
+  older version); Codex lists `library` in enabled_tools.
+- A service that kept the code of before an update is replaced by itself: /health names a stamp of its code, a bridge
+  of other code asks it to stop (POST /shutdown) and starts a new one once it has gone; a service of before the stamp
+  is used as it is.
 - A plan-schedule of revision, inspection, repair or maintenance with no results stays out of the library like the
   other administrative papers; an act, a record, a report or a defect list with results goes in.
 - `assistant-x intake redo --fill CODES`: a part of a set without its text is read (its text layer, or the recognition

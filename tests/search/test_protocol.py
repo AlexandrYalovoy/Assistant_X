@@ -212,3 +212,37 @@ def test_the_server_names_its_version_in_the_handshake():
     from assistant_x.server import mcp_server
 
     assert getattr(mcp_server.mcp, "version", __version__) == __version__
+
+
+def test_the_compact_bridge_unwraps_the_one_tool():
+    """The author, 2026-11-04: the one tool `library` for every app, LM Studio too. The compact bridge takes the
+    command out of a call of `library` (args as a dict or as a JSON text of a small model), gives it the arguments
+    of the reference mode, puts it back, answers a command outside the reference mode itself, and treats the answer
+    by the command; the short description of `library` names the commands of the reference mode with their args."""
+    import json
+
+    from assistant_x.server import bridge
+
+    sent = []
+    b = bridge.Bridge(toolset="one", compact=True, out=io.BytesIO())
+    b.forward = sent.append
+    call = {"name": "library", "arguments": {"action": "search_library", "args": json.dumps({"query": "gas", "k": 9})}}
+    b.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": call})
+    args = sent[-1]["params"]["arguments"]
+    assert args["action"] == "search_library" and args["args"]["k"] == toolsets.COMPACT_K and args["args"]["quotes"]
+    assert b.calls[1] == "search_library"
+    page = {"content": [{"type": "text", "text": "[N-00390, PDF 131] …"}]}
+    assert b.adjust({"id": 1, "result": page})["result"]["content"][0]["text"] == toolsets.FORM_HINT
+    b.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "library", "arguments": {"action": "intake_apply"}},
+        }
+    )
+    assert len(sent) == 1 and b"No command 'intake_apply'" in b.out.getvalue()
+    short = toolsets.compact_tools([{"name": "library", "description": "x. y.", "inputSchema": {}}])[0]["description"]
+    assert short == toolsets.ONE_COMPACT and all(n in short for n in toolsets.REFERENCE)
+    assert toolsets.unwrap("search_library", {"query": "q"}) == ("search_library", {"query": "q"})
+    assert toolsets.unwrap("library", {"action": " read_pages ", "args": "not json"}) == ("read_pages", {})

@@ -3,11 +3,11 @@
 """The tool sets of the library server and the compact mode for small local models: which tools an app gets and how
 long their answers may be. Light (standard library only): the stdio bridge (server/bridge.py) uses it on every message.
 
-    reader  the tools that read the library (READER) and export_references (EXPORT, copies into a folder of the user):
-            the default of DeepSeek Harness and LM Studio
-    all     every tool, the intake and the base packages too: the default of Codex and Claude Code
-    one     one tool, `library`, that carries every command (its action and its arguments): the chat of Claude Desktop
-            asks once a tool before the first call, so one tool asks once (the author, 2026-11-04)
+    reader  the tools that read the library (READER) and export_references (EXPORT, copies into a folder of the user)
+    all     every tool, the intake and the base packages too
+    one     one tool, `library`, that carries every command (its action and its arguments): the default of every app.
+            The chat of Claude Desktop asks once a tool before the first call, the others keep one rule to allow it, so
+            one tool asks once (the author, 2026-11-04). In the compact mode it carries the commands of REFERENCE
 
 compact: the first sentence of every tool description, and the answers of the reading tools cut at COMPACT_CHARS
 characters with a note how to get the rest: one answer with a quote fits a context of 16 000 tokens."""
@@ -47,6 +47,35 @@ def allowed(name, toolset, compact=False):
     return (toolset == "all" or name in READER + EXPORT) and (not compact or name in REFERENCE)
 
 
+def unwrap(name, args):
+    """(command, its arguments) of a call: a call of the one tool `library` names its command in action and its
+    arguments in args (a dict, or a JSON text from a small model); any other call is itself."""
+    if name != ONE:
+        return name, args
+    import json
+
+    args = args if isinstance(args, dict) else {}
+    inner = args.get("args")
+    if isinstance(inner, str):
+        try:
+            inner = json.loads(inner or "{}")
+        except ValueError:
+            inner = {}
+    return str(args.get("action") or "").strip(), inner if isinstance(inner, dict) else {}
+
+
+def wrap(args, action, inner):
+    """The arguments of the one tool with the command's arguments replaced."""
+    return dict(args if isinstance(args, dict) else {}, action=action, args=inner)
+
+
+ONE_COMPACT = (
+    "The library: action is the command, args its arguments by name. library_guide (first, no args); "
+    'search_library {"query": "..."}; read_pages {"code": "N-00001", "start_page": 12, "end_page": 13}; '
+    'export_references {"folder": "...", "references": ["the lines of the answer"]}.'
+)
+
+
 def check(toolset):
     """The set, or SystemExit with the choices."""
     if toolset not in TOOLSETS:
@@ -75,7 +104,7 @@ def compact_tools(tools):
     out = []
     for t in tools:
         t = dict(t)
-        t["description"] = first_sentence(t.get("description"))
+        t["description"] = ONE_COMPACT if t.get("name") == ONE else first_sentence(t.get("description"))
         schema = t.get("inputSchema")
         if isinstance(schema, dict) and isinstance(schema.get("properties"), dict):
             props = {

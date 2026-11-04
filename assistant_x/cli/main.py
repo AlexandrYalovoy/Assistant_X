@@ -7,7 +7,7 @@
     assistant-x intake run|build|apply|status|...   the intake of inbox (assistant_x.intake.pipeline)
     assistant-x build [--full]       build the search base from index (assistant_x.search.build_index)
     assistant-x embed [--wait|--cpu] embeddings of the new fragments (assistant_x.search.embed)
-    assistant-x mcp [--tools reader|all] [--compact]  the stdio bridge an app starts (assistant_x.server.bridge): it
+    assistant-x mcp [--tools reader|all|one] [--compact]  the stdio bridge an app starts (assistant_x.server.bridge): it
                                      starts the library service of the workspace and talks to it
     assistant-x service              the library service: one MCP server on 127.0.0.1 for every app of the PC
     assistant-x serve [--http]       the MCP server in the process of the app (assistant_x.server.mcp_server); --http:
@@ -85,10 +85,10 @@ HELP = {  # the commands whose module has no argparse of its own: their help, sh
         "Where everything of the workspace is and what is missing; exit code 1 when the workspace is broken or not made."
     ),
     "serve": (
-        "usage: assistant-x serve [--tools reader|all] [--compact] [--http [--port N]]\n\n"
+        "usage: assistant-x serve [--tools reader|all|one] [--compact] [--http [--port N]]\n\n"
         "The MCP server of the library in the process of the app (the apps start assistant-x mcp, the bridge to the\n"
         "library service; serve is the fallback). Without options: stdio.\n"
-        "  --tools      reader: only the 8 reading tools; all (default): every tool\n"
+        "  --tools      reader: only the 8 reading tools; all (default): every tool; one: the tool library\n"
         "  --compact    short descriptions and answers for small local models\n"
         "  --http       streamable HTTP on 127.0.0.1 (http://127.0.0.1:N/mcp), every request with the bearer token\n"
         "               of mcp_http_token.txt in the PC folder\n"

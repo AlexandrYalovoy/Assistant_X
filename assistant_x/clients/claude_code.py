@@ -13,7 +13,7 @@ from assistant_x.core import proc
 from assistant_x.server import toolsets
 
 NAME, TITLE = "claude_code", "Claude Code"
-TOOLSET, COMPACT = "all", False
+TOOLSET, COMPACT = "one", False
 SETTINGS = "`claude mcp add-json -s user` (`~/.claude.json`)"
 SKILL = "`~/.claude/skills/assistant-x`"
 
@@ -52,10 +52,11 @@ def settings():
 
 
 def allowed_tools():
-    """The permission rules of the reading tools ("mcp__assistant-x__search_library", ...) and of export_references,
-    allowed without a question (the author, 2026-11-04: no question, or one at the first start): the export writes
-    only into the folder the user names, never a share or the library, and replaces a file only on the user's yes."""
-    return [f"mcp__{K.SERVER}__{name}" for name in toolsets.READER + toolsets.EXPORT]
+    """The permission rules allowed without a question (the author, 2026-11-04: no question, or one at the first
+    start): the one tool `library` ("mcp__assistant-x__library"; a command that changes the library still needs the
+    user's yes in the conversation and the token of its plan), and the reading tools and export_references for a
+    service of an older version that shows its tools apart. The export writes only into the folder the user names."""
+    return [f"mcp__{K.SERVER}__{name}" for name in (toolsets.ONE,) + toolsets.READER + toolsets.EXPORT]
 
 
 def allow(dry, add=True):
