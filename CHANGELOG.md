@@ -6,6 +6,9 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.5.12 — not released
 
+- docs/API.md: the library from a program of one's own, with no AI: the service, its entry points (`/mcp`,
+  `/health`, `/shutdown`), the token, every command with its parameters (made from the schemas of the server by
+  gen-docs) and three examples run against a real library (Python, curl, the MCP client library).
 - LM Studio, said plainly: a small local model (Qwen) is much weaker than Claude or ChatGPT, so the quality of the
   assistant there is much lower and not guaranteed. It is kept to a narrow reference mode (quotes with references);
   getting more out of it is not a goal of this version.

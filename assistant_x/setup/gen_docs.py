@@ -8,12 +8,14 @@ the tools of the server, the commands of the command line and the version only, 
     INSTALL_FOR_AI.md      what an agent (Codex, Claude Code, DeepSeek Harness) does when told "connect this tool"
     AGENTS.md              the section between the assistant-x markers (the rest of the file is the people's)
     docs/CLIENTS.md        the apps, their settings files, tool sets and skills
+    docs/API.md            the library from a program of one's own: the service, the entry points, every command
+                           with its parameters (from the schemas of the server) and examples
     INSTALL_FOR_AI.ru.md, docs/CLIENTS.ru.md    their Russian twins: the templates *.ru.md, the strings of the tables
                            in templates/docs/ru.json (one per app, tool, command and known failure: a missing one fails)
 
 tests/test_gen_docs.py fails when a committed file differs from what this makes; hooks/pre-commit runs it."""
 
-import argparse, re, sys
+import argparse, json, re, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent  # the folder of the code (pyproject.toml)
@@ -92,6 +94,64 @@ def tools_table(lang="en"):
     return "\n".join(rows)
 
 
+def api_table(lang="en"):
+    """The commands of the server with their parameters (type, default, required in bold), from tools/list."""
+    import anyio
+
+    from assistant_x.server import mcp_server, toolsets
+
+    r = ru() if lang == "ru" else None
+    head = r["headers"]["api"] if r else "| Command | Parameters | What it does | Changes the library |"
+    words = (
+        r["change"]
+        if r
+        else {
+            "no": "no",
+            "destructive": "yes, after the user's yes to a plan",
+            "work": "writes its own work files",
+            "export": "no: writes copies into a folder the user names",
+            "one": "as the command it carries",
+        }
+    )
+    rows = [head, _rule(head)]
+    for t in anyio.run(mcp_server.mcp.list_tools):
+        schema = t.input_schema or {}
+        need = set(schema.get("required") or [])
+        params = []
+        for k, v in (schema.get("properties") or {}).items():
+            if k == "ctx":
+                continue
+            kind = _kind(v)
+            item = f"**{k}**: {kind}" if k in need else f"{k}: {kind} = {json.dumps(v.get('default'), ensure_ascii=False)}"
+            params.append(item.replace("|", r"\|"))
+        about = r["tools"][t.name] if r else toolsets_first(t.description)
+        a = t.annotations
+        change = words["no"] if a.read_only_hint else words["destructive"] if a.destructive_hint else words["work"]
+        change = words["export"] if t.name in toolsets.EXPORT else change
+        change = words["one"] if t.name == "library" else change
+        rows.append(f"| `{t.name}` | {'<br>'.join(params) or '—'} | {about} | {change} |")
+    return "\n".join(rows)
+
+
+def _kind(v):
+    """The type of a JSON schema, short: str, int, list[str], str | null."""
+    if "anyOf" in v:
+        kinds = [_kind(x) for x in v["anyOf"]]
+        return " | ".join(dict.fromkeys(kinds))
+    t = v.get("type")
+    if t == "array":
+        return f"list[{_kind(v.get('items') or {})}]"
+    return {"string": "str", "integer": "int", "number": "float", "boolean": "bool", "object": "dict", "null": "null"}.get(
+        t, "any"
+    )
+
+
+def toolsets_first(text):
+    from assistant_x.server import toolsets
+
+    return toolsets.first_sentence(text)
+
+
 def commands_table(lang="en"):
     from assistant_x.cli import main as cli
 
@@ -130,6 +190,7 @@ def values(lang="en"):
         "apps_table": apps_table(lang),
         "tools_table": tools_table(lang),
         "commands_table": commands_table(lang),
+        "api_table": api_table(lang),
         "troubleshooting": problems_table(lang),
         "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER + toolsets.EXPORT),
         "apps": ", ".join(f"`{n}`" for n in __import__("assistant_x.clients", fromlist=["APPS"]).APPS),
@@ -226,6 +287,8 @@ def targets():
         agents: agents_md(old, v),
         ROOT / "docs" / "CLIENTS.md": render("CLIENTS.md", v),
         ROOT / "docs" / "CLIENTS.ru.md": render("CLIENTS.ru.md", v_ru),
+        ROOT / "docs" / "API.md": render("API.md", v),
+        ROOT / "docs" / "API.ru.md": render("API.ru.md", v_ru),
         **plugin_files(v),
     }
 
