@@ -23,6 +23,7 @@ from assistant_x.core.txn import bad_path, inside  # noqa: F401 — the name rul
 
 FORMAT = "axbase/1"
 MANIFEST, CHECKSUMS, README = "axbase.json", "CHECKSUMS.sha256", "README.txt"
+VERIFIED = "verified.json"  # in the work folder of the workspace: the stamp of a package verified whole (verify_once)
 ID_RX = r"^[a-z0-9][a-z0-9._-]{0,63}$"
 VERSION_RX = r"^[0-9A-Za-z][0-9A-Za-z._+-]{0,39}$"
 SUFFIX = ".axbase"
@@ -209,6 +210,36 @@ class Package:
         h.update(b"\0")
         h.update(self.read(CHECKSUMS) if CHECKSUMS in self.names() else b"")
         return h.hexdigest()
+
+    def stamp(self):
+        """What names this very file as it lies on the disk (path, size, time of change, identity); None for a folder
+        (its files change without the folder telling)."""
+        if self.folder:
+            return None
+        st = os.stat(self.path)
+        return {"path": self.path, "size": st.st_size, "mtime_ns": st.st_mtime_ns, "identity": self.identity()}
+
+    def verify_once(self, work, progress=None):
+        """verify(), skipped when the work folder holds the stamp of this very file verified whole before (the
+        inspect, then the install --confirm, then a resume: one pass over a package of tens of GB, not three)."""
+        stamp = self.stamp()
+        path = os.path.join(work, VERIFIED) if work else ""
+        if stamp and path:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    if json.load(f) == stamp:
+                        return []
+            except (OSError, ValueError):
+                pass
+        bad = self.verify(progress)
+        if not bad and stamp and path:
+            try:
+                os.makedirs(work, exist_ok=True)
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(stamp, f)
+            except OSError:
+                pass  # the stamp only saves time
+        return bad
 
     def verify(self, progress=None):
         """[problems] of the files against CHECKSUMS.sha256 (an empty list: every file is whole); a file the zip

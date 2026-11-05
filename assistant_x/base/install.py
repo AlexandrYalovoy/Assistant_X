@@ -3,7 +3,7 @@
 r"""assistant-x base install: a base package into this workspace, as a transaction that may be continued or undone.
 
     assistant-x base install PACKAGE                  the plan (inspect), nothing changes
-    assistant-x base install PACKAGE --confirm [--keep own|package] [--answers answers.json] [--own-apart]
+    assistant-x base install PACKAGE --confirm [--keep own|package] [--answers answers.json] [--own-apart] [--cpu]
     assistant-x base install PACKAGE --resume         continue an install that was interrupted
     assistant-x base install PACKAGE --rollback       undo an install that was interrupted
 
@@ -22,7 +22,9 @@ The steps, each noted in the journal .assistant_x\w\<id>\install.journal.json as
               eval_baseline.json; not the texts) to .assistant_x\backups\<time>-before-<id>.zip
   extract     the package into the short folder .assistant_x\w\<id>\pkg, every name checked first (no "..", no
               absolute path, no link, no device name, no ":", no two names equal but for the case, stored entries
-              only, every size as declared), then every checksum
+              only, every size as declared), every file hashed against its checksum as it is copied and noted
+              when done (a resume copies the rest only); the package was checked whole once by the inspect (its
+              stamp in .assistant_x\workerified.json: the install --confirm and a resume do not read it again)
   plan        what goes where: the code plan of inspect, the answers, the documents to skip or to replace
   renames     the documents of the side that gets new codes: every file to a temporary name, then to its new name
               (a swap of two codes works); a file held by another program is tried again, then the install stops
@@ -39,12 +41,13 @@ The steps, each noted in the journal .assistant_x\w\<id>\install.journal.json as
   vectors     the vectors of the package into the vector cache when they are of the model here, checked
               (base/vectors.py): only keys of fragments of the package documents without a vector, a sample encoded
               again when the model is here
-  base        assistant-x embed (from the cache; a fragment it has not and no model here: the search by words until
-              assistant-x embed runs), assistant-x check
+  base        assistant-x embed (from the cache; the fragments the package leaves on the video card, else on the
+              processor when they are few or with --cpu; no model here: the search by words until assistant-x embed
+              runs), assistant-x check
   report      reports\base_install_<id>_<time>.md; the marker removed, the work folder emptied
 """
 
-import argparse, datetime, json, os, re, shutil, sys, time, zipfile
+import argparse, datetime, hashlib, json, os, re, shutil, sys, time, zipfile
 from pathlib import Path
 
 from assistant_x.base import inspection as I, package as P, registry, remap as R
@@ -54,7 +57,26 @@ from assistant_x.core import config as settings
 from assistant_x.core.txn import Journal, exists, is_link, lp, move as txn_move
 
 JOURNAL = "install.journal.json"
-RETRIES, RETRY_S = 5, 2.0  # a file held by another program (Claude, an antivirus): tried again this often
+RETRIES, RETRY_S = 5, 2.0
+BUSY = 3  # the exit code of embed when it does not start (core/gpu_guard: no video card and nobody to ask, card busy)
+AUTO_CPU_FRAGMENTS = 5000  # leftovers computed on the processor without --cpu: about an hour at most
+STEPS = (  # the steps of run(), in order: the share of the install done for the progress (core/progress.py)
+    "marker",
+    "backup",
+    "extract",
+    "plan",
+    "aside",
+    "renames one",
+    "renames two",
+    "cards",
+    "package",
+    "place",
+    "tables",
+    "key norms",
+    "build",
+    "vectors",
+    "base",
+)  # a file held by another program (Claude, an antivirus): tried again this often
 
 
 class Stop(SystemExit):
@@ -64,21 +86,53 @@ class Stop(SystemExit):
 # ---------- the names of a package ----------
 
 
-def extract(pkg, dst):
-    """Every file of the package into dst, each of the size declared; then the checksums."""
-    total = 0
-    for name in pkg.names():
-        target = lp(os.path.join(dst, *name.split("/")))
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        with pkg.open(name) as src, open(target, "wb") as out:
-            shutil.copyfileobj(src, out, 1 << 20)
-        if os.path.getsize(target) != pkg.size(name):
-            raise Stop(f"{name}: {os.path.getsize(target)} bytes extracted, {pkg.size(name)} declared")
-        total += os.path.getsize(target)
-    with P.Package(dst) as staged:
-        bad = staged.verify()
+def extract(pkg, dst, jr=None):
+    """Every file of the package into dst, each of the size declared and of its checksum, hashed as it is copied (one
+    read of the package, no second pass). With a journal every file done is noted (the journal written every few
+    seconds): a resume after a cut copies only the files not noted yet, a noted file of its size is not read again."""
+    from assistant_x.core.progress import write_progress
+
+    want = pkg.checksums()
+    names = pkg.names()
+    have = set(names) - {P.CHECKSUMS}
+    bad = [f"missing: {n}" for n in sorted(set(want) - have)] + [
+        f"not in {P.CHECKSUMS}: {n}" for n in sorted(have - set(want))
+    ]
     if bad:
         raise Stop("The package is damaged: " + "; ".join(bad[:10]))
+    done = set(jr.data.setdefault("extracted_names", [])) if jr is not None else set()
+    total, size_all = 0, sum(pkg.size(n) for n in names) or 1
+    try:
+        for i, name in enumerate(names):
+            size = pkg.size(name)
+            target = lp(os.path.join(dst, *name.split("/")))
+            if name in done and os.path.exists(target) and os.path.getsize(target) == size:
+                total += size
+                continue
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            h = hashlib.sha256()
+            try:
+                with pkg.open(name) as src, open(target, "wb") as out:
+                    for block in iter(lambda: src.read(1 << 20), b""):
+                        h.update(block)
+                        out.write(block)
+            except P.DAMAGED as e:
+                if isinstance(e, OSError) and (e.errno == 28 or getattr(e, "winerror", 0) in (39, 112)):
+                    raise Stop(f"The disk is full at {name}: free space there, then base install … --resume") from e
+                raise Stop(f"The package is damaged: damaged: {name} ({e})") from e
+            if os.path.getsize(target) != size:
+                raise Stop(f"{name}: {os.path.getsize(target)} bytes extracted, {size} declared")
+            if name != P.CHECKSUMS and h.hexdigest() != want[name]:
+                raise Stop(f"The package is damaged: damaged: {name}")
+            total += size
+            if jr is not None:
+                jr.data["extracted_names"].append(name)
+                jr.save(every=SAVE_EVERY_S)
+            if i % 200 == 0:
+                write_progress("base install: extract", total, size_all)
+    finally:  # the files noted so far are true: a stop keeps them for the resume
+        if jr is not None:
+            jr.save()
     return total
 
 
@@ -350,9 +404,20 @@ def staging(w, ident):
 
 
 def install(
-    path, confirm=False, keep=None, answers=None, own_apart=False, resume=False, rollback=False, config=None, say=print
+    path,
+    confirm=False,
+    keep=None,
+    answers=None,
+    own_apart=False,
+    resume=False,
+    rollback=False,
+    config=None,
+    say=print,
+    cpu=False,
 ):
-    """Install the package at path; 0 when it is installed (or only planned without confirm), 1 when it cannot."""
+    """Install the package at path; 0 when it is installed (or only planned without confirm), 1 when it cannot. cpu:
+    the fragments the vectors of the package do not cover are computed on the processor without asking, however many
+    (without it: up to AUTO_CPU_FRAGMENTS when there is no video card)."""
     from assistant_x.core import lock
     from assistant_x.core.common import clear_maintenance, load_config
 
@@ -442,6 +507,8 @@ def install(
                         report=report,
                         identity=identity,
                     )
+                if cpu:
+                    jr.data["cpu"] = True  # a resume without --cpu keeps the consent given
                 run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say)
             finally:
                 lock_f.close()
@@ -456,6 +523,7 @@ def install(
 
 def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
     from assistant_x.core.common import clear_maintenance, mark_index_stale, set_maintenance
+    from assistant_x.core.progress import write_progress
 
     report, root = jr.data["report"], str(w.root)
     idx_rel, lib_rel = _rel(w.index, root), _rel(w.library, root)
@@ -463,7 +531,10 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
     pkg_dir = stage / "pkg"
 
     def step(name):
-        return not jr.done(name)
+        if jr.done(name):
+            return False
+        write_progress(f"base install: {name}", len(jr.data["steps"]), len(STEPS))
+        return True
 
     if step("marker"):
         set_maintenance(cfg["index_dir"], f"install of the base package {ident} {version}")
@@ -473,10 +544,11 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
         jr.data["backup"] = backup(w, ident)
         jr.mark("backup")
     if step("extract"):
-        if pkg_dir.exists():
-            shutil.rmtree(pkg_dir)  # a half extraction of an interrupted run: the work folder is ours
+        if pkg_dir.exists() and "extracted_names" not in jr.data:
+            shutil.rmtree(pkg_dir)  # a half extraction of a run that noted nothing: the work folder is ours
         with P.Package(path) as pkg:
-            jr.data["extracted"] = extract(pkg, str(pkg_dir))
+            jr.data["extracted"] = extract(pkg, str(pkg_dir), jr)
+        jr.data.pop("extracted_names", None)  # every file there: the list served the resume only
         jr.mark("extract")
     pcards = {c: C.load(p) for c, p in C.paths(pkg_dir / "cards").items()}
     if step("plan"):
@@ -557,7 +629,7 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
         jr.data["vectors"] = package_vectors(w, pkg_dir, ident)
         jr.mark("vectors")
     if step("base"):
-        jr.data["base"] = build_base(config_path(w), say, full=jr.data["full"])
+        jr.data["base"] = build_base(config_path(w), say, full=jr.data["full"], cpu=bool(jr.data.get("cpu")))
         jr.mark("base")
     clear_maintenance(cfg["index_dir"])
     write_report(w, jr, say)
@@ -792,16 +864,44 @@ def build_only(config):
     return full
 
 
-def build_base(config, say, full=None):
+def leftovers(config):
+    """How many fragments of the base (of a full rebuild waiting for its vectors, else of the base in use) have no
+    vector yet."""
+    from assistant_x.core.common import connect, load_config, next_db
+
+    cfg = load_config(config)
+    db = next_db(cfg["index_dir"]) or cfg["db"]
+    if not os.path.exists(db):
+        return 0
+    con = connect(db, readonly=True)
+    try:
+        return con.execute("SELECT count(*) FROM chunks WHERE vec_row IS NULL").fetchone()[0]
+    finally:
+        con.close()
+
+
+def build_base(config, say, full=None, cpu=False):
     """build (unless done already: full given), embed and check of the workspace; {documents, embedded, checked,
-    notes}."""
+    notes}. The fragments the vectors of the package leave (another build of a text here, a document renumbered)
+    are computed: on the video card, else on the processor when cpu or when they are few (AUTO_CPU_FRAGMENTS; the
+    consent to the install covers completing it); embed alone, with no console to ask, would not start (core/gpu_guard)."""
     from assistant_x.core.common import load_config
     from assistant_x.search import check_index, embed
 
     if full is None:
         full = build_only(config)
     notes = []
-    rc = run_main(embed.main, "embed.py", ["--config", config])
+    rc = run_main(embed.main, "embed.py", ["--config", config] + (["--cpu"] if cpu else []))
+    if rc == BUSY and not cpu:
+        left = leftovers(config)
+        if 0 < left <= AUTO_CPU_FRAGMENTS:
+            say(f"{left} fragments without a vector from the package: computing them on the processor.")
+            rc = run_main(embed.main, "embed.py", ["--config", config, "--cpu"])
+        elif left:
+            notes.append(
+                f"{left} fragments without a vector: too many for the processor without asking; "
+                "assistant-x embed --cpu (or base install … --resume --cpu) computes them"
+            )
     embedded = rc in (None, 0)
     if not embedded:
         notes.append(
@@ -931,6 +1031,9 @@ def main(argv=None):
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--rollback", action="store_true")
     ap.add_argument("--config")
+    ap.add_argument(
+        "--cpu", action="store_true", help="the fragments without a vector of the package: on the processor, however many"
+    )
     a = ap.parse_args(argv)
     answers = json.loads(Path(a.answers).read_text(encoding="utf-8")) if a.answers else None
     try:
@@ -943,6 +1046,7 @@ def main(argv=None):
             resume=a.resume,
             rollback=a.rollback,
             config=a.config,
+            cpu=a.cpu,
         )
     except P.PackageError as e:
         raise SystemExit(str(e))

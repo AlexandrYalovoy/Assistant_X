@@ -460,7 +460,7 @@ def inspect(cfg, raw, path, work=None, keep=None, verify=True):
             )
         problems += [f"package entry {p}" for p in P.check_entries(pkg)]  # what the install refuses, said now
         if verify:
-            bad = pkg.verify()
+            bad = pkg.verify_once(work)
             problems += [f"package file {b}" for b in bad[:20]] + ([f"… and {len(bad) - 20} more"] if len(bad) > 20 else [])
             if any(b.startswith("damaged: ") for b in bad):  # its files do not read: nothing more to look at
                 return damaged(man, path, problems, warnings, len(C.paths(cfg["cards_dir"])))

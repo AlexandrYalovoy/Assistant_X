@@ -637,3 +637,87 @@ def test_a_rollback_removes_only_the_folders_it_made(packages, tmp_path, monkeyp
     monkeypatch.undo()
     assert B.install(packages["a"], rollback=True, config=path, say=say) == 0
     assert all(os.path.isdir(d) for d in mine) and folders() == before
+
+
+def test_an_extract_cut_midway_resumes_without_reading_again_what_it_copied(packages, tmp_path, monkeypatch):
+    """A cut during the extraction (a colleague's 37.5 GB package): the resume copies only the files not noted yet,
+    each hashed as it is copied (no second pass over the package), and the package checked whole once: the inspect
+    of the install --confirm and a resume take the stamp of the first check."""
+    whole = str(tmp_path / "whole")
+    assert install(empty(whole), packages["a"]) == 0
+    root = str(tmp_path / "ws")
+    path = empty(root)
+    opened, real_open, cut = [], P.Package.open, {"after": 4}
+
+    def opening(self, name):
+        if not self.folder and name.startswith(("texts/", "library/")):  # the package itself, its documents
+            opened.append(name)
+            if cut["after"] is not None and len(opened) > cut["after"]:
+                raise B.Stop("the PC was switched off")
+        return real_open(self, name)
+
+    verified = []
+    real_verify = P.Package.verify
+    monkeypatch.setattr(P.Package, "verify", lambda self, progress=None: verified.append(1) or real_verify(self, progress))
+    assert B.install(packages["a"], config=path, say=say) == 0  # the inspect: the package checked whole
+    monkeypatch.setattr(P.Package, "open", opening)
+    assert install(path, packages["a"]) == 1
+    jr = B.Journal(B.staging(settings.load(path)[0], "test-a") / B.JOURNAL)
+    noted = set(jr.data["extracted_names"])
+    assert noted and "extract" not in jr.data["steps"]
+    cut["after"], opened[:] = None, []
+    assert install(path, packages["a"], resume=True) == 0
+    with P.Package(packages["a"]) as pkg:
+        names = {n for n in pkg.names() if n.startswith(("texts/", "library/"))}
+    assert not noted & set(opened) and (names - noted) <= set(opened)
+    assert len(verified) == 1  # the inspect checked it; the install and its resume took the stamp
+    assert state(root, originals=False) == state(whole, originals=False)
+
+
+def test_a_damaged_file_stops_the_extract_by_its_checksum(packages, tmp_path, monkeypatch):
+    root = str(tmp_path / "ws")
+    path = empty(root)
+    real_open = P.Package.open
+
+    def opening(self, name):
+        f = real_open(self, name)
+        if not self.folder and name.startswith("texts/"):
+            import io
+
+            return io.BytesIO(f.read()[:-1] + b"#")
+        return f
+
+    monkeypatch.setattr(P.Package, "verify_once", lambda self, work, progress=None: [])  # damaged after the inspect
+    monkeypatch.setattr(P.Package, "open", opening)
+    assert install(path, packages["a"]) == 1
+    jr = B.Journal(B.staging(settings.load(path)[0], "test-a") / B.JOURNAL)
+    assert "extract" not in jr.data["steps"]
+
+
+def test_the_fragments_the_package_leaves_are_computed_on_the_processor(tmp_path, monkeypatch):
+    """embed with no console to ask stops (no video card): a few leftovers are computed on the processor at once,
+    many only with --cpu (the colleague's install: 412 fragments left for a manual embed)."""
+    from assistant_x.search import embed as E, check_index
+
+    import sys
+
+    calls = []
+
+    def fake_embed():
+        calls.append(list(sys.argv[1:]))
+        return 0 if "--cpu" in sys.argv else B.BUSY
+
+    monkeypatch.setattr(E, "main", fake_embed)
+    monkeypatch.setattr(check_index, "run", lambda cfg, quiet=True: 0)
+    root = str(tmp_path / "ws")
+    path = empty(root)
+    monkeypatch.setattr(B, "leftovers", lambda config: 412)
+    out = B.build_base(path, say, full=False)
+    assert out["embedded"] and calls[-1][-1] == "--cpu" and len(calls) == 2
+    calls.clear()
+    monkeypatch.setattr(B, "leftovers", lambda config: B.AUTO_CPU_FRAGMENTS + 1)
+    out = B.build_base(path, say, full=False)
+    assert not out["embedded"] and len(calls) == 1 and any("--cpu" in n for n in out["notes"])
+    calls.clear()
+    out = B.build_base(path, say, full=False, cpu=True)
+    assert out["embedded"] and calls == [["--config", path, "--cpu"]]
