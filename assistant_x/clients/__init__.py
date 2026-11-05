@@ -53,7 +53,9 @@ def entry(python=None, toolset="one", compact=False, root=None):
         args += ["--tools", toolset]
     if compact:
         args.append("--compact")
-    env = {"AX_WORKSPACE": str(root or workspace.find()), "PYTHONUTF8": "1", "HF_HUB_OFFLINE": "1"}
+    env = {"AX_WORKSPACE": str(Path(root or workspace.find()).resolve()), "PYTHONUTF8": "1", "HF_HUB_OFFLINE": "1"}
+    if workspace.machine_dir() != workspace.default_machine_dir():  # on another disk: the app is told, not left to find it
+        env["AX_MACHINE_DIR"] = str(workspace.machine_dir())
     return {"command": windowless(python or sys.executable), "args": args, "env": env}
 
 

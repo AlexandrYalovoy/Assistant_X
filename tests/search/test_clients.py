@@ -725,3 +725,36 @@ def test_the_thin_skill_and_its_outdated_copy():
     again = mcp_server.first_rules(guided)  # the form comes with the first search even after the guide
     assert again.startswith("The rules of the answers") and mcp_server.SKILL_OUTDATED not in again
     assert "Independent assessment" in skill.rules("general") and "Independent assessment" in mcp_server.OLD_SKILL
+
+
+def test_a_workspace_and_a_folder_of_the_pc_on_another_disk_reach_every_app(home, tmp_path, monkeypatch):
+    """A colleague's install with the workspace on D: had to write paths into the settings of the apps by hand: a
+    later assistant-x connect in a new shell (no AX_WORKSPACE) took Documents\Assistant X. The installation
+    remembers its workspace and a moved folder of the PC (machine_dir.txt), and connect writes both into every app."""
+    from assistant_x.core import workspace
+
+    monkeypatch.delenv("AX_MACHINE_DIR", raising=False)
+    monkeypatch.setenv("USERPROFILE", str(home))
+    disk_d = tmp_path / "D"
+    ws = disk_d / "Library"
+    ws.mkdir(parents=True)
+    (ws / workspace.CONFIG).write_text('profile = "general"\n', encoding="utf-8")
+    moved = workspace.move_machine_dir(disk_d / "AssistantX")
+    monkeypatch.delenv("AX_MACHINE_DIR")  # a new shell: only machine_dir.txt tells
+    assert workspace.machine_dir() == moved and (workspace.default_machine_dir() / workspace.MOVED).is_file()
+    workspace.remember(ws)
+    monkeypatch.delenv("AX_WORKSPACE")
+    monkeypatch.chdir(tmp_path)
+    assert workspace.find() == ws.resolve()
+    e = entry("reader", True)
+    assert e["env"]["AX_WORKSPACE"] == str(ws.resolve()) and e["env"]["AX_MACHINE_DIR"] == str(moved)
+    codex.connect(e, False)
+    data = tomllib.loads((home / ".codex" / "config.toml").read_text(encoding="utf-8"))
+    assert data["mcp_servers"]["assistant-x"]["env"]["AX_MACHINE_DIR"] == str(moved)
+    workspace.move_machine_dir(workspace.default_machine_dir())  # back: the pointer goes, nothing else is told
+    monkeypatch.delenv("AX_MACHINE_DIR")
+    assert (
+        workspace.machine_dir() == workspace.default_machine_dir() and "AX_MACHINE_DIR" not in entry("reader", True)["env"]
+    )
+    (ws / workspace.CONFIG).unlink()  # a remembered folder that is no workspace any more: the default again
+    assert workspace.find() == workspace.default_root()

@@ -659,9 +659,10 @@ def copy_programs(dry):
 def remember_python(py):
     """The python of the program in use, in python.txt of the machine folder (setup/self_update.py writes it too); the
     folder is made first: on a new PC nothing made it yet."""
-    os.makedirs(LOCAL, exist_ok=True)
-    with open(os.path.join(LOCAL, CURRENT_PYTHON), "w", encoding="utf-8", newline="\n") as f:
-        f.write(py + "\n")
+    for d in dict.fromkeys([LOCAL, str(workspace.default_machine_dir())]):  # the .bat files look in the default one
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, CURRENT_PYTHON), "w", encoding="utf-8", newline="\n") as f:
+            f.write(py + "\n")
 
 
 def pick_base():
@@ -1090,8 +1091,19 @@ def main():
     ap.add_argument("--status", action="store_true", help="one JSON line: the state of a background installation")
     ap.add_argument("--models", action="store_true", help="download the models of the search by meaning (about 4.5 GB)")
     ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)  # the process --background starts
+    ap.add_argument(
+        "--machine-dir",
+        help="the folder of the PC (program, environment, models) on another disk, e.g. D:\\AssistantX: every app and "
+        "command finds it (machine_dir.txt in %%USERPROFILE%%\\.assistant_x)",
+    )
     a = ap.parse_args()
-    global YES, PROFILE, JSON, WORKER
+    global YES, PROFILE, JSON, WORKER, LOCAL
+    if a.machine_dir:
+        if a.dry_run:
+            os.environ["AX_MACHINE_DIR"] = os.path.abspath(a.machine_dir)
+        else:
+            workspace.move_machine_dir(a.machine_dir)
+        LOCAL = str(workspace.machine_dir())
     if a.status:
         from assistant_x.setup import status
 
@@ -1232,6 +1244,8 @@ def steps(a, summary, problems, dry):
         remember_python(py)
     stage("packages", "3. Workspace and models")  # the models first: the device may need their ONNX export (DirectML)
     problems += check_workspace(dry)
+    if not dry:  # a later command in another shell, with no AX_WORKSPACE, finds this workspace (core/workspace.find)
+        workspace.remember(P.ROOT)
     problems += copy_models(dry)
     say("4. Video card")
     device = choose_device(a.cpu, offline)

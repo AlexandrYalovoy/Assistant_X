@@ -21,7 +21,8 @@ The models are of the PC: %USERPROFILE%\.assistant_x\models, unless [paths] mode
 the workspace has its own .assistant_x\models (an older workspace; a linked folder of models stays where it is).
 
 Which workspace: AX_WORKSPACE, else the folder of AX_CONFIG, else the nearest folder holding assistant_x.toml from
-the current folder up, else the default Documents\Assistant X (chosen at `assistant-x init`).
+the current folder up, else the one the installation made (workspace.txt in the folder of the PC), else the default
+Documents\Assistant X (chosen at `assistant-x init`).
 """
 
 import functools, os
@@ -39,16 +40,66 @@ def default_root():
     return Path.home() / "Documents" / DEFAULT_NAME
 
 
-def machine_dir():
-    r"""Per-PC folder outside any workspace: %USERPROFILE%\.assistant_x on Windows (~/.cache/AssistantX elsewhere);
-    AX_MACHINE_DIR gives another one (the tests). Not in %LOCALAPPDATA%: Claude Desktop from the Microsoft Store runs
-    its children with that folder redirected into its package, and the other apps would not see what they write."""
-    given = env.get("MACHINE_DIR")
-    if given:
-        return Path(given)
+def default_machine_dir():
     if os.name == "nt":
         return Path(os.environ.get("USERPROFILE") or Path.home()) / DATA
     return Path(os.environ.get("LOCALAPPDATA") or str(Path.home() / ".cache")) / "AssistantX"
+
+
+MOVED = "machine_dir.txt"  # in the default folder of the PC: the folder it was moved to (install --machine-dir)
+REMEMBERED = "workspace.txt"  # in the folder of the PC: the workspace the installation made (install --workspace)
+
+
+def machine_dir():
+    r"""Per-PC folder outside any workspace: %USERPROFILE%\.assistant_x on Windows (~/.cache/AssistantX elsewhere);
+    AX_MACHINE_DIR gives another one (the tests), and so does machine_dir.txt in the default folder (install
+    --machine-dir D:\…: a small disk C:; every process of the PC then finds it, an app started without the variable
+    too). Not in %LOCALAPPDATA%: Claude Desktop from the Microsoft Store runs its children with that folder
+    redirected into its package, and the other apps would not see what they write."""
+    given = env.get("MACHINE_DIR")
+    if given:
+        return Path(given)
+    home = default_machine_dir()
+    try:
+        moved = (home / MOVED).read_text(encoding="utf-8").strip()
+    except OSError:
+        moved = ""
+    return Path(moved) if moved and os.path.isabs(moved) else home
+
+
+def move_machine_dir(target):
+    """install --machine-dir: the folder of the PC is target from now on, for every process (machine_dir.txt in the
+    default folder; AX_MACHINE_DIR of this process). Nothing is moved: an installation there starts anew."""
+    target = Path(os.path.abspath(target))
+    target.mkdir(parents=True, exist_ok=True)
+    home = default_machine_dir()
+    if target != home:
+        home.mkdir(parents=True, exist_ok=True)
+        (home / MOVED).write_text(str(target) + "\n", encoding="utf-8")
+    else:
+        try:
+            (home / MOVED).unlink()
+        except OSError:
+            pass
+    os.environ["AX_MACHINE_DIR"] = str(target)
+    return target
+
+
+def remember(root):
+    """The workspace of the installation, for the commands started without AX_WORKSPACE outside any workspace (an
+    agent's assistant-x connect auto in a new shell found Documents\Assistant X instead of D:\…)."""
+    d = machine_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    (d / REMEMBERED).write_text(str(Path(root).resolve()) + "\n", encoding="utf-8")
+
+
+def remembered():
+    """The workspace remember() wrote, when it is still a workspace; else None."""
+    try:
+        p = Path((machine_dir() / REMEMBERED).read_text(encoding="utf-8").strip())
+    except OSError:
+        return None
+    return p if p.is_absolute() and (p / CONFIG).is_file() else None
 
 
 MIGRATED = "migrated.json"  # in the folder of the PC: where its older folders were taken over from
@@ -200,7 +251,7 @@ def find(start=None):
     for d in (here, *here.parents):
         if (d / CONFIG).is_file():
             return d
-    return default_root()
+    return remembered() or default_root()
 
 
 class Workspace:
