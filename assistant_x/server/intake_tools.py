@@ -220,6 +220,18 @@ def _exit_code(kind, job):
     return data.get("code") if job and data.get("job") == job.get("id") else None
 
 
+def _exit_why(kind, job, code):
+    """The meaning of the exit code the wrapper wrote (server/jobrun.py), in words."""
+    try:
+        with open(_exit_path(kind), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        data = {}
+    from assistant_x.setup import status
+
+    return data.get("why") or status.why_exit(code)
+
+
 AGAIN = {  # what Claude calls when a job stopped before the end
     "run": "intake_run(resume=True)",
     "apply": "intake_apply() (the plan again; an apply stopped halfway is resumed)",
@@ -257,10 +269,13 @@ def state_text(kind, job=None):
             "(its log says which)"
         )
     if s == "failed":
-        return f"failed (exit code {code})"
+        return f"failed (exit code {code}: {_exit_why(kind, job, code)})"
     if s == "stopped":
         again = AGAIN.get(kind, "start it again")
-        return f"stopped before the end (no exit code: the process was ended); go on with {again}"
+        from assistant_x.server import jobrun
+
+        why = jobrun.gone_why(_exit_path(kind), (job or {}).get("id")) or "the process was ended"
+        return f"stopped before the end (no exit code: {why}); go on with {again}"
     return s or ""
 
 
