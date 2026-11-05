@@ -86,7 +86,7 @@ def move_machine_dir(target):
 
 
 def remember(root):
-    """The workspace of the installation, for the commands started without AX_WORKSPACE outside any workspace (an
+    r"""The workspace of the installation, for the commands started without AX_WORKSPACE outside any workspace (an
     agent's assistant-x connect auto in a new shell found Documents\Assistant X instead of D:\…)."""
     d = machine_dir()
     d.mkdir(parents=True, exist_ok=True)

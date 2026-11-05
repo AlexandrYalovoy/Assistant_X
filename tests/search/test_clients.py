@@ -728,7 +728,7 @@ def test_the_thin_skill_and_its_outdated_copy():
 
 
 def test_a_workspace_and_a_folder_of_the_pc_on_another_disk_reach_every_app(home, tmp_path, monkeypatch):
-    """A colleague's install with the workspace on D: had to write paths into the settings of the apps by hand: a
+    r"""A colleague's install with the workspace on D: had to write paths into the settings of the apps by hand: a
     later assistant-x connect in a new shell (no AX_WORKSPACE) took Documents\Assistant X. The installation
     remembers its workspace and a moved folder of the PC (machine_dir.txt), and connect writes both into every app."""
     from assistant_x.core import workspace

@@ -166,7 +166,7 @@ def behind(cfg, chosen):
     from assistant_x.core.common import connect
 
     if not os.path.exists(cfg["db"]):
-        return sorted(chosen)
+        return []  # no base, no vectors: the package goes without them (vectors_of)
     con = connect(cfg["db"], readonly=True)
     try:
         known = {r[0]: (r[1], r[2]) for r in con.execute("SELECT code, text_sha, card_sha FROM docs")}
