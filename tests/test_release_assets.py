@@ -17,6 +17,6 @@ def test_the_release_attaches_the_source_archive_and_its_sha256():
 
 def test_the_instructions_check_the_archive_before_installing():
     text = open(os.path.join(ROOT, "INSTALL_FOR_AI.md"), encoding="utf-8").read()
-    step = text.split("## 3. The latest release", 1)[1].split("## 4.", 1)[0]
+    step = text.split("## 2. The latest release", 1)[1].split("## 3.", 1)[0]
     assert "assistant_x-<version>-src.zip" in step and "SHA256SUMS.txt" in step and "stop and" in step
     assert step.index("SHA-256") < step.index("Extract it")

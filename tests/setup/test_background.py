@@ -141,3 +141,16 @@ def test_a_trial_run_in_the_background_from_start_to_end(tmp_path):
     assert out["state"] == "done" and out["ok"] and out["stage"] == "doctor", out
     log = open(out["log"], encoding="utf-8").read()
     assert "Installation of Assistant X (trial run" in log and "11. Check" in log
+
+
+@pytest.mark.parametrize("name", ["INSTALL_FOR_AI.md", "INSTALL_FOR_AI.ru.md"])
+def test_the_agent_instructions_are_short_and_name_every_error_of_the_status(name):
+    """The token budget first, the one command in the background, every error code of the status with what to do;
+    the tables of the tools and the commands in the reference, not here (an agent read 579 000 characters)."""
+    text = open(os.path.join(install.CODE, name), encoding="utf-8").read()
+    heads = [line for line in text.splitlines() if line.startswith("## ")]
+    assert heads[0].startswith(("## Token budget", "## Бюджет токенов")) and len(text.splitlines()) < 120
+    assert "--yes --json --background" in text and "INSTALL_REFERENCE" in text and "winget install" not in text
+    for code in S.FIXES:
+        assert f"`{code}`" in text, code
+    assert "{{" not in text and "| `search_library` |" not in text

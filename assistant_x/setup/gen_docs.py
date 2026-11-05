@@ -5,7 +5,9 @@ the tools of the server, the commands of the command line and the version only, 
 
     assistant-x gen-docs [--check]     write them (--check: exit 1 when a committed one differs, change nothing)
 
-    INSTALL_FOR_AI.md      what an agent (Codex, Claude Code, DeepSeek Harness) does when told "connect this tool"
+    INSTALL_FOR_AI.md      what an agent (Codex, Claude Code, DeepSeek Harness) does when told "connect this tool":
+                           short, one command in the background and its status (a token budget on top)
+    docs/INSTALL_REFERENCE.md   the rest for an agent: the steps one by one, the codes of doctor, the update, the tools
     AGENTS.md              the section between the assistant-x markers (the rest of the file is the people's)
     docs/CLIENTS.md        the apps, their settings files, tool sets and skills
     docs/API.md            the library from a program of one's own: the service, the entry points, every command
@@ -284,6 +286,8 @@ def targets():
     return {
         ROOT / "INSTALL_FOR_AI.md": render("INSTALL_FOR_AI.md", v),
         ROOT / "INSTALL_FOR_AI.ru.md": render("INSTALL_FOR_AI.ru.md", v_ru),
+        ROOT / "docs" / "INSTALL_REFERENCE.md": render("INSTALL_REFERENCE.md", v),
+        ROOT / "docs" / "INSTALL_REFERENCE.ru.md": render("INSTALL_REFERENCE.ru.md", v_ru),
         agents: agents_md(old, v),
         ROOT / "docs" / "CLIENTS.md": render("CLIENTS.md", v),
         ROOT / "docs" / "CLIENTS.ru.md": render("CLIENTS.ru.md", v_ru),

@@ -112,7 +112,11 @@ LM Studio ──────stdio─ bridge ──┘          one per workspace
 import json, os, urllib.request
 from pathlib import Path
 
-machine = Path(os.environ.get("AX_MACHINE_DIR") or Path.home() / ".assistant_x")
+home, moved = (
+    Path.home() / ".assistant_x",
+    Path.home() / ".assistant_x" / "machine_dir.txt",
+)  # moved by install --machine-dir
+machine = Path(os.environ.get("AX_MACHINE_DIR") or (moved.read_text(encoding="utf-8").strip() if moved.exists() else home))
 info = json.loads(next(machine.glob("service-*.json")).read_text(encoding="utf-8"))
 token = (machine / "mcp_http_token.txt").read_text(encoding="utf-8").strip()
 url, session = f"http://127.0.0.1:{info['port']}/mcp", None
@@ -158,7 +162,7 @@ Found word for word on PDF 19 of N-01072.
 ## Пример: curl
 
 ```sh
-M="$USERPROFILE/.assistant_x"
+M="$USERPROFILE/.assistant_x"; [ -f "$M/machine_dir.txt" ] && M=$(tr -d '\r\n' < "$M/machine_dir.txt")
 TOKEN=$(cat "$M/mcp_http_token.txt")
 PORT=$(grep -o '"port": [0-9]*' "$M"/service-*.json | grep -o '[0-9]*$')
 URL="http://127.0.0.1:$PORT/mcp"
@@ -187,7 +191,11 @@ import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-machine = Path(os.environ.get("AX_MACHINE_DIR") or Path.home() / ".assistant_x")
+home, moved = (
+    Path.home() / ".assistant_x",
+    Path.home() / ".assistant_x" / "machine_dir.txt",
+)  # moved by install --machine-dir
+machine = Path(os.environ.get("AX_MACHINE_DIR") or (moved.read_text(encoding="utf-8").strip() if moved.exists() else home))
 info = json.loads(next(machine.glob("service-*.json")).read_text(encoding="utf-8"))
 token = (machine / "mcp_http_token.txt").read_text(encoding="utf-8").strip()
 

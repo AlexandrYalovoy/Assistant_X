@@ -4,6 +4,28 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.6.1 — in preparation
+
+- An agent installs the program and a base package with one command and a few polls (a colleague's agent spent
+  199 model calls and its plan limit on 0.6 with a base of 37.5 GB): `Setup.bat --online --yes --json --background
+  --models --base FILE` runs the whole chain in a process of its own with no window that outlives the agent (out of
+  its job, through the WMI service where its sandbox forbids that) and returns at once; `assistant-x status --json`
+  prints one short line: the stage, the percent, the minutes left, an error with its code and its fix, when to poll
+  again. A worker that died is started again by the poll; every end is written (an error, a signal, a sleep of the
+  PC). INSTALL_FOR_AI.md is short, with a token budget on top; the rest is in docs/INSTALL_REFERENCE.md.
+- A base install that was cut continues where it stopped: the extraction notes every file it copied (each hashed as
+  it is copied) and copies only the rest, and the package is checked whole once, not on every run. The fragments its
+  vectors leave are computed on the processor when there is no video card and they are few (`--cpu`: however many).
+- The export never makes a package whose vectors are of older texts than the ones it carries (412 fragments without
+  a vector after a colleague's install: the parts recognized again after the base was built): `base export` builds
+  and embeds first, and refuses a base that is behind.
+- A workspace and the folder of the PC on another disk (`--workspace D:\…`, `--machine-dir D:\…`) reach every app and
+  every later command by themselves.
+- Setup.bat names the Python it took (one that is here, else the installer of the medium or of python.org; never
+  winget) and waits for no key with `--yes` or `--json`.
+- The background jobs of the server say why they ended (the exit code in words, a signal, the PC restarted).
+- A test holds every call the documents and the skills show to the live schema of the server.
+
 ## 0.6 — 2026-11-04
 
 - docs/API.md: the library from a program of one's own, with no AI: the service, its entry points (`/mcp`,

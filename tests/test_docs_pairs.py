@@ -17,6 +17,7 @@ DOCS = [
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
     "INSTALL_FOR_AI.md",
+    "docs/INSTALL_REFERENCE.md",
     "docs/INTAKE.md",
     "docs/SEARCH.md",
     "docs/PACKAGES.md",
