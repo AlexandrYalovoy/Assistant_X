@@ -116,3 +116,44 @@ def python_env(env=None):
     if python() != sys.executable:
         env[VENV_LAUNCHER] = sys.executable
     return env
+
+
+WMI_CREATE = (  # Win32_Process.Create: a hidden console process, a child of the WMI service
+    "$si = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ShowWindow=[uint16]0}; "
+    "$a = @{CommandLine=$env:AX_WMI_CMD; ProcessStartupInformation=$si}; "
+    "if ($env:AX_WMI_CWD) { $a.CurrentDirectory = $env:AX_WMI_CWD }; "
+    "$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments $a; "
+    "if ($r.ReturnValue -ne 0) { exit 1 }; [string]$r.ProcessId"
+)
+
+
+def start_outside(cmd, cwd=None):
+    """A job that must outlive the agent that starts it, with no window: (pid, how). Out of the job object of the
+    client by a breakaway where it allows it ("breakaway"); a client whose job forbids it (the sandbox of an agent:
+    its job ends the tree with its session) gets the job started by the WMI service, outside any job ("wmi"); else
+    in the job ("job": it ends with the client). The job gets no environment of this process with "wmi" (that of the
+    user): cmd must carry what it needs (setup/launch.py). Its output: what cmd itself writes into a file."""
+    if not _nt:
+        p = subprocess.Popen(cmd, cwd=cwd, start_new_session=True, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL)
+        return p.pid, "session"
+    base = NO_WINDOW | NEW_GROUP
+    io = {"stdin": DEVNULL, "stdout": DEVNULL, "stderr": DEVNULL, "cwd": cwd}
+    try:
+        return subprocess.Popen(cmd, creationflags=base | BREAKAWAY, **io).pid, "breakaway"
+    except PermissionError:
+        pass
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", WMI_CREATE],
+            env=dict(os.environ, AX_WMI_CMD=subprocess.list2cmdline(cmd), AX_WMI_CWD=cwd or ""),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            creationflags=NO_WINDOW,
+        )
+        pid = out.stdout.strip().splitlines()[-1] if out.returncode == 0 and out.stdout.strip() else ""
+        if pid.isdigit():
+            return int(pid), "wmi"
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return subprocess.Popen(cmd, creationflags=base, **io).pid, "job"

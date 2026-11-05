@@ -26,8 +26,16 @@ Usage: python -m assistant_x.setup.install [--workspace DIR] [--profile NAME] [-
   --no-register  leave the settings of Claude Desktop and Claude Code alone
   --online       install the packages from the internet even when the media has the packages folder
   --cpu          torch for the processor even when there is an NVIDIA video card
-  --base PACKAGE install a base package right after (assistant-x base install --confirm; with codes that collide a
-                 reference package keeps its codes, a default one needs --keep own|package)"""
+  --base PACKAGE install a base package right after (assistant-x base inspect, then base install --confirm
+                 --or-resume; with codes that collide a reference package keeps its codes, a default one needs
+                 --keep own|package)
+  --models       download the models of the search by meaning (about 4.5 GB) when they are not here
+  --background   for an agent: the whole installation as a process of its own (no window; it outlives the agent,
+                 out of its job by a breakaway or through the WMI service), one JSON line at once with the command
+                 that polls it; then --status, or setup/status.py --json, or assistant-x status --json: one short
+                 line (state, stage, percent, eta_min, error with its fix, poll_s). A worker that died is started
+                 again by the poll; every end (an error, a signal, a sleep of the PC) is written to the status
+  --status       the state of a background installation, one JSON line"""
 
 import argparse, glob, json, os, platform, shutil, sys, tempfile
 
@@ -113,7 +121,21 @@ DOWNLOAD_GB = {"packages": 1.0, "packages_cuda": 3.5, "models": 4.5}  # what an 
 
 
 class Stop(Exception):
-    pass
+    """The installation stops; code: the kind for the status of a background run (setup/status.FIXES)."""
+
+    def __init__(self, msg, code="stopped"):
+        super().__init__(msg)
+        self.code = code
+
+
+WORKER = None  # setup/status.Worker of a background run (--worker): its stages, its end
+
+
+def stage(name, title):
+    """A step of the installation: its title said, its stage in the status of a background run."""
+    say(title)
+    if WORKER:
+        WORKER.stage(name)
 
 
 def say(msg=""):
@@ -650,16 +672,55 @@ def pick_base():
     return base_pick.choose([P.MEDIUM or CODE], ask=ask, yes=YES, say=say)
 
 
-def install_base(py, path, keep, dry):
-    """A base package right after the installation (--base): assistant-x base install --confirm."""
-    cmd = [py, "-m", "assistant_x.base.cli", "install", os.path.abspath(path), "--confirm"] + (
-        ["--keep", keep] if keep else []
-    )
-    if run(cmd, dry, env=dict(os.environ, AX_WORKSPACE=P.ROOT, PYTHONUTF8="1")):
-        return [
-            f"The base package {path} was not installed (see the messages above): double-click Install-Base.bat, it continues the installation "
-            "or shows why it cannot"
-        ]
+def install_base(py, path, keep, dry, cpu=False):
+    """A base package right after the installation (--base): assistant-x base inspect (the package checked whole once,
+    its questions: codes that collide need --keep), then base install --confirm --or-resume (an install of this very
+    package that was interrupted is continued from its journal). Stop when it cannot go on."""
+    path = os.path.abspath(path)
+    env_ = dict(os.environ, AX_WORKSPACE=P.ROOT, PYTHONUTF8="1")
+    interrupted = glob.glob(os.path.join(str(P.WS.data), "w", "*", "install.journal.json"))
+    if interrupted:  # the workspace is changed halfway: the install continues its journal, no inspect of it now
+        say(f"   an install that was interrupted is continued ({interrupted[0]})")
+    if not dry and not interrupted:
+        out = os.path.join(tempfile.gettempdir(), f"ax-inspect-{os.getpid()}.json")
+        rc = run(
+            [py, "-m", "assistant_x.base.cli", "inspect", path, "--json", out] + (["--keep", keep] if keep else []),
+            dry,
+            env=env_,
+            stdout=sys.stderr if JSON else None,
+        )
+        report = None
+        try:
+            with open(out, encoding="utf-8") as f:
+                report = json.load(f)
+            os.remove(out)
+        except (OSError, ValueError):
+            pass
+        if report is None and rc:
+            raise Stop(f"the base package {path} could not be inspected (exit code {rc}): see the log", "base_failed")
+        if report is not None:
+            codes = report.get("codes") or {}
+            if not report.get("ok"):
+                found = [str(p) for p in report.get("problems") or []]
+                kind = "disk_full" if any(p.startswith("not enough disk space") for p in found) else "base_failed"
+                raise Stop(f"the base package {path} cannot be installed: {'; '.join(found[:5])}", kind)
+            if codes.get("mapping") and not codes.get("renumbered") and not keep:
+                raise Stop(
+                    f"the codes of {len(codes['mapping'])} documents of the package and of the library collide",
+                    "base_choice",
+                )
+    cmd = [py, "-m", "assistant_x.base.cli", "install", path, "--confirm", "--or-resume"]
+    cmd += (["--keep", keep] if keep else []) + (["--cpu"] if cpu else [])
+    rc = run(cmd, dry, env=env_, stdout=sys.stderr if JSON else None)
+    if WORKER:
+        WORKER.child_ended("the base install", rc)
+    if rc:
+        from assistant_x.setup import status
+
+        raise Stop(
+            f"the base install of {path} stopped: {status.why_exit(rc)} (exit code {rc}); the same command continues it",
+            "base_failed",
+        )
     return []
 
 
@@ -1020,10 +1081,29 @@ def main():
         action="store_true",
         help="install from a medium whose packages carry no sha256 (not recommended: make the medium again)",
     )
+    ap.add_argument(
+        "--background",
+        action="store_true",
+        help="for an agent: start the whole installation as a process of its own (no window, it outlives the agent) "
+        "and return at once with one JSON line; then poll --status (or assistant-x status --json)",
+    )
+    ap.add_argument("--status", action="store_true", help="one JSON line: the state of a background installation")
+    ap.add_argument("--models", action="store_true", help="download the models of the search by meaning (about 4.5 GB)")
+    ap.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)  # the process --background starts
     a = ap.parse_args()
-    global YES, PROFILE, JSON
-    YES = YES or a.yes
-    JSON = a.json
+    global YES, PROFILE, JSON, WORKER
+    if a.status:
+        from assistant_x.setup import status
+
+        return status.main(["--json"])
+    if a.background:
+        return start_background([x for x in sys.argv[1:] if x != "--background"])
+    YES = YES or a.yes or a.worker
+    JSON = a.json or a.worker
+    if a.worker:
+        from assistant_x.setup import status
+
+        WORKER = status.Worker(sys.argv[1:])
     PROFILE = a.profile
     if a.workspace:
         use_workspace(a.workspace)
@@ -1036,72 +1116,154 @@ def main():
     problems = []
     summary = {"ok": False, "dry_run": dry, "workspace": P.ROOT, "python": None, "command": None, "device": device}
     try:
-        say("License")
-        license_note()
-        if not a.no_register:
-            say("0. Claude Desktop must be closed")
-            wait_claude_closed(dry)
-        have = f"{sys.version_info[0]}.{sys.version_info[1]}"
-        offline = os.path.isdir(P.WHEELS) and os.path.exists(P.LOCK) and not a.online
-        bad = unverified() if offline else []
-        if bad and not a.allow_unverified:
-            raise Stop(
-                "the packages cannot be checked before they are installed:\n  - "
-                + "\n  - ".join(bad[:10])
-                + "\nMake the medium again (assistant-x prepare-media --out …, then prepare-media --check), or run "
-                "with --allow-unverified to install without the check."
-            )
-        for b in bad:
-            say(f"   WARNING, not checked (--allow-unverified): {b}")
-        want = open(P.PYVER, encoding="utf-8").read().strip() if os.path.exists(P.PYVER) else None
-        say(f"1. Python {platform.python_version()}: {sys.executable}")
-        if sys.version_info < (3, 11):
-            raise Stop("Python 3.11 or newer is needed.")
-        if offline and want and want != have:
-            raise Stop(
-                f"The packages on the media are built for Python {want}, but {have} is running. "
-                f"Install Python {want} (its installer lies in the packages folder) or run with --online."
-            )
-        vdir = pick_venv(a.venv)
-        say(f"2. Environment: {vdir}")
-        py = make_venv(vdir, dry)
-        summary.update(python=py, command=command_of(py))
-        if not a.venv and not dry:  # the python of the program: Install-Base.bat and Update.bat start it
-            remember_python(py)
-        say("3. Workspace and models")  # the models first: the device may need their ONNX export (DirectML)
-        problems += check_workspace(dry)
-        problems += copy_models(dry)
-        say("4. Video card")
-        device = choose_device(a.cpu, offline)
-        summary["downloads"] = downloads(offline, device)
-        say("5. Packages and base")
-        device = install_packages(py, offline, dry, device)
-        problems += check_data()
-        say("6. Intake of your own documents")
-        copy_programs(dry)
-        problems += check_intake(py, dry)
-        if a.no_register:
-            say("7-8. Connection to Claude Desktop and the other apps: skipped (--no-register)")
-            changed = False
-        else:
-            say("7. Connection to Claude Desktop")
-            changed = register_desktop(py, dry)
-            say("8. Connection to the other apps")
-            register_others(py, dry)
-        say("9. Self-test")
-        problems += self_check(py, dry)
-        base = a.base or (None if dry else pick_base())
-        if base:
-            say("10. Base package")
-            problems += install_base(py, base, a.keep, dry)
+        return steps(a, summary, problems, dry)
     except Stop as e:
         say(f"\nInstallation stopped: {e}")
-        return report(summary, problems, device, error=str(e))
+        return finish(summary, problems, error=e)
     except KeyboardInterrupt:
         say("\nInstallation interrupted (Ctrl+C). Run Setup.bat once more: what is done is not done again.")
-        return report(summary, problems, device, error="interrupted")
+        return finish(summary, problems, error=Stop("interrupted"))
+    except Exception as e:  # noqa: BLE001 — noted in the status of a background run, then as before
+        if WORKER:
+            from assistant_x.setup import status
+
+            WORKER.finish(False, summary, status.error("exception", f"{type(e).__name__}: {e}"))
+        raise
+
+
+def finish(summary, problems, error=None):
+    """The end of the installation: the summary (--json), the status of a background run; its exit code."""
+    rc = report(summary, problems, summary.get("device", "cpu"), error=str(error) if error else None)
+    if WORKER:
+        from assistant_x.setup import status
+
+        err = None
+        if error is not None:
+            code = getattr(error, "code", "stopped")
+            if code == "stopped" and any(k in str(error) for k in ("SSL", "CERTIFICATE", "onnection", "HTTP", "pip")):
+                code = "network"
+            err = status.error(code, error)
+        WORKER.finish(error is None, summary, err)
+    return rc
+
+
+def start_background(argv):
+    """--background: the installation (these arguments, with --worker) as a process of its own that outlives the agent;
+    one JSON line at once: started, pid, the command that polls its status, when to poll."""
+    from assistant_x.setup import status
+
+    here = os.path.join(CODE, "assistant_x", "setup", "status.py")
+    poll = f'"{sys.executable}" "{here}" --json'
+    data = status.read()
+    if data and data.get("state") == "running" and status.alive(data.get("pid"), data.get("started")):
+        out = dict(status.short(data), started=False, message="an installation runs already: poll it", status=poll)
+        print(json.dumps(out, ensure_ascii=False), flush=True)
+        return 0
+    argv = argv + ["--worker"]  # with --dry-run: a trial run in the background, changing nothing
+    pid, how = status.spawn(sys.executable, argv, CODE)
+    now = __import__("time").time()
+    status.write(
+        {
+            "state": "running",
+            "stage": "start",
+            "stage_started": now,
+            "pid": pid,
+            "started": now,
+            "heartbeat": now,
+            "updated": now,
+            "argv": argv,
+            "python": sys.executable,
+            "cwd": CODE,
+            "restarts": 0,
+            "python_source": env.get("PYTHON_SOURCE") or "",
+            "log": status.path(status.LOG),
+        }
+    )
+    out = {
+        "ok": True,
+        "started": True,
+        "pid": pid,
+        "outlives_the_agent": how != "job",
+        "python": sys.executable,
+        "python_source": env.get("PYTHON_SOURCE") or "this Python",
+        "status": poll,
+        "poll_s": 300,
+        "log": status.path(status.LOG),
+    }
+    print(json.dumps(out, ensure_ascii=False), flush=True)
+    return 0
+
+
+def steps(a, summary, problems, dry):
+    """The steps of the installation in order; the exit code (finish)."""
+    say("License")
+    license_note()
+    if not a.no_register:
+        say("0. Claude Desktop must be closed")
+        wait_claude_closed(dry)
+    have = f"{sys.version_info[0]}.{sys.version_info[1]}"
+    offline = os.path.isdir(P.WHEELS) and os.path.exists(P.LOCK) and not a.online
+    bad = unverified() if offline else []
+    if bad and not a.allow_unverified:
+        raise Stop(
+            "the packages cannot be checked before they are installed:\n  - "
+            + "\n  - ".join(bad[:10])
+            + "\nMake the medium again (assistant-x prepare-media --out …, then prepare-media --check), or run "
+            "with --allow-unverified to install without the check."
+        )
+    for b in bad:
+        say(f"   WARNING, not checked (--allow-unverified): {b}")
+    want = open(P.PYVER, encoding="utf-8").read().strip() if os.path.exists(P.PYVER) else None
+    stage("environment", f"1. Python {platform.python_version()}: {sys.executable}")
+    summary["python_source"] = env.get("PYTHON_SOURCE") or "the Python that runs the installer"
+    if sys.version_info < (3, 11):
+        raise Stop("Python 3.11 or newer is needed.", "python")
+    if offline and want and want != have:
+        raise Stop(
+            f"The packages on the media are built for Python {want}, but {have} is running. "
+            f"Install Python {want} (its installer lies in the packages folder) or run with --online.",
+            "python",
+        )
+    vdir = pick_venv(a.venv)
+    say(f"2. Environment: {vdir}")
+    py = make_venv(vdir, dry)
+    summary.update(python=py, command=command_of(py))
+    if not a.venv and not dry:  # the python of the program: Install-Base.bat and Update.bat start it
+        remember_python(py)
+    stage("packages", "3. Workspace and models")  # the models first: the device may need their ONNX export (DirectML)
+    problems += check_workspace(dry)
+    problems += copy_models(dry)
+    say("4. Video card")
+    device = choose_device(a.cpu, offline)
+    summary["device"] = device
+    summary["downloads"] = downloads(offline, device)
+    say("5. Packages and base")
+    device = install_packages(py, offline, dry, device)
+    summary["device"] = device
+    problems += check_data()
+    if a.models:
+        stage("models", "5a. Models of the search by meaning (about 4.5 GB)")
+        problems += download_models(py, dry)
+        summary["downloads"] = downloads(offline, device)
+    stage("intake", "6. Intake of your own documents")
+    copy_programs(dry)
+    problems += check_intake(py, dry)
+    stage("connect", "7. Connection to Claude Desktop" if not a.no_register else "7-8. Connection: skipped")
+    changed = False
+    if not a.no_register:
+        changed = register_desktop(py, dry)
+        say("8. Connection to the other apps")
+        register_others(py, dry)
+    stage("self-test", "9. Self-test")
+    problems += self_check(py, dry)
+    base = a.base or (None if dry or WORKER else pick_base())
+    if base:
+        stage("base", "10. Base package")
+        problems += install_base(py, base, a.keep, dry)
+    stage("doctor", "11. Check (assistant-x doctor)")
+    summary["doctor"] = doctor(py, dry)
     if JSON:
-        return report(summary, problems, device)
+        return finish(summary, problems)
     say()
     if problems:
         say("The installation is finished, but there are remarks:")
@@ -1135,6 +1297,40 @@ def main():
         'Settings → Capabilities → Skills → Upload. Then ask Claude, starting with "AX:".'
     )
     return 0
+
+
+def download_models(py, dry):
+    """--models: the models of the search by meaning (assistant-x download-models) unless they are here; [problems]."""
+    if os.path.isdir(os.path.join(str(P.MODELS), "bge-m3")):
+        say("   the models are here already")
+        return []
+    rc = run([py, "-m", "assistant_x.setup.download_models"], dry, stdout=sys.stderr if JSON else None)
+    if rc:
+        return [
+            f"the models were not downloaded (exit code {rc}): <command> download-models later; until then the search "
+            "is by words only" + NETWORK_HINT
+        ]
+    return []
+
+
+def doctor(py, dry):
+    """assistant-x doctor --json of the installed program: {ok, problems: [codes]} (None with --dry-run)."""
+    if dry:
+        return None
+    p = proc.run(
+        [py, "-m", "assistant_x", "doctor", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=600,
+        encoding="utf-8",
+        errors="replace",
+        env=dict(os.environ, PYTHONUTF8="1", AX_WORKSPACE=P.ROOT),
+    )
+    try:
+        out = json.loads(p.stdout)
+    except ValueError:
+        return {"ok": False, "problems": [f"doctor did not answer (exit code {p.returncode})"]}
+    return {"ok": bool(out.get("ok")), "problems": [x.get("code") or x.get("message") for x in out.get("problems") or []]}
 
 
 if __name__ == "__main__":

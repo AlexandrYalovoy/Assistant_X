@@ -5,6 +5,7 @@ r"""assistant-x base install: a base package into this workspace, as a transacti
     assistant-x base install PACKAGE                  the plan (inspect), nothing changes
     assistant-x base install PACKAGE --confirm [--keep own|package] [--answers answers.json] [--own-apart] [--cpu]
     assistant-x base install PACKAGE --resume         continue an install that was interrupted
+    assistant-x base install PACKAGE --confirm --or-resume   install, or continue the interrupted install of it
     assistant-x base install PACKAGE --rollback       undo an install that was interrupted
 
 answers.json: {"codes": "package" | "own"} (the same as --keep). When the codes collide, a reference package keeps
@@ -414,10 +415,12 @@ def install(
     config=None,
     say=print,
     cpu=False,
+    or_resume=False,
 ):
     """Install the package at path; 0 when it is installed (or only planned without confirm), 1 when it cannot. cpu:
     the fragments the vectors of the package do not cover are computed on the processor without asking, however many
-    (without it: up to AUTO_CPU_FRAGMENTS when there is no video card)."""
+    (without it: up to AUTO_CPU_FRAGMENTS when there is no video card). or_resume: with confirm, an install of this
+    very package that was interrupted is continued (an unattended setup run again after a cut)."""
     from assistant_x.core import lock
     from assistant_x.core.common import clear_maintenance, load_config
 
@@ -438,6 +441,9 @@ def install(
             return 1
         with lock.heavy_task("base install"), lock.hold(w.work, "base install"):
             return undo(w, cfg, jr, stage, say)
+    if or_resume and confirm and jr.data and jr.data.get("kind", "install") == "install":
+        say(f"Continuing the install of {ident} interrupted at {jr.data['started']} (done: {', '.join(jr.data['steps'])}).")
+        resume = True
     if jr.data and jr.data.get("kind", "install") != "install":
         say(
             f"An {jr.data['kind']} of {ident} was interrupted: finish it first (assistant-x base {jr.data['kind']} … "
@@ -1030,6 +1036,9 @@ def main(argv=None):
     ap.add_argument("--own-apart", action="store_true")
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--rollback", action="store_true")
+    ap.add_argument(
+        "--or-resume", action="store_true", help="with --confirm: continue an install of this package that was interrupted"
+    )
     ap.add_argument("--config")
     ap.add_argument(
         "--cpu", action="store_true", help="the fragments without a vector of the package: on the processor, however many"
@@ -1047,6 +1056,7 @@ def main(argv=None):
             rollback=a.rollback,
             config=a.config,
             cpu=a.cpu,
+            or_resume=a.or_resume,
         )
     except P.PackageError as e:
         raise SystemExit(str(e))

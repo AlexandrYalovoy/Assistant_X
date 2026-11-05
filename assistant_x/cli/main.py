@@ -15,6 +15,7 @@
     assistant-x doctor               where everything is and what is missing
     assistant-x base export|inspect|install|update|remove  base packages (assistant_x.base)
     assistant-x remove CODE [CODE …] [--why TEXT] [--dry-run]  documents of the library aside (inbox\\_to_delete)
+    assistant-x status [--json]      the state of an installation running in the background (install --background)
     assistant-x search, check, report, eval, query-log, debug-report, install, lock
 
 Every command works on the workspace found by core/workspace.py: --workspace DIR anywhere on the line (or
@@ -38,6 +39,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "query-log": ("assistant_x.search.query_log", "what the apps asked and how long it took"),
     "debug-report": ("assistant_x.setup.debug_report", "a report to pass on when something fails"),
     "install": ("assistant_x.setup.install", "the Python environment and the connection to the apps"),
+    "status": ("assistant_x.setup.status", "the state of an installation running in the background (--json: one line)"),
     "setup-intake": ("assistant_x.setup.setup_intake", "LibreOffice, Tesseract, 7-Zip and DjVuLibre for the intake"),
     "download-models": ("assistant_x.setup.download_models", "the embedding and reranking models from HuggingFace"),
     "prepare-media": ("assistant_x.setup.prepare_media", "the packages of an offline installation (build PC)"),

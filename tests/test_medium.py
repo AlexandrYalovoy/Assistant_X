@@ -136,7 +136,8 @@ def test_the_installer_takes_the_medium(tmp_path, monkeypatch):
         assert cmds[-1][-1].endswith(f"assistant_x-{__version__}-py3-none-any.whl") and "--no-index" in cmds[-1]
         assert os.path.isdir(os.path.join(install.LOCAL, "app", __version__))
         assert install.install_base("py", str(tmp_path / "x.axbase"), "own", dry=False) == []
-        assert cmds[-1][2:6] == ["assistant_x.base.cli", "install", str(tmp_path / "x.axbase"), "--confirm"]
+        assert cmds[-2][2:5] == ["assistant_x.base.cli", "inspect", str(tmp_path / "x.axbase")]  # checked first
+        assert cmds[-1][2:7] == ["assistant_x.base.cli", "install", str(tmp_path / "x.axbase"), "--confirm", "--or-resume"]
         assert cmds[-1][-2:] == ["--keep", "own"]
     finally:
         monkeypatch.undo()  # AX_MEDIUM and CODE back before the paths of the installation are made again
