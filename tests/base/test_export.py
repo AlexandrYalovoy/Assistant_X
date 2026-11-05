@@ -183,3 +183,43 @@ def test_the_command(library, tmp_path, capsys):
     with P.Package(str(out) + P.SUFFIX) as pkg:
         assert pkg.manifest["name"] == {"en": "Command A"}
     assert cli.main(["base"]) == 0 and "base export" in capsys.readouterr().out
+
+
+def test_a_base_behind_its_texts_stops_the_export_and_the_command_levels_it_first(tmp_path):
+    """A text recognized again after the base was built: the vectors the package would take are of the old text,
+    the new fragments of it would have none after the install (a colleague's install: 412). export() refuses, and
+    assistant-x base export builds and embeds first: every fragment of the package then has its vector."""
+    from assistant_x.search import embed as E, vector_cache as V
+
+    root = str(tmp_path / "A")
+    path = make_library(root)
+    build(path)
+    embed(path)
+    texts = load_config(path)["texts_dir"]
+    md = next(f for f in sorted(os.listdir(texts)) if f.endswith(".md"))
+    code = md[: -len(".md")]
+    with open(os.path.join(texts, md), "a", encoding="utf-8") as f:
+        f.write("\n\nA paragraph the second recognition found: separator vessel retention time.\n")
+    with pytest.raises(SystemExit, match="has not read the texts or cards of 1 documents"):
+        export(path, tmp_path / "a.axbase")
+    assert not os.path.exists(tmp_path / "a.axbase") and not os.path.exists(tmp_path / "a.axbase.part")
+    assert X.behind(load_config(path), {}) == []
+
+    from tests.search.fake_embedder import fake_models
+
+    with fake_models():  # the real commands, the fake model of the tests
+        X.level_base(path, say=lambda s: None)
+    assert (
+        X.behind(load_config(path), X.select({c: C.load(p) for c, p in C.paths(load_config(path)["cards_dir"]).items()}))
+        == []
+    )
+    man = export(path, tmp_path / "b.axbase")
+    assert man["embed"]["missing"] == 0
+    cfg = load_config(path)
+    con = connect(cfg["db"], readonly=True)
+    want = set(E.keys_of(E.fragments(con, f"c.code = '{code}' OR d.parent = '{code}'"), V.fingerprint(cfg), False))
+    con.close()
+    with P.Package(tmp_path / "b.axbase") as pkg:
+        keys = pkg.read("vectors/keys.bin")
+    got = {keys[i : i + V.KEY_BYTES] for i in range(0, len(keys), V.KEY_BYTES)}
+    assert want and want <= got

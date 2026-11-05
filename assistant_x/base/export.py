@@ -155,6 +155,54 @@ class Writer:
                 f.write(text)
 
 
+EMPTY_SHA = hashlib.sha256(b"").hexdigest()  # build_index.read_text of a document with no text
+
+
+def behind(cfg, chosen):
+    """The codes (documents and parts) of chosen whose text or card the search base has not read yet: their
+    fragments in the base, and so the vectors a package takes from it, are of an older text. A colleague's package
+    exported after 636 parts were recognized again and before the base was built carried their new texts without
+    the vectors of them: 412 fragments left for a manual embed after the install."""
+    from assistant_x.core.common import connect
+
+    if not os.path.exists(cfg["db"]):
+        return sorted(chosen)
+    con = connect(cfg["db"], readonly=True)
+    try:
+        known = {r[0]: (r[1], r[2]) for r in con.execute("SELECT code, text_sha, card_sha FROM docs")}
+    finally:
+        con.close()
+    out = []
+    for code, card in chosen.items():
+        path = os.path.join(cfg["cards_dir"], f"{code}.json")
+        if code not in known or (os.path.exists(path) and known[code][1] != C.sha(path)):
+            out.append(code)
+            continue
+        for sub, _ in file_entries(card):
+            if sub not in known:
+                continue  # a part with no text the base lists no row for
+            want = text_sha(cfg["texts_dir"], sub) or EMPTY_SHA
+            if (known[sub][0] or EMPTY_SHA) != want:
+                out.append(sub)
+    return sorted(set(out))
+
+
+def level_base(config, say=print):
+    """assistant-x build and assistant-x embed before an export (assistant-x base export): the base level with the
+    texts and the cards, every fragment with its vector. A failed build stops the export; an embed that cannot run
+    (no model, no video card and nobody to ask) is said, and the package then lacks those vectors."""
+    from assistant_x.base.install import run_main
+    from assistant_x.search import build_index, embed
+
+    args = ["--config", config] if config else []
+    rc = run_main(build_index.main, "build_index.py", args)
+    if rc not in (None, 0):
+        raise SystemExit(f"Export stopped: assistant-x build ended with {rc} (assistant-x check shows the errors).")
+    rc = run_main(embed.main, "embed.py", args)
+    if rc not in (None, 0):
+        say(f"Note: assistant-x embed ended with {rc}: the fragments without a vector go into the package without one.")
+
+
 def vectors_of(cfg, codes):
     """(meta of the vectors, keys bytes, vectors bytes) of the fragments of codes in the vector cache, or None when
     the cache has none of them. The vectors of the base are put into the cache first."""
@@ -181,6 +229,7 @@ def vectors_of(cfg, codes):
     found = cache.get(keys)
     if not found:
         return None
+    missing = len(keys) - len(found)  # fragments of the base with no vector yet: the installer computes them
     keys = [k for k in keys if k in found]
     vecs = np.stack([found[k] for k in keys]).astype(np.float16)
     info = {
@@ -191,6 +240,7 @@ def vectors_of(cfg, codes):
         "model": models.model_name(cfg.get("embed_model") or "bge-m3"),
         "max_seq_length": int(cfg.get("max_seq_length", 1024)),
         "table_rows": bool(cfg.get("table_rows", False)),
+        "missing": missing,
     }
     return info, b"".join(keys), vecs.tobytes()
 
@@ -236,6 +286,15 @@ def export(
             "Nothing to export: the library has no documents"
             + ("" if include_personal else " besides personal ones (--include-personal)")
         )
+    if vectors:
+        late = behind(cfg, chosen)
+        if late:
+            raise SystemExit(
+                f"Export stopped: the search base has not read the texts or cards of {len(late)} documents yet "
+                f"({', '.join(late[:5])}{', …' if len(late) > 5 else ''}): their vectors would be of the old texts. "
+                "Run assistant-x build and assistant-x embed (assistant-x base export does both by itself), then export "
+                "again; --no-vectors exports without vectors."
+            )
     root, idx, texts = cfg["library_root"], os.path.dirname(cfg["catalog"]), cfg["texts_dir"]
     files = []  # (name in the package, source path)
     for code in sorted(chosen):
@@ -325,6 +384,8 @@ def export(
     vec = vectors_of(cfg, set(chosen)) if vectors else None
     if vectors:
         say(f"Vectors: {vec[0]['rows'] if vec else 0} in {time.time() - t1:.0f} s")
+        if vec and vec[0]["missing"]:
+            say(f"  {vec[0]['missing']} fragments have no vector yet (assistant-x embed): the installer computes them")
     if vec:
         info, keys, blob = vec
         w.add_bytes("vectors/meta.json", json.dumps(info, indent=1).encode("utf-8"))
@@ -380,6 +441,7 @@ def main(argv=None):
     ap.add_argument("--include-personal", action="store_true")
     ap.add_argument("--strip-names", action="store_true")
     ap.add_argument("--no-vectors", action="store_true")
+    ap.add_argument("--no-level", action="store_true", help="no build and embed first (the export refuses a base behind)")
     ap.add_argument(
         "--codes",
         choices=CODES,
@@ -393,8 +455,10 @@ def main(argv=None):
     if a.out and not out.lower().endswith(P.SUFFIX):
         out += P.SUFFIX
     cfg = load_config(a.config)
-    raw = settings.load(a.config)[1]
+    w, raw = settings.load(a.config)
     with lock.heavy_task("base export"):  # reads the whole library, hashes every file
+        if not a.no_vectors and not a.no_level:
+            level_base(str(w.config))
         export(
             cfg,
             raw,
