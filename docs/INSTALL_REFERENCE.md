@@ -5,7 +5,7 @@ English | [Русский](INSTALL_REFERENCE.ru.md)
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/INSTALL_REFERENCE.md: edit that file. -->
 
 The install itself is [INSTALL_FOR_AI.md](../INSTALL_FOR_AI.md): one command in the background and its status. This
-page is for what goes beyond it (version 0.6): the steps one by one, the codes of the checks, the update, the
+page is for what goes beyond it (version 0.6.1): the steps one by one, the codes of the checks, the update, the
 tools of the server. Read only the section you need.
 
 ## The steps one by one

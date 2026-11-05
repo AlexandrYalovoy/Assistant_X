@@ -99,7 +99,7 @@ the command that fixes it (the same table, core/problems.py):
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.
 
-## The tools (0.6)
+## The tools (0.6.1)
 
 | Tool | What it does | Set | Changes the library |
 | --- | --- | --- | --- |

@@ -4,7 +4,7 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.6.1 — in preparation
+## 0.6.1 — 2026-11-05
 
 - An agent installs the program and a base package with one command and a few polls (a colleague's agent spent
   199 model calls and its plan limit on 0.6 with a base of 37.5 GB): `Setup.bat --online --yes --json --background

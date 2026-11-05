@@ -6,7 +6,7 @@ English | [Русский](INSTALL_FOR_AI.ru.md)
 
 You are an agent (Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked you to
 install or connect **Assistant X**: a local library of the user's documents with search by words and by meaning,
-served to AI apps over MCP. These instructions are of version 0.6; always install the **latest release**:
+served to AI apps over MCP. These instructions are of version 0.6.1; always install the **latest release**:
 https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## Token budget: read this first
