@@ -16,9 +16,11 @@ New entries go under the version being prepared. The version number is `assistan
 - A base install that was cut continues where it stopped: the extraction notes every file it copied (each hashed as
   it is copied) and copies only the rest, and the package is checked whole once, not on every run. The fragments its
   vectors leave are computed on the processor when there is no video card and they are few (`--cpu`: however many).
-- The export never makes a package whose vectors are of older texts than the ones it carries (412 fragments without
-  a vector after a colleague's install: the parts recognized again after the base was built): `base export` builds
-  and embeds first, and refuses a base that is behind.
+- A new title in a card has the text fragments of the document embedded again: the model reads the title in front of
+  every fragment, and a build kept their vectors (412 fragments of 4 documents of a library had vectors of the old
+  title; a package exported from it carried none for them, so a colleague's install had them left). The first embed of
+  this version finds such vectors once and computes them again. `base export` builds and embeds first and refuses a
+  base that is behind its texts.
 - A workspace and the folder of the PC on another disk (`--workspace D:\…`, `--machine-dir D:\…`) reach every app and
   every later command by themselves.
 - Setup.bat names the Python it took (one that is here, else the installer of the medium or of python.org; never

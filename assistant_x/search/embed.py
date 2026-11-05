@@ -84,6 +84,25 @@ def seed(con, cfg, cache, fp):
     return added, None
 
 
+def drop_unkeyed(con, cfg, cache, fp):
+    """Once a state of the model (meta vector_keys_checked): the fragments that have a vector but whose key (what the
+    model reads of them now) the vector cache has not were embedded for another text — a title changed and a build
+    before 0.6.1 kept their vectors — their vector is dropped, so this run computes it. Only for a base whose cache
+    was seeded before (a seed keys every vector of the base by its fragment as it is). The count dropped."""
+    if meta(con, "vector_keys_checked") == fp or meta(con, "vector_cache_seeded") != fp:
+        return 0
+    rows = fragments(con, "c.vec_row IS NOT NULL")
+    keys = keys_of(rows, fp, bool(cfg.get("table_rows", False)))
+    found = cache.get(list(dict.fromkeys(keys)))
+    stale = [r["id"] for r, k in zip(rows, keys) if k not in found]
+    if stale:
+        con.executemany("UPDATE chunks SET vec_row=NULL WHERE id=?", [(i,) for i in stale])
+        print(f"{len(stale)} fragments had a vector of an older text (a title changed): computed again.")
+    con.execute("INSERT OR REPLACE INTO meta VALUES('vector_keys_checked', ?)", (fp,))
+    con.commit()
+    return len(stale)
+
+
 def seed_all(cfg, con, cache, fp):
     """seed() for the base being embedded and the base the search uses (when they differ: a full rebuild waiting)."""
     for db in dict.fromkeys(p for p in (current_db(cfg["index_dir"]), cfg["db"]) if os.path.exists(p)):
@@ -140,6 +159,8 @@ def main():
         seed_all(cfg, con, cache, fp)  # once: a later full build or new codes then recompute none of these
         if a.seed_cache:
             return 0
+    elif not a.codes:
+        drop_unkeyed(con, cfg, cache, fp)
     args, where = [], "c.vec_row IS NULL"
     if a.codes:
         where += f" AND c.code IN ({','.join('?' * len(a.codes))})"

@@ -54,6 +54,7 @@ from assistant_x.core.common import (
     switch_db,
     drop_stale_dbs,
     DB_NEXT,
+    MODEL_TITLE_CHARS,
 )
 from assistant_x.core.formats import TEXT_FORMAT, pages_path, read_outline, read_pages_info
 
@@ -367,6 +368,10 @@ def build(a):
     drop_stale_vectors(cfg, con)
     cards = load_cards(cfg["cards_dir"])
     known = {r["code"]: (r["text_sha"], r["card_sha"]) for r in con.execute("SELECT code, text_sha, card_sha FROM docs")}
+    # the embedding model reads the short title in front of every fragment (common.model_text): a new title makes the
+    # vectors of the kept text fragments stale (a library of 0.6 kept them: 412 fragments of 4 documents)
+    titles = {r[0]: (r[1] or "")[:MODEL_TITLE_CHARS] for r in con.execute("SELECT code, title FROM docs")}
+    retitled = 0
     # fragment numbers are never reused, so a Claude still holding the old state cannot mix up fragments
     next_id = (
         max(int(meta(con, "max_chunk_id", 0)), con.execute("SELECT coalesce(max(id), 0) FROM chunks").fetchone()[0]) + 1
@@ -398,6 +403,10 @@ def build(a):
         con.execute(
             f"INSERT OR REPLACE INTO docs({','.join(DOC_COLUMNS)}) VALUES({','.join(':' + c for c in DOC_COLUMNS)})", info
         )
+        if code in titles and titles[code] != (info["title"] or "")[:MODEL_TITLE_CHARS]:
+            retitled += con.execute(
+                "UPDATE chunks SET vec_row=NULL WHERE code=? AND kind='text' AND vec_row IS NOT NULL", (code,)
+            ).rowcount
         if not info["parent"] and old_card != info["card_sha"]:  # a new or changed card: its fragments and contents
             cards_read += 1
             con.execute("DELETE FROM toc WHERE code=?", (code,))
@@ -438,6 +447,7 @@ def build(a):
     print(
         f"Done: documents {len(cards)} (and parts {len(docs) - len(cards)}), texts updated {changed}, cards read "
         f"{cards_read}, pages chunked again {pages_redone}, fragments {n}, without meaning vectors {todo}."
+        + (f" A new title: {retitled} fragments to embed again." if retitled else "")
     )
     con.close()  # the old base may be deleted right below: no connection of this process may hold any base
     n_docs, n_open = catalog.write(Path(cfg["catalog"]).parent, profile=cfg, cards={c: v[0] for c, v in cards.items()})
