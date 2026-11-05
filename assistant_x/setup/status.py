@@ -166,7 +166,7 @@ def _creation_time(pid):
 def own_start():
     """The time this process started (alive() compares it), or None."""
     try:
-        return _creation_time(os.getpid()) if os.name == "nt" else None
+        return _creation_time(os.getpid()) if os.name == "nt" else _posix_start(os.getpid())
     except (OSError, AttributeError):
         return None
 
@@ -183,8 +183,20 @@ def alive(pid, started=None):
     except ProcessLookupError:
         return False
     except PermissionError:
-        return True
-    return True
+        pass
+    t = _posix_start(int(pid))
+    return t is None or started is None or abs(t - float(started)) < 120
+
+
+def _posix_start(pid):
+    """The time (epoch s) process pid started, from /proc (Linux); None where it cannot be told."""
+    try:
+        with open(f"/proc/{pid}/stat", encoding="ascii", errors="replace") as f:
+            ticks = int(f.read().rsplit(")", 1)[1].split()[19])
+        boot = boot_time()
+        return boot + ticks / os.sysconf("SC_CLK_TCK") if boot else None
+    except (OSError, ValueError, IndexError, AttributeError):
+        return None
 
 
 def boot_time():
@@ -205,7 +217,7 @@ def why_exit(code):
     """The meaning of the exit code of a process, in words."""
     if code is None:
         return "unknown"
-    c = code & 0xFFFFFFFF if code < 0 and os.name == "nt" else code
+    c = code & 0xFFFFFFFF if code < -255 else code  # an NTSTATUS read as a signed number (on any system: a log of it)
     return EXIT_CODES.get(c, EXIT_CODES.get(code, f"ended with code {code}"))
 
 
