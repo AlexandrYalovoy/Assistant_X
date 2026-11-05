@@ -73,6 +73,9 @@ def move_machine_dir(target):
     target = Path(os.path.abspath(target))
     target.mkdir(parents=True, exist_ok=True)
     home = default_machine_dir()
+    if env.get("MACHINE_DIR"):  # AX_MACHINE_DIR rules this process (a test, an isolated install): no pointer written
+        os.environ["AX_MACHINE_DIR"] = str(target)
+        return target
     if target != home:
         home.mkdir(parents=True, exist_ok=True)
         (home / MOVED).write_text(str(target) + "\n", encoding="utf-8")

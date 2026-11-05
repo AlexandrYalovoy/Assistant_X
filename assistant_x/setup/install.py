@@ -659,7 +659,10 @@ def copy_programs(dry):
 def remember_python(py):
     """The python of the program in use, in python.txt of the machine folder (setup/self_update.py writes it too); the
     folder is made first: on a new PC nothing made it yet."""
-    for d in dict.fromkeys([LOCAL, str(workspace.default_machine_dir())]):  # the .bat files look in the default one
+    dirs = [LOCAL]
+    if not env.get("MACHINE_DIR"):  # moved by machine_dir.txt: the .bat files look in the default folder; AX_MACHINE_DIR
+        dirs.append(str(workspace.default_machine_dir()))  # (a test, another installation) never touches the default one
+    for d in dict.fromkeys(dirs):
         os.makedirs(d, exist_ok=True)
         with open(os.path.join(d, CURRENT_PYTHON), "w", encoding="utf-8", newline="\n") as f:
             f.write(py + "\n")

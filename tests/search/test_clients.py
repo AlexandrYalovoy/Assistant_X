@@ -751,6 +751,7 @@ def test_a_workspace_and_a_folder_of_the_pc_on_another_disk_reach_every_app(home
     codex.connect(e, False)
     data = tomllib.loads((home / ".codex" / "config.toml").read_text(encoding="utf-8"))
     assert data["mcp_servers"]["assistant-x"]["env"]["AX_MACHINE_DIR"] == str(moved)
+    monkeypatch.delenv("AX_MACHINE_DIR", raising=False)
     workspace.move_machine_dir(workspace.default_machine_dir())  # back: the pointer goes, nothing else is told
     monkeypatch.delenv("AX_MACHINE_DIR")
     assert (
@@ -758,3 +759,6 @@ def test_a_workspace_and_a_folder_of_the_pc_on_another_disk_reach_every_app(home
     )
     (ws / workspace.CONFIG).unlink()  # a remembered folder that is no workspace any more: the default again
     assert workspace.find() == workspace.default_root()
+    monkeypatch.setenv("AX_MACHINE_DIR", str(tmp_path / "isolated"))  # an isolated install: the default folder untouched
+    workspace.move_machine_dir(disk_d / "Other")
+    assert not (workspace.default_machine_dir() / workspace.MOVED).exists()
