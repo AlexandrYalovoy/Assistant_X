@@ -346,9 +346,30 @@ def unverified():
     return out + downloads.check_sums(P.PACKS)
 
 
+def installed(py, device):
+    """Do the packages of an online installation load in py, with the program of this folder at this version (and the
+    CUDA build of torch for device cuda)? A second run, or a worker started again after a cut, then installs nothing
+    (pip again took minutes and the internet each time)."""
+    from assistant_x import __version__
+
+    ok, out = check(
+        py,
+        IMPORTS + "; import assistant_x, os; print('ax=' + assistant_x.__version__ + '|' + "
+        "os.path.dirname(os.path.dirname(os.path.abspath(assistant_x.__file__))))",
+        timeout=600,
+    )
+    ax = next((l[3:] for l in out.splitlines() if l.startswith("ax=")), "")
+    torch = next((l.split("=", 1)[1] for l in out.splitlines() if l.startswith("torch=")), "")
+    here = f"{__version__}|{os.path.normcase(os.path.abspath(CODE))}"
+    same = ax.rsplit("|", 1)[0] + "|" + os.path.normcase(ax.rsplit("|", 1)[-1]) == here if "|" in ax else False
+    return ok and same and (device != "cuda" or "+cu" in torch)
+
+
 def install_packages(py, offline, dry, device="cpu"):
     rc = 0
-    if offline:
+    if not offline and not dry and installed(py, device):
+        say("   installed already: the packages load, the program is this version (nothing downloaded)")
+    elif offline:
         say(f"   without internet, from {P.WHEELS}")
         if device == "cuda":  # first: the lock then finds torch of TORCH (+cu128 matches its ==) and keeps it
             rc = run(

@@ -154,3 +154,26 @@ def test_the_agent_instructions_are_short_and_name_every_error_of_the_status(nam
     for code in S.FIXES:
         assert f"`{code}`" in text, code
     assert "{{" not in text and "| `search_library` |" not in text
+
+
+def test_a_second_run_installs_no_package_that_is_there(monkeypatch):
+    """A worker started again after a cut, or a second run, installs nothing when the packages load and the program
+    of this folder is this version (pip took minutes and the internet each time); another version or folder, or a
+    processor build of torch for a video card, installs."""
+    from assistant_x import __version__
+
+    here = os.path.abspath(install.CODE)
+    out = {"v": f"torch=2.9.1+cu128\nax={__version__}|{here}"}
+    monkeypatch.setattr(install, "check", lambda py, code="", timeout=0: (True, out["v"]))
+    assert install.installed("py", "cuda") and install.installed("py", "cpu")
+    out["v"] = f"torch=2.9.1+cpu\nax={__version__}|{here}"
+    assert install.installed("py", "cpu") and not install.installed("py", "cuda")
+    out["v"] = f"torch=2.9.1+cu128\nax=0.1|{here}"
+    assert not install.installed("py", "cuda")
+    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|C:\elsewhere"
+    assert not install.installed("py", "cuda")
+    runs = []
+    monkeypatch.setattr(install, "run", lambda cmd, dry, **kw: runs.append(cmd) or 0)
+    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|{here}"
+    monkeypatch.setattr(install, "check", lambda py, code="", timeout=0: ("directml" not in code, out["v"] + "\ncuda=True"))
+    assert install.install_packages("py", offline=False, dry=False, device="cuda") == "cuda" and runs == []
