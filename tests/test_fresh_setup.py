@@ -5,7 +5,7 @@ run under a bare Python (no numpy, no other package) and with no machine folder 
 python.org only signed by the Python Software Foundation, takes an installer only when the file is there, and every
 double-click file passes the exit code of its command on."""
 
-import os, subprocess, sys
+import json, os, subprocess, sys
 
 import pytest
 
@@ -116,3 +116,25 @@ def test_update_and_install_base_fail_when_their_command_fails(tmp_path, name):
     env["AX_MACHINE_DIR"] = str(tmp_path / "none")  # not installed: a failure too
     r = subprocess.run(["cmd", "/c", os.path.join(CODE, name)], env=env, capture_output=True, timeout=120)
     assert r.returncode == 1
+
+
+@pytest.mark.skipif(os.name != "nt", reason="cmd.exe")
+def test_setup_bat_for_an_agent_says_which_python_and_waits_for_no_key(tmp_path):
+    """Setup.bat --yes --json: no pause (stdin is not a console of a person), the JSON names the Python it found
+    (an agent's winget failed on a colleague's PC: Setup.bat takes a Python 3.11 that is there, else installs one)."""
+    env = {k: v for k, v in os.environ.items() if k != "AX_NOPAUSE"}
+    env.update(AX_MACHINE_DIR=str(tmp_path / "m"), AX_WORKSPACE=str(tmp_path / "ws"))
+    r = subprocess.run(
+        ["cmd", "/c", os.path.join(CODE, "Setup.bat"), "--dry-run", "--yes", "--json", "--no-register"],
+        env=env,
+        stdin=subprocess.PIPE,
+        capture_output=True,
+        timeout=600,
+    )
+    out = r.stdout.decode("utf-8", "replace")
+    assert r.returncode == 0, out[-2000:]
+    summary = json.loads([x for x in out.splitlines() if x.startswith("{")][-1])
+    assert summary["python_source"].endswith("python.exe") and ": " in summary["python_source"]
+    assert "Press any key" not in out
+    bat = open(os.path.join(CODE, "Setup.bat"), encoding="utf-8").read()
+    assert "winget" not in bat.replace("no winget", "")

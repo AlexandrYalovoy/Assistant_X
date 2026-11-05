@@ -24,9 +24,14 @@ set "PYCHECK=sys.version_info >= (3, 11)"
 set "RC=0"
 set "DRY="
 set "YES=%AX_YES%"
+set "NOPAUSE=%AX_NOPAUSE%"
 for %%a in (%*) do (
   if /i "%%~a"=="--dry-run" set "DRY=1"
   if /i "%%~a"=="--yes" set "YES=1"
+  if /i "%%~a"=="--yes" set "NOPAUSE=1"
+  if /i "%%~a"=="--json" set "NOPAUSE=1"
+  if /i "%%~a"=="--background" set "NOPAUSE=1"
+  if /i "%%~a"=="--status" set "NOPAUSE=1"
 )
 if exist "%PACKS%\python_version.txt" (
   set /p PYVER=<"%PACKS%\python_version.txt"
@@ -34,13 +39,15 @@ if exist "%PACKS%\python_version.txt" (
 if exist "%PACKS%\python_version.txt" call :exact
 set "PYTAG=%PYVER:.=%"
 set "PY="
-call :try "%APPDIR%.venv\Scripts\python.exe"
-if not defined PY call :try "%AXM%\venv\Scripts\python.exe"
-if not defined PY call :try "%LOCALAPPDATA%\Programs\Python\Python%PYTAG%\python.exe"
-if not defined PY call :try "%AXM%\Python%PYTAG%\python.exe"
-if not defined PY call :try "%ProgramFiles%\Python%PYTAG%\python.exe"
-if not defined PY for /f "delims=" %%i in ('py -%PYVER% -c "import sys; print(sys.executable)" 2^>nul') do call :try "%%i"
-if not defined PY for /f "delims=" %%i in ('where python 2^>nul') do if not defined PY call :try "%%i"
+rem every Python that is here already first (no winget: its installer fails on some PCs), then the installer of the
+rem medium, then the one of python.org; AX_PYTHON_SOURCE tells the installation (and its JSON) which one it took
+call :try "%APPDIR%.venv\Scripts\python.exe" "the environment of this folder"
+if not defined PY call :try "%AXM%\venv\Scripts\python.exe" "the environment of an earlier installation"
+if not defined PY call :try "%LOCALAPPDATA%\Programs\Python\Python%PYTAG%\python.exe" "Python %PYVER% installed for the user"
+if not defined PY call :try "%AXM%\Python%PYTAG%\python.exe" "Python %PYVER% an earlier Setup.bat installed"
+if not defined PY call :try "%ProgramFiles%\Python%PYTAG%\python.exe" "Python %PYVER% installed for every user"
+if not defined PY for /f "delims=" %%i in ('py -%PYVER% -c "import sys; print(sys.executable)" 2^>nul') do call :try "%%i" "Python %PYVER% of the py launcher"
+if not defined PY for /f "delims=" %%i in ('where python 2^>nul') do if not defined PY call :try "%%i" "a Python on the PATH"
 if not defined PY call :install_python
 if not defined PY if not exist "%PACKS%\python-*.exe" call :download_python
 if not defined PY (
@@ -50,6 +57,7 @@ if not defined PY (
   set "RC=1"
   goto end
 )
+set "AX_PYTHON_SOURCE=%PYSRC%: %PY%"
 "%PY%" -m assistant_x.setup.install %*
 set "RC=%errorlevel%"
 if not "%RC%"=="0" (
@@ -59,7 +67,7 @@ if not "%RC%"=="0" (
 )
 :end
 echo.
-if not defined AX_NOPAUSE pause
+if not defined NOPAUSE pause
 exit /b %RC%
 
 :exact
@@ -67,7 +75,7 @@ set "PYCHECK=sys.version_info[:2] == (%PYVER:.=,%)"
 exit /b
 
 :try
-if exist "%~1" "%~1" -c "import sys; sys.exit(0 if %PYCHECK% else 1)" >nul 2>nul && set "PY=%~1"
+if exist "%~1" "%~1" -c "import sys; sys.exit(0 if %PYCHECK% else 1)" >nul 2>nul && set "PY=%~1" && set "PYSRC=%~2"
 exit /b
 
 :install_python
@@ -95,7 +103,7 @@ if /i not "%GOT%"=="%WANT%" (
 )
 echo Python %PYVER% not found: installing it from the media for the current user only, this takes a couple of minutes...
 "%PYEXE%" /quiet InstallAllUsers=0 PrependPath=0 Include_launcher=0 Include_test=0 Include_doc=0 Shortcuts=0 AssociateFiles=0 TargetDir="%AXM%\Python%PYTAG%"
-call :try "%AXM%\Python%PYTAG%\python.exe"
+call :try "%AXM%\Python%PYTAG%\python.exe" "Python %PYVER% installed now from the medium, for the user only"
 exit /b
 
 :download_python
@@ -135,5 +143,5 @@ echo Installing Python %PYFULL% for the current user only, this takes a couple o
 "%PYEXE%" /quiet InstallAllUsers=0 PrependPath=0 Include_launcher=0 Include_test=0 Include_doc=0 Shortcuts=0 AssociateFiles=0 TargetDir="%AXM%\Python%PYTAG%"
 del /q "%PYEXE%" 2>nul
 set "PYEXE="
-call :try "%AXM%\Python%PYTAG%\python.exe"
+call :try "%AXM%\Python%PYTAG%\python.exe" "Python %PYFULL% installed now from python.org, for the user only, its signature checked"
 exit /b
