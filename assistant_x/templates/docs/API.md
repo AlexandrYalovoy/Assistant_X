@@ -110,11 +110,9 @@ time. Keep a session open for a series of questions: every `initialize` costs a 
 import json, os, urllib.request
 from pathlib import Path
 
-home, moved = (
-    Path.home() / ".assistant_x",
-    Path.home() / ".assistant_x" / "machine_dir.txt",
-)  # moved by install --machine-dir
-machine = Path(os.environ.get("AX_MACHINE_DIR") or (moved.read_text(encoding="utf-8").strip() if moved.exists() else home))
+machine = Path(os.environ.get("AX_MACHINE_DIR") or Path.home() / ".assistant_x")
+moved = machine / "machine_dir.txt"  # install --machine-dir: the folder on another disk
+machine = Path(moved.read_text(encoding="utf-8").strip()) if moved.exists() else machine
 info = json.loads(next(machine.glob("service-*.json")).read_text(encoding="utf-8"))
 token = (machine / "mcp_http_token.txt").read_text(encoding="utf-8").strip()
 url, session = f"http://127.0.0.1:{info['port']}/mcp", None
@@ -189,11 +187,9 @@ import httpx
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-home, moved = (
-    Path.home() / ".assistant_x",
-    Path.home() / ".assistant_x" / "machine_dir.txt",
-)  # moved by install --machine-dir
-machine = Path(os.environ.get("AX_MACHINE_DIR") or (moved.read_text(encoding="utf-8").strip() if moved.exists() else home))
+machine = Path(os.environ.get("AX_MACHINE_DIR") or Path.home() / ".assistant_x")
+moved = machine / "machine_dir.txt"  # install --machine-dir: the folder on another disk
+machine = Path(moved.read_text(encoding="utf-8").strip()) if moved.exists() else machine
 info = json.loads(next(machine.glob("service-*.json")).read_text(encoding="utf-8"))
 token = (machine / "mcp_http_token.txt").read_text(encoding="utf-8").strip()
 
