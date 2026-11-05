@@ -25,7 +25,7 @@ def test_the_stages_and_the_end_of_a_worker(pc, monkeypatch):
     w.stage("packages")
     out = S.short(S.read())
     assert out["state"] == "running" and out["stage"] == "packages" and out["percent"] == 4 and out["poll_s"] == 300
-    assert len(json.dumps(out)) < 400  # one short line
+    assert len(json.dumps(out)) < 600 and "restarts" not in out  # one short line, the worker alive
     w.finish(True, {"problems": ["x" * 500], "next": ["connect --check"], "command": "ax.exe"})
     out = S.short(S.read())
     assert out["state"] == "done" and out["ok"] and out["poll_s"] == 0 and out["percent"] == 100

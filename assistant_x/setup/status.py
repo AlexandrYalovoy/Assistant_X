@@ -163,6 +163,14 @@ def _creation_time(pid):
         k.CloseHandle(h)
 
 
+def own_start():
+    """The time this process started (alive() compares it), or None."""
+    try:
+        return _creation_time(os.getpid()) if os.name == "nt" else None
+    except (OSError, AttributeError):
+        return None
+
+
 def alive(pid, started=None):
     """Is the worker pid running (and is it the very process that started at started, not a new one of that pid)?"""
     if not pid:
@@ -234,7 +242,7 @@ class Worker:
             ok=None,
             error=None,
             pid=os.getpid(),
-            started=now,
+            started=own_start() or now,
             heartbeat=now,
             updated=now,
             argv=argv,
