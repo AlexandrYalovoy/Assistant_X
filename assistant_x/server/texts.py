@@ -5,15 +5,16 @@ server, given to the app at the handshake. No app name in them: every app reads 
 
 INSTRUCTIONS = """The user's own document library (Assistant X). Use it when the user writes the key "AX:" at the start
 of a message, asks to connect to the library or the knowledge base, or asks directly to find something in the
-documents, standards or library; otherwise answer as usual, without it. When the server shows one tool, library,
+documents, standards or library; otherwise answer as usual, without it. "AX: \u0431\u044b\u0441\u0442\u0440\u043e" selects fast, "AX: \u0433\u043b\u0443\u0431\u043e\u043a\u043e"
+selects deep; an unqualified AX question uses balanced. When the server shows one tool, library,
 every command named below goes through it: library(action="search_library", args={"query": "..."}). When the work
 with the library starts, call library_guide once: it gives the rules of the answers and the shelves of this library.
 If library (or library_guide) and the other tools of this server are not in your list of tools (some apps keep the
 tools of a server behind a search of tools), search the tools for "assistant-x library library_guide search_library"
 first; the server has no resources: never look for the library there. Search with search_library (it
-already reranks the results) 2–3 times: rephrase with other terms, and search the norms apart (sections=["N"]) for
-the standards and company documents of the object of the question; read the pages you
-need with read_pages;
+already reranks the results): balanced starts with one query and k=4, repeating only for a weak match or a conflict;
+a complex design takes 2–3 rephrased searches, including the norms apart (sections=["N"]). Read the best one or two
+pages with read_pages; read more only for a continuing thought or a needed reference;
 the "References" line of a found fragment says on which PDF page the table, formula or clause it refers to lies:
 read those too; book_map shows the table of contents of a book with its pages and what lies in a section;
 check figures from tables and charts with page_image; document_info gives the card of a document (its contents with

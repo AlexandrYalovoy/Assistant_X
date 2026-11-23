@@ -77,6 +77,8 @@ settings are never touched. Tell the user to restart the apps; the old environme
 | Tool | What it does | Set | Changes the library |
 | --- | --- | --- | --- |
 | `library_guide` | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | reader | no |
+| `search_library_data` | Search fragments and return JSON data beside the text search: code, PDF and printed pages, citation, text, source quality and references. | reader | no |
+| `verify_answer` | Check citations and verbatim quotes in a finished answer. | reader | no |
 | `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
 | `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
 | `book_map` | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | reader | no |
@@ -106,7 +108,7 @@ settings are never touched. Tell the user to restart the apps; the old environme
 Every app gets the one tool `library` by default: it carries every command of the table by its name and
 arguments (`library(action="search_library", args={"query": "..."})`), so the app asks once or keeps one rule to
 allow it; LM Studio gets the commands of the reference mode. `--full` gives every tool apart, `--reader` the reading
-tools apart (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). Every command that changes the library asks for the user's yes to a plan first.
+tools apart (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). Every command that changes the library asks for the user's yes to a plan first.
 
 ## The commands
 
@@ -121,6 +123,7 @@ tools apart (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_
 | `service` | the library service: one MCP server on 127.0.0.1 for every app |
 | `serve` | the MCP server in the process of the app (stdio; --http) |
 | `search` | a query from the command line |
+| `context` | one bounded JSON answer context: search plus the best full pages |
 | `check` | check the cards (the schema, the profile) and the texts |
 | `report` | the state of the library |
 | `eval` | the control questions of the workspace |

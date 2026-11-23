@@ -18,9 +18,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **The service** (`assistant-x service`): one per workspace, the models loaded once (on the video card when there is
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
-- **The tool sets**: `one` (the default of every app: one tool, `library`, that carries every command by its name
-  and arguments, so an app asks once or keeps one rule to allow it), `all` (every tool apart: the intake, base
-  packages) or `reader` ({{reader_tools}}). `--compact`: one-sentence
+- **The tool sets**: `one` (one tool, `library`, that carries every command by its name and arguments),
+  `one_reader` (the same one schema with only reading and export actions; the short reader guide; default for Kimi),
+  `all` (every tool apart: the intake, base packages) or `reader` ({{reader_tools}}). `--compact`: one-sentence
   descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):

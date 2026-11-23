@@ -45,6 +45,9 @@ copy for reading and cloning). Everyone taking part follows the [Code of Conduct
   `git tag -a v0.1 -m "Assistant X 0.1"`.
 - Until the tag the CHANGELOG heading of the version reads `## 0.1 — unreleased`; in the commit that is tagged it
   gets the date of the tag instead: `## 0.1 — 2026-MM-DD`. The next version then gets a new `unreleased` heading.
+- Before the tag run `python scripts/release_check.py` on the release commit (during development, `--fast
+  --allow-dirty` permits edits and excludes the slow tests). It checks the version in the documents, generated files,
+  dependency pins, lint, formatting and tests. Pushing and tagging still require the maintainer's explicit decision.
 - Pushing the tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml): it checks that the tag is the
   version of the code, builds the wheel from a clean copy of the tagged commit, checks that it holds exactly the files
   of `assistant_x/`, and makes the GitHub release with the wheel, its SHA-256 and the CHANGELOG section as the notes.

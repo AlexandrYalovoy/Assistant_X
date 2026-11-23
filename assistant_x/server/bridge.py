@@ -298,7 +298,7 @@ class Bridge:
         result = m.get("result")
         if rid in self.lists and isinstance(result, dict) and isinstance(result.get("tools"), list):
             self.lists.discard(rid)
-            if self.toolset == "one" and not any(t.get("name") == toolsets.ONE for t in result["tools"]):
+            if self.toolset in ("one", "one_reader") and not any(t.get("name") == toolsets.ONE for t in result["tools"]):
                 self.toolset = "all"  # a service of before the one tool: its tools as they are, rather than none
             tools = [t for t in result["tools"] if toolsets.allowed(t.get("name"), self.toolset, self.compact)]
             m = dict(m, result=dict(result, tools=toolsets.compact_tools(tools) if self.compact else tools))
@@ -380,6 +380,22 @@ class Bridge:
             if not toolsets.allowed(tool, self.toolset, self.compact):
                 return self.error(msg.get("id"), -32602, f"Unknown tool: {tool}")
             name, args = toolsets.unwrap(tool, params.get("arguments"))  # the command a call of `library` carries
+            if self.toolset == "one_reader" and name not in toolsets.READER + toolsets.EXPORT:
+                return self.write(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": msg.get("id"),
+                        "result": {
+                            "content": [{"type": "text", "text": f"No command {name!r} in one_reader."}],
+                            "isError": True,
+                        },
+                    }
+                )
+            if name == "library_guide" and self.toolset in ("reader", "one_reader"):
+                args = dict(args, detail="reader")
+                args = toolsets.wrap(params.get("arguments"), name, args) if tool == toolsets.ONE else args
+                msg = dict(msg, params=dict(params, arguments=args))
+                params = msg["params"]
             if self.compact and tool == toolsets.ONE and name not in toolsets.REFERENCE:
                 return self.write(
                     {

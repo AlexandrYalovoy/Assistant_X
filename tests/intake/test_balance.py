@@ -210,3 +210,21 @@ def test_a_missing_program_under_the_lock_is_one_line(heavy_lock, capsys):
     err = capsys.readouterr().err
     assert err.startswith("cannot start no-such-program-of-assistant-x") and "Traceback" not in err
     assert machine_lock.holder() is None and machine_lock.main(["--"]) == 2
+
+
+def test_localized_tool_output_cannot_crash_a_reader_thread(monkeypatch):
+    """PYTHONUTF8 makes subprocess text pipes UTF-8; a localized Windows tool may answer in another code page."""
+    calls = []
+
+    def run(cmd, **kw):
+        calls.append(kw)
+        return type("Result", (), {"stdout": "GPU, 100, 8192, 55\n" if "nvidia" in cmd[0] else "73\n", "returncode": 0})()
+
+    monkeypatch.setattr(balance.shutil, "which", lambda name: "nvidia" if name == "nvidia-smi" else None)
+    monkeypatch.setattr(balance.subprocess, "run", run)
+    assert balance._smi("test") == ["GPU, 100, 8192, 55"]
+    sensors = object.__new__(balance.Sensors)
+    sensors.t_temp, sensors.cpu_temp_ok, sensors.has_gpu = -1e9, True, False
+    sensors.temp, sensors.gpu_load = None, None
+    assert sensors.temps() == 73.0
+    assert len(calls) == 2 and all(c.get("errors") == "replace" for c in calls)

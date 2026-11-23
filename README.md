@@ -284,6 +284,7 @@ chooses another workspace):
 | `remove CODE [--why TEXT] [--dry-run]` | a document of the library taken aside (`inbox\_to_delete`), its code reserved ([docs/INTAKE.md](docs/INTAKE.md)) |
 | `build [--full]`, `embed [--cpu]` | the search base from the cards and texts; the meaning vectors of the new fragments |
 | `search "question"` | a query from the command line |
+| `context "question" [--mode fast\|balanced\|deep]` | one bounded JSON answer context: search, best full pages, citations and source quality |
 | `base export`, `base inspect`, `base install`, `base update`, `base remove` | base packages: a library passed between people ([docs/PACKAGES.md](docs/PACKAGES.md)) |
 | `connect APP\|auto`, `connect --list`, `connect --check`, `disconnect APP` | connect the apps of this PC ([docs/CLIENTS.md](docs/CLIENTS.md)) |
 | `update` | connect every connected app again (after a new version: its entry and its skill) |
@@ -377,7 +378,7 @@ After a new version, `assistant-x update` writes the entries again; the skills o
 service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
 outdated.
 
-`--tools reader` gives the 8 reading tools (search, pages, contents, page image, quote check, card, list, the guide)
+`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks, card, list, the guide)
 and `export_references`, which writes copies of the references only into a folder the user names; without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
 models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
 `assistant-x serve --http [--port 8765]` (every request needs the bearer token of `mcp_http_token.txt` in the PC folder:

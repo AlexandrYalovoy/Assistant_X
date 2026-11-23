@@ -4,6 +4,29 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.6.2 — unreleased
+
+- A bounded answer cost: `assistant-x context "question"` returns one JSON with the best matches and full pages,
+  without repeating page text in the matches. It is the documented one-command fallback when MCP tools are
+  unavailable; an agent must not inspect the code or write its own client.
+- `fast` is an explicit 3-match, one-page quick answer; `AX: быстро` selects it, `AX: глубоко` selects deep, and an
+  unqualified AX question keeps balanced. Deep reads neighbours of the two leading documents: the 19-question set now
+  reaches 26/26 expected pages and 12/12 values at about 8 912 tokens a context.
+- `one_reader` gives Kimi one MCP schema with only reading and export actions; the reader guide is short (about 8k
+  characters instead of 29k). Balanced answers start with one search and 1–2 pages; deep design keeps 2–3 searches
+  and up to 5 pages. Page images and whole-answer verification are used when the evidence needs them, not routinely.
+- MCP clients can receive search hits as JSON with stable fields (`search_library_data`): document code, PDF and printed
+  pages, a ready citation, text, source quality and cross-references. `verify_answer` checks every page reference and
+  the verbatim quotes it can associate with one citation; the existing text tools remain unchanged.
+- `python scripts/release_check.py` checks the version across the changelogs, roadmap and security guide, generated
+  documents, dependency pins, lint, formatting and tests; `--fast` and `--allow-dirty` support a development run.
+- Localized output of NVIDIA and PowerShell tools cannot crash a UTF-8 subprocess reader thread on Windows: invalid
+  bytes are replaced; the numeric sensor readings remain readable.
+- The dependency pins match the build environment again; both package guides give the actual 30-minute confirmation
+  token lifetime, and the roadmap names the current release.
+- The background install status compares a Linux worker by its start time and reads a Windows exit code as signed;
+  the API guide shows how to find a machine folder moved to another disk.
+
 ## 0.6.1 — 2026-11-05
 
 - An agent installs the program and a base package with one command and a few polls (a colleague's agent spent
