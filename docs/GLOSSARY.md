@@ -58,7 +58,7 @@ have Russian twins (name.ru.md); elsewhere Russian is kept only as data for Russ
 | нумерация страниц | page numbering | `doc.page_offset`: printed page = PDF page − value |
 | отладочный отчёт | debug report | `assistant-x debug-report` |
 | установка | installation | `install.bat` |
-| пакет базы | base package | a ready library added to a workspace ([ROADMAP.md](../ROADMAP.md)) |
+| пакет базы | base package | a ready library added to a workspace ([PACKAGES.md](PACKAGES.md)) |
 | рабочая папка проекта | workspace | the user's data folder with `assistant_x.toml` (`core/workspace.py`) |
 | профиль | (domain) profile | the knowledge of a field: synonyms, the wording of the skill ([`assistant_x/profiles`](../assistant_x/profiles)) |
 

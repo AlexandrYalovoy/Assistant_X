@@ -14,16 +14,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def problems(version, changelogs, roadmap, security):
+def problems(version, changelogs, security):
     """Version consistency problems in the release documents."""
     out = []
     rx = re.compile(rf"^## {re.escape(version)}(?:\s+—\s+|\s+)(unreleased|\d{{4}}-\d{{2}}-\d{{2}})\s*$", re.M)
     for name, text in changelogs.items():
         if not rx.search(text):
             out.append(f"{name}: no section ## {version} — unreleased or ## {version} — YYYY-MM-DD")
-    for name, text in (("ROADMAP.md", roadmap), ("SECURITY.md", security)):
-        if version not in text:
-            out.append(f"{name}: does not name the current version {version}")
+    if version not in security:
+        out.append(f"SECURITY.md: does not name the current version {version}")
     return out
 
 
@@ -44,7 +43,6 @@ def main(argv=None):
     bad = problems(
         __version__,
         {name: (ROOT / name).read_text(encoding="utf-8") for name in ("CHANGELOG.md", "CHANGELOG.ru.md")},
-        (ROOT / "ROADMAP.md").read_text(encoding="utf-8"),
         (ROOT / "SECURITY.md").read_text(encoding="utf-8"),
     )
     stale = [

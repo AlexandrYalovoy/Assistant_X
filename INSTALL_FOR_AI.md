@@ -4,10 +4,11 @@ English | [Русский](INSTALL_FOR_AI.ru.md)
 
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/INSTALL_FOR_AI.md: edit that file. -->
 
-You are an agent (Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked you to
-install or connect **Assistant X**: a local library of the user's documents with search by words and by meaning,
-served to AI apps over MCP. These instructions are of version 0.7.0; always install the **latest release**:
-https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
+You are an agent (Kimi Work, Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked
+you to install or connect **Assistant X**: a local library of the user's documents with search by words and by meaning,
+served to AI apps over MCP. In Kimi Work, the personal Assistant X plugin is installed and updated separately from the
+program; open a new chat after updating it. These instructions are of version 0.7.0; always install the **latest
+release**: https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## Token budget: read this first
 

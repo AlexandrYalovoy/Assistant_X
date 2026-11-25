@@ -47,6 +47,18 @@ and titles), the pages it reads, cards, the list of documents, page images, and 
 cards with the start of the text of the new files. Nothing leaves the PC with a local model in LM Studio (or in
 DeepSeek Harness and Codex pointed at LM Studio).
 
+## Kimi Work
+
+Kimi Work connects through a separate personal Assistant X plugin using the same local bridge and the `one_reader` set:
+one `library` tool, reading and reference export only. `assistant-x connect kimi` configures Kimi CLI / Kimi Code; it
+does not install or update the Work plugin, which is a separate action. Open a new chat after updating the plugin.
+
+On 25 November 2026, fast and deep answers in Kimi Work were live-tested on the real library. Kimi CLI / Kimi Code and
+Kimi Chat have not been live-tested separately; they must not be called tested merely because Work works. When MCP is
+unavailable but the agent can run a terminal command, one fallback `assistant-x context "question" --mode
+fast|balanced|deep` is enough, without inspecting the source or writing a custom client. The modes and measurements:
+[`COST.md`](COST.md).
+
 ## Codex and ChatGPT
 
 The Codex CLI, its IDE extension and the ChatGPT desktop app read the same `~/.codex/config.toml`: `assistant-x connect

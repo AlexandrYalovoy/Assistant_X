@@ -588,5 +588,5 @@ Only when the user asks to keep an addition apart is it marked: `assistant-x int
 the MCP command `intake_apply(personal=True)`), or `personal = true` in `[intake]` of `assistant_x.toml` (every
 batch; `assistant-x init --personal`). The cards then get `intake.personal: true` and the search marks such a document
 "personal document". The codes are the same either way, the next free one of the shelf: the codes of a shared base
-package and of the user's documents are reconciled when the package is added ([ROADMAP.md](../ROADMAP.md), item 5), not by ranges of
-numbers.
+package and of the user's documents are reconciled when the package is added
+([PACKAGES.md](PACKAGES.md), "Inspect"), not by ranges of numbers.
