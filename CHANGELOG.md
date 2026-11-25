@@ -4,7 +4,7 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
-## 0.6.2 — unreleased
+## 0.7.0 — 2026-11-25
 
 - The `COST.md` guide documents the explicit fast / balanced / deep modes, their measured context savings and quality;
   README notes the substantial Kimi K3 improvements in Kimi Work, and the bilingual-document test covers the new guide.
