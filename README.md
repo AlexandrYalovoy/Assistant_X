@@ -38,7 +38,7 @@ for anyone who works from documents: engineers, researchers, students, doctors, 
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
-Version 0.7.0 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+Version 0.7.1 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
 [License](#license)) · Author: Alexandr Yalovoy.
 
 ## Features in detail

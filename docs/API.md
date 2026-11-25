@@ -2,7 +2,7 @@ English | [Русский](API.ru.md)
 
 # The library from your own program (API)
 
-Version 0.7.0. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
+Version 0.7.1. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
 one local service, by the Model Context Protocol (MCP). Your own program can do the same, with no AI at all: it sends
 JSON-RPC messages over HTTP to `127.0.0.1` and gets the same answers the apps get. This page says how the service is
 built, how to reach it, every command with its parameters, and three examples run against a real library.
@@ -68,7 +68,7 @@ Through `library` a command goes as `{"action": "search_library", "args": {"quer
 
 ## The commands
 
-Made from the schemas of the server (0.7.0). A parameter in **bold** is required; a command that changes the
+Made from the schemas of the server (0.7.1). A parameter in **bold** is required; a command that changes the
 library first answers with a plan and a token, and changes it only when called again with `confirm=true` and that
 token, after the user's yes.
 
