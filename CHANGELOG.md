@@ -6,6 +6,8 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.6.2 — unreleased
 
+- The `COST.md` guide documents the explicit fast / balanced / deep modes, their measured context savings and quality;
+  README notes the substantial Kimi K3 improvements in Kimi Work, and the bilingual-document test covers the new guide.
 - A bounded answer cost: `assistant-x context "question"` returns one JSON with the best matches and full pages,
   without repeating page text in the matches. It is the documented one-command fallback when MCP tools are
   unavailable; an agent must not inspect the code or write its own client.

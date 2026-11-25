@@ -64,6 +64,11 @@ Version 0.6.1 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the dat
 - Reading pages in a row (`read_pages`), the card of a document (`document_info`), the list of documents
   (`list_documents`).
 - A query log: what the apps asked and what was found, to measure the quality.
+- **Bounded answers:** `fast`, `balanced` and `deep`, selected by `AX: быстро`, ordinary `AX:` and `AX: глубоко`;
+  a one-command JSON context is the fallback when MCP is unavailable. The modes, measurements and commands are in
+  [`COST.md`](docs/COST.md).
+- Structured search hits (`search_library_data`) and a finished-answer check (`verify_answer`) complement the text
+  search and `verify_quote`; a simple fact does not need the full-answer check.
 
 ### Intake of documents
 
@@ -94,7 +99,10 @@ Version 0.6.1 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the dat
   LM Studio, Gemini CLI, Antigravity, Cursor, Cline and Kimi and writes the library into each.
 - One local service per PC: the models are loaded once and serve every app at the same time.
 - An NVIDIA video card (CUDA), an AMD or Intel one (DirectML), or the processor.
-- A mode for small local models (`--compact`) and a reading set of tools (`--tools reader`: it changes nothing in the library).
+- A mode for small local models (`--compact`), reading tools (`--tools reader`) and `one_reader`: one `library`
+  schema with reading and export only, the default for Kimi.
+- Kimi CLI / Kimi Code are connected by `assistant-x connect kimi`; the same local bridge can be installed as a
+  personal plugin in Kimi Work. Its command and workspace path are specific to that PC.
 - MCP over HTTP for other clients, with an access token.
 - The skill of every app is written by the program and refreshed with a new version.
 
@@ -154,13 +162,13 @@ also take the plugin of this repository: `codex plugin marketplace add AlexandrY
 | [`assistant_x/`](assistant_x) | the Python package: `core` (workspace, settings, language packs, locks, file formats, text and base helpers), `search` (base builder, embeddings, retrieval, reports), `intake` (the intake of new documents and its tools), `server` (the MCP server `assistant-x`), `setup` (installer, debug report, media), `cli` (the command `assistant-x`), `lang` (language packs: data), `profiles` (domain profiles: data), `templates` |
 | [`pyproject.toml`](pyproject.toml) | the package `assistant-x`: dependencies and extras `dense`, `intake`, `dml`, `export`, `dev` |
 | [`Setup.bat`](Setup.bat), [`intake.bat`](intake.bat), [`assistant-x.bat`](assistant-x.bat) | double-click: install; the intake of `inbox`; any command (`assistant-x.bat help`) |
-| [`scripts/`](scripts) | thin .bat files: debug report, library report, query log, intake installation, media |
+| [`scripts/`](scripts) | thin .bat files: debug report, library report, query log, intake installation, media; `release_check.py` checks a release |
 | [`assistant_x/templates/skill/`](assistant_x/templates/skill) | the skill `assistant-x` (switched on by "AX:") from one core: SKILL.md for Claude and for the agents (Codex, DeepSeek Harness), the short rules of the tool `library_guide`; `assistant-x skill` writes it for the profile of the workspace |
 | [`assistant_x/clients/`](assistant_x/clients) | the apps `assistant-x connect` knows: where each keeps its MCP servers and skills |
 | [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md), [`AGENTS.md`](AGENTS.md), [`plugins/`](plugins) | the instructions for an agent that installs Assistant X, the notes for agents, the plugin of Codex and Claude Code (with [`.agents/plugins`](.agents/plugins) and [`.claude-plugin`](.claude-plugin)): made by `assistant-x gen-docs` from [`assistant_x/templates/docs/`](assistant_x/templates/docs) |
 | [`assistant_x/schemas/`](assistant_x/schemas) | the JSON Schema of the document cards (`card-1.json`) |
 | [`tests/`](tests) | the tests ([`tests/base`](tests/base), [`tests/search`](tests/search), [`tests/intake`](tests/intake), [`tests/corpus`](tests/corpus), and the top of `tests`: see Tests) |
-| [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the apps ([`CLIENTS.md`](docs/CLIENTS.md)), the library from a program of your own ([`API.md`](docs/API.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
+| [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the apps ([`CLIENTS.md`](docs/CLIENTS.md)), the library from a program of your own ([`API.md`](docs/API.md)), answer modes and cost ([`COST.md`](docs/COST.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
 | [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md) | what comes next, what changed |
 | [`LICENSE`](LICENSE), [`LICENSES/`](LICENSES), [`NOTICE`](NOTICE), [`CLA.md`](CLA.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | the licenses, the notices of the author and of the third-party components, the contributor agreement, how to contribute, the code of conduct |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, and what the product guarantees about untrusted documents and packages |
@@ -398,6 +406,9 @@ corpus against its baseline) and the tests at the top of `tests` (cards, languag
 English library). [`scripts\check.ps1`](scripts/check.ps1) runs ruff and every test (`-Fast`: without the slow ones). The slow tests (the
 whole intake with LibreOffice and OCR, the corpus) carry `@pytest.mark.slow`: `pytest -m slow tests`.
 [`hooks/pre-commit`](hooks/pre-commit) runs ruff and `pytest -m "not slow" tests` before a commit (copy it to `.git/hooks/`).
+Before a release, `python scripts/release_check.py` also checks the version across documents, generated files and
+dependency pins; `tests/golden/context_cost.py` measures the quality and size of balanced and deep contexts on the
+real engineering questions.
 
 ## License
 
@@ -427,3 +438,6 @@ This is in addition to the no-warranty clause of the GNU AGPL.
 ## AI-assisted development
 
 Assistant X was developed with Claude Desktop and Claude Code using Claude Opus 5.5 and Claude Fable 5.1.
+Further development and substantial improvements were made with Kimi in Kimi Work using the K3 model: the Kimi
+integration, structured MCP tools, answer verification, the bounded fast / balanced / deep modes and their measured
+cost and quality checks.
