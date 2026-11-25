@@ -7,7 +7,7 @@
     assistant-x intake run|build|apply|status|...   the intake of inbox (assistant_x.intake.pipeline)
     assistant-x build [--full]       build the search base from index (assistant_x.search.build_index)
     assistant-x embed [--wait|--cpu] embeddings of the new fragments (assistant_x.search.embed)
-    assistant-x mcp [--tools reader|all|one] [--compact]  the stdio bridge an app starts (assistant_x.server.bridge): it
+    assistant-x mcp [--tools reader|all|one|one_reader] [--compact]  the stdio bridge an app starts (assistant_x.server.bridge): it
                                      starts the library service of the workspace and talks to it
     assistant-x service              the library service: one MCP server on 127.0.0.1 for every app of the PC
     assistant-x serve [--http]       the MCP server in the process of the app (assistant_x.server.mcp_server); --http:
@@ -33,6 +33,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "service": ("assistant_x.server.service", "the library service: one MCP server on 127.0.0.1 for every app"),
     "serve": ("assistant_x.server.mcp_server", "the MCP server in the process of the app (stdio; --http)"),
     "search": ("assistant_x.search.retrieval", "a query from the command line"),
+    "context": ("assistant_x.search.context", "one bounded JSON answer context: search plus the best full pages"),
     "check": ("assistant_x.search.check_index", "check the cards (the schema, the profile) and the texts"),
     "report": ("assistant_x.search.library_report", "the state of the library"),
     "eval": ("assistant_x.search.eval", "the control questions of the workspace"),
@@ -59,7 +60,7 @@ COMMANDS = {  # command -> (module run as __main__, one line of help)
     "remove": ("assistant_x.intake.remove", "take documents of the library aside (inbox\\_to_delete), codes reserved"),
     "key-norms": ("assistant_x.search.key_norms", "the key norms of the design topics: searched, verified, written"),
 }
-MODEL_COMMANDS = ("search", "embed", "eval")  # they load the models: torch and transformers kept quiet
+MODEL_COMMANDS = ("search", "context", "embed", "eval")  # they load the models: torch and transformers kept quiet
 
 
 def usage():
@@ -87,7 +88,7 @@ HELP = {  # the commands whose module has no argparse of its own: their help, sh
         "Where everything of the workspace is and what is missing; exit code 1 when the workspace is broken or not made."
     ),
     "serve": (
-        "usage: assistant-x serve [--tools reader|all|one] [--compact] [--http [--port N]]\n\n"
+        "usage: assistant-x serve [--tools reader|all|one|one_reader] [--compact] [--http [--port N]]\n\n"
         "The MCP server of the library in the process of the app (the apps start assistant-x mcp, the bridge to the\n"
         "library service; serve is the fallback). Without options: stdio.\n"
         "  --tools      reader: only the 8 reading tools; all (default): every tool; one: the tool library\n"

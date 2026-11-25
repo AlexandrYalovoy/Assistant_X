@@ -2,7 +2,7 @@ English | [Русский](API.ru.md)
 
 # The library from your own program (API)
 
-Version 0.6.1. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
+Version 0.7.0. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
 one local service, by the Model Context Protocol (MCP). Your own program can do the same, with no AI at all: it sends
 JSON-RPC messages over HTTP to `127.0.0.1` and gets the same answers the apps get. This page says how the service is
 built, how to reach it, every command with its parameters, and three examples run against a real library.
@@ -61,19 +61,22 @@ The messages on `/mcp`, in this order:
 ### Tool sets
 
 A program that talks HTTP to the service sees every command apart (the set `all`). The bridges show a set to their
-app: `--tools one` (one tool `library`, the default of every app since 0.6: an app asks once), `--tools reader`
+app: `--tools one` (one tool `library`, the default of most apps since 0.6: an app asks once), `--tools one_reader`
+(the same one schema with reading and export only, the default for Kimi), `--tools reader`
 (the reading commands apart), `--tools all`; `--compact` cuts the answers for a small local model. Through
 `library` a command goes as `{"action": "search_library", "args": {"query": "..."}}`; `args` may also be a JSON text.
 
 ## The commands
 
-Made from the schemas of the server (0.6.1). A parameter in **bold** is required; a command that changes the
+Made from the schemas of the server (0.7.0). A parameter in **bold** is required; a command that changes the
 library first answers with a plan and a token, and changes it only when called again with `confirm=true` and that
 token, after the user's yes.
 
 | Command | Parameters | What it does | Changes the library |
 | --- | --- | --- | --- |
-| `library_guide` | reference: bool \| null = null<br>skill: str \| null = null | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | no |
+| `library_guide` | reference: bool \| null = null<br>detail: str \| null = null<br>skill: str \| null = null | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | no |
+| `search_library_data` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>context: str \| null = null | Search fragments and return JSON data beside the text search: code, PDF and printed pages, citation, text, source quality and references. | no |
+| `verify_answer` | **answer**: str | Check citations and verbatim quotes in a finished answer. | no |
 | `search_library` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>quotes: bool \| null = null<br>context: str \| null = null | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | no |
 | `read_pages` | **code**: str<br>**start_page**: int<br>**end_page**: int | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | no |
 | `book_map` | **code**: str<br>page: int \| null = null | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | no |

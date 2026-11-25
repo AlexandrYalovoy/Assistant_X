@@ -126,6 +126,7 @@ def _smi(query):
             [exe, query, "--format=csv,noheader,nounits"],
             capture_output=True,
             text=True,
+            errors="replace",
             timeout=15,
             creationflags=0x08000000 if _nt else 0,
         )
@@ -401,6 +402,7 @@ class Sensors:
                     ["powershell", "-NoProfile", "-NonInteractive", "-Command", CPU_TEMP_PS],
                     capture_output=True,
                     text=True,
+                    errors="replace",
                     timeout=20,
                     creationflags=0x08000000 | 0x4000,
                 )

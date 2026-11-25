@@ -170,6 +170,24 @@ def test_tessdata_on_the_command_line(tmp_path, monkeypatch):
     assert ocr_page.tessdata_args({}) == ["--tessdata-dir", str(data)]  # no setting: the tessdata beside the program
 
 
+def test_tessdata_detection_needs_no_localized_shell_probe(tmp_path, monkeypatch):
+    """Explicit data and the folder beside Tesseract avoid PyMuPDF's text=True shell probes entirely."""
+    from assistant_x.intake.tools import convert_md
+
+    data = tmp_path / "tessdata"
+    data.mkdir()
+    exe = tmp_path / "tesseract.exe"
+    exe.write_bytes(b"")
+    monkeypatch.setattr(ocr_page, "_tess", str(exe))
+    monkeypatch.setenv("TESSDATA_PREFIX", "configured")
+    assert convert_md.tessdata() == "configured" and convert_md.tessdata("given") == "given"
+    monkeypatch.delenv("TESSDATA_PREFIX")
+    assert convert_md.tessdata() == str(data)
+    monkeypatch.setattr(ocr_page, "_tess", "")
+    with pytest.raises(RuntimeError, match="No tessdata"):
+        convert_md.tessdata()
+
+
 @pytest.mark.slow
 def test_turned_pages_are_read(tmp_path, monkeypatch):
     """A page scanned on its side or upside down is turned by the orientation Tesseract sees and read again."""

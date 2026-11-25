@@ -177,7 +177,7 @@ after an explicit yes → `base_status` → the report; and "AX: make a base pac
 settings?" → `base_export`. The commands return facts and options; Claude asks and summarizes in the user's language.
 
 The commands that change the library (`base_install`, `base_update`, `base_remove`, and `intake_apply` of the
-intake) take two steps (`server/confirm.py`): the plan call (without `confirm`) answers with a token, valid 10
+intake) take two steps (`server/confirm.py`): the plan call (without `confirm`) answers with a token, valid 30
 minutes, for that action and that package or id in that workspace, once, and bound to the package file of the plan
 (its manifest and checksums) or the installed entry of the id; the `confirm=True` call must give it back. A call
 with `confirm=True` alone, which a text inside a document or a package could ask Claude for, changes nothing, and a

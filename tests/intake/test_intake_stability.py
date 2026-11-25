@@ -249,17 +249,15 @@ def test_disk_settings_in_the_settings(project):
 # ---------- debug and the backup ----------
 
 
+def git_call(*args):
+    """Git tests do not inherit command-line config of the host agent (its credential helper may be incomplete)."""
+    env = dict(os.environ, GIT_CONFIG_COUNT="0")
+    return subprocess.run(["git", *args], cwd=CODE, env=env, capture_output=True, text=True, encoding="utf-8")
+
+
 def test_debug_folder_ignored():
-    root = CODE
-    r = subprocess.run(["git", "check-ignore", "-q", "debug/x.txt"], cwd=root)
-    assert r.returncode == 0
-    tracked = subprocess.run(
-        ["git", "-c", "core.quotepath=false", "ls-files", "debug"],
-        cwd=root,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    ).stdout
+    assert git_call("check-ignore", "-q", "debug/x.txt").returncode == 0
+    tracked = git_call("-c", "core.quotepath=false", "ls-files", "debug").stdout
     assert tracked == ""
 
 
@@ -336,4 +334,4 @@ def test_settings_template_has_no_paths_of_this_pc():
     template = tomllib.loads((CODE / "assistant_x" / "templates" / "assistant_x.toml").read_text(encoding="utf-8"))
     assert not {"soffice", "tesseract", "tessdata", "sevenzip"} & set(template["intake"])
     for p in ("assistant_x.local.toml", ".assistant_x/db/x.sqlite", "programs/x.exe"):
-        assert subprocess.run(["git", "check-ignore", "-q", p], cwd=CODE).returncode == 0
+        assert git_call("check-ignore", "-q", p).returncode == 0

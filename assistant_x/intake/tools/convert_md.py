@@ -17,12 +17,38 @@ per document for its chunks."""
 import sys, os, json, re, time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from assistant_x.core import lang
+from assistant_x.core import lang, proc
 from assistant_x.intake.tools import onnx_threads
 from assistant_x.intake.tools import ocr_page
 
 TEXT_CHUNK, OCR_CHUNK = 50, 5
 _open = {}  # path -> the open PDF of this process (one per document, a few at a time)
+
+
+def tessdata(tessdata=None):
+    """The language folder for PyMuPDF without its locale-sensitive shell probes (PyMuPDF 2.0).
+
+    Its get_tessdata uses subprocess.run(text=True) for "tesseract --list-langs" and "where tesseract". In UTF-8
+    mode a localized Windows error kills both reader threads. Prefer the explicit settings and the folder beside the
+    program; the remaining probe goes through proc.run, whose text pipes use errors="replace"."""
+    if tessdata:
+        return tessdata
+    found = os.environ.get("TESSDATA_PREFIX")
+    if found:
+        return found
+    exe = ocr_page.tesseract_exe()
+    if exe:
+        beside = os.path.join(os.path.dirname(exe), "tessdata")
+        if os.path.isdir(beside):
+            return beside
+        try:
+            result = proc.run([exe, "--list-langs"], capture_output=True, text=True, timeout=30)
+            match = re.search(r'List of available languages in "(.+)"', result.stdout)
+            if match and os.path.isdir(match.group(1)):
+                return match.group(1)
+        except (OSError, proc.SubprocessError):
+            pass
+    raise RuntimeError("No tessdata specified and Tesseract is not installed")
 
 
 class _Stdout:
@@ -43,6 +69,7 @@ class _Stdout:
 def open_pdf(path):
     import pymupdf
 
+    pymupdf.get_tessdata = tessdata
     if not isinstance(getattr(pymupdf, "_ax_messages", None), _Stdout):
         pymupdf._ax_messages = _Stdout()
         pymupdf.set_messages(stream=pymupdf._ax_messages)

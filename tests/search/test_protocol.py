@@ -4,7 +4,7 @@
 tool, the reader set, library_guide, texts without an app name, argument schemas an OpenAI strict function takes,
 the compact mode."""
 
-import copy, io
+import copy, io, json
 
 import anyio
 import pytest
@@ -17,7 +17,9 @@ from assistant_x.server import mcp_server, texts, toolsets
 def server(lib, monkeypatch):
     monkeypatch.setattr(mcp_server, "_lib", lib)
     monkeypatch.setattr(mcp_server, "_owner", object())
-    return mcp_server
+    yield mcp_server
+    mcp_server.ACTIVE_TOOLSET = "all"
+    mcp_server.COMPACT = False
 
 
 def listed(mode="legacy"):
@@ -75,6 +77,33 @@ def test_search_through_a_plain_client(server):
     """A client that cannot ask the user (no elicitation, as LM Studio) reads the library as any other."""
     r = called("search_library", {"query": "обводнённости"})
     assert not r.is_error and "[N-00001, PDF" in r.content[0].text
+
+
+def test_structured_search_has_fields_and_a_citation(server):
+    """A client that needs data does not parse the prose of search_library; cards deliberately have no page citation."""
+    r = called("search_library_data", {"query": "обводнённости", "k": 3})
+    data = json.loads(r.content[0].text)
+    assert data["status"] == "ok" and data["hits"]
+    hit = next(x for x in data["hits"] if x["kind"] == "text")
+    assert hit["code"] and hit["pdf_page"] > 0
+    assert hit["citation"].startswith(f"[{hit['code']},") and "PDF " in hit["citation"]
+    assert hit["text"] and "source_quality" in hit and "references" in hit
+
+
+def test_verify_answer_checks_pages_and_quotes(server):
+    good = "«Настоящий стандарт устанавливает порядок расчёта дебита скважины» — [N-00001, PDF 1]"
+    direct = server.verify_answer(good)
+    assert direct["ok"] and direct["references"][0]["ok"] and direct["quotes"][0]["exact"]
+    through_mcp = called("verify_answer", {"answer": good})
+    assert json.loads(through_mcp.content[0].text)["ok"]
+    bad_page = server.verify_answer("«Настоящий стандарт» — [N-00001, PDF 999]")
+    assert not bad_page["ok"] and bad_page["references"][0]["status"] == "no_such_document_or_page"
+    wrong_page = server.verify_answer("«Дебит скважины определяют по табл. 1» — [N-00001, PDF 1]")
+    assert not wrong_page["ok"] and wrong_page["quotes"][0]["status"] == "different_page"
+    duplicate = server.verify_answer(good + " [N-00001, PDF 1]")
+    assert duplicate["ok"] and len(duplicate["quotes"]) == 1 and len(duplicate["references"]) == 1
+    ambiguous = server.verify_answer("«Настоящий стандарт» — [N-00001, PDF 1] [N-00002, PDF 1]")
+    assert not ambiguous["ok"] and ambiguous["warnings"]
 
 
 def test_page_image_has_a_text_beside_the_picture(server):
@@ -282,3 +311,42 @@ def test_a_reference_search_waits_for_the_models_being_loaded(monkeypatch):
     t = time.monotonic()
     mcp_server.wait_models(5)
     assert time.monotonic() - t < 1  # a model that failed is not waited for
+
+
+def test_one_reader_has_one_schema_and_blocks_changes(server, monkeypatch):
+    assert toolsets.allowed("library", "one_reader")
+    assert not toolsets.allowed("search_library", "one_reader")
+    monkeypatch.setattr(server, "ACTIVE_TOOLSET", "one_reader")
+    refused = server.library("intake_run")
+    assert "No command 'intake_run' in one_reader" in refused
+    assert "one_reader" in server.library("intake_run", args="{}")
+    guide = server.library("library_guide")
+    assert "How to answer" in guide and "How to sort the user's documents" not in guide
+
+
+def test_one_reader_bridge_adds_the_short_guide_and_refuses_a_change():
+    import io
+
+    from assistant_x.server import bridge
+
+    sent = []
+    b = bridge.Bridge(toolset="one_reader", out=io.BytesIO())
+    b.forward = sent.append
+    b.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "library", "arguments": {"action": "library_guide", "args": {}}},
+        }
+    )
+    assert sent[0]["params"]["arguments"]["args"]["detail"] == "reader"
+    b.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {"name": "library", "arguments": {"action": "intake_run", "args": {}}},
+        }
+    )
+    assert len(sent) == 1 and b"one_reader" in b.out.getvalue()

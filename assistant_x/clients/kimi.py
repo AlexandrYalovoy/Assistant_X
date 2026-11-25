@@ -3,8 +3,7 @@
 """Kimi (Moonshot AI): the Kimi CLI (`kimi`, ~/.kimi/mcp.json) and Kimi Code (~/.kimi-code/mcp.json, or the folder of
 KIMI_CODE_HOME), each the mcpServers of the MCP clients (command, args, env); Kimi Code also takes startupTimeoutMs and
 toolTimeoutMs for the long first answer. The rules of the library go into the AGENTS.md of the folder, as a block
-between two marker comments (as for Gemini CLI). Both apps when both are there. All the tools: the Kimi models carry
-the intake too.
+between two marker comments (as for Gemini CLI). Both apps when both are there. Reading and export only: the one_reader set keeps the schema small and carries no intake.
 
 Not verified: whether the Kimi CLI reads this global AGENTS.md at all (its documentation names the AGENTS.md files of
 the project, from its root down to the working folder, .kimi/AGENTS.md among them). The block is written all the same;
@@ -22,7 +21,7 @@ from assistant_x import clients as K
 from assistant_x.clients import gemini
 
 NAME, TITLE = "kimi", "Kimi CLI / Kimi Code"
-TOOLSET, COMPACT = "one", False
+TOOLSET, COMPACT = "one_reader", False
 SETTINGS = "`~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md`"
 SKILL = (
     "a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified;"

@@ -103,3 +103,14 @@ def test_detached_child_gets_no_window(tmp_path):
 
 def test_subprocess_names_reexported():
     assert proc.TimeoutExpired is subprocess.TimeoutExpired and proc.DEVNULL == subprocess.DEVNULL
+
+
+def test_text_output_cannot_kill_a_reader_thread():
+    """A localized child may emit bytes that are not UTF-8: the text result keeps a replacement, not a dead thread."""
+    r = proc.run(
+        [sys.executable, "-c", "import os; os.write(1, b'ok: \\xad\\x88')"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert r.returncode == 0 and r.stdout.startswith("ok: ") and "\ufffd" in r.stdout

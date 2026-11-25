@@ -18,9 +18,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **The service** (`assistant-x service`): one per workspace, the models loaded once (on the video card when there is
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
-- **The tool sets**: `one` (the default of every app: one tool, `library`, that carries every command by its name
-  and arguments, so an app asks once or keeps one rule to allow it), `all` (every tool apart: the intake, base
-  packages) or `reader` (`library_guide`, `search_library`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
+- **The tool sets**: `one` (one tool, `library`, that carries every command by its name and arguments),
+  `one_reader` (the same one schema with only reading and export actions; the short reader guide; default for Kimi),
+  `all` (every tool apart: the intake, base packages) or `reader` (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
   descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):
@@ -37,7 +37,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 | Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one | none: `library_guide` |
 | Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one | none: `library_guide` |
 | Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one | none: `library_guide` |
-| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | one | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
+| Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | one_reader | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
 
 `--full` gives an app every tool apart without the compact answers, `--reader` only the reading tools apart (a
 chosen set stays at `assistant-x update`; the default one follows the version), `--compact` the short
@@ -99,11 +99,13 @@ the command that fixes it (the same table, core/problems.py):
 
 The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.
 
-## The tools (0.6.1)
+## The tools (0.7.0)
 
 | Tool | What it does | Set | Changes the library |
 | --- | --- | --- | --- |
 | `library_guide` | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | reader | no |
+| `search_library_data` | Search fragments and return JSON data beside the text search: code, PDF and printed pages, citation, text, source quality and references. | reader | no |
+| `verify_answer` | Check citations and verbatim quotes in a finished answer. | reader | no |
 | `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
 | `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
 | `book_map` | Map of a document: the table of contents with PDF page ranges; with page — the part of the contents around that page and which tables, figures, formulas and appendices lie in its section. | reader | no |

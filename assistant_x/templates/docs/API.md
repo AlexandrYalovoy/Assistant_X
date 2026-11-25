@@ -61,7 +61,8 @@ The messages on `/mcp`, in this order:
 ### Tool sets
 
 A program that talks HTTP to the service sees every command apart (the set `all`). The bridges show a set to their
-app: `--tools one` (one tool `library`, the default of every app since 0.6: an app asks once), `--tools reader`
+app: `--tools one` (one tool `library`, the default of most apps since 0.6: an app asks once), `--tools one_reader`
+(the same one schema with reading and export only, the default for Kimi), `--tools reader`
 (the reading commands apart), `--tools all`; `--compact` cuts the answers for a small local model. Through
 `library` a command goes as `{"action": "search_library", "args": {"query": "..."}}`; `args` may also be a JSON text.
 

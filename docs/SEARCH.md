@@ -80,6 +80,18 @@ the cards are [`assistant_x/core/card.py`](../assistant_x/core/card.py) and the 
 Check the search by hand: `assistant-x search "glycol carry-over from the absorber"` (`--section N`, `--code L-00015`,
 `--doc-type handbook`, `--lang ru`, `--rerank`).
 
+## Bounded context for an agent
+
+`assistant-x context "question" [--mode fast|balanced|deep]` is the one-command fallback when an agent cannot call MCP. It
+prints JSON only (model logs stay out of a successful answer): matches, the best full pages, citations, source quality
+and notes, with no page text duplicated in the matches. Fast allows 3 matches, 1 page and 12 000 page characters;
+balanced allows 4, 2 and 24 000; deep allows 8, 5 and 40 000, plus neighbours of the two leading documents.
+`--code`, `--section`, `--k`, `--pages` and `--max-chars` narrow the request.
+
+On the 19 real engineering design questions (`python tests/golden/context_cost.py --mode MODE`), balanced found 19/26
+expected pages and 11/12 values at about 3 951 tokens a context; deep found 26/26 and 12/12 at about 8 912. Use deep
+for a design or calculation, balanced for a simple fact. `tests/golden/context_cost.py OUT.json` saves the full report.
+
 ## Index check and the state of the library
 
 - `assistant-x check` validates every card against the schema (the languages every text needs, the shelves, the

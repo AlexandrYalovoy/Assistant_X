@@ -29,6 +29,10 @@ with every tool apart calls the commands by their own names. The commands:
   `langs` — languages of the documents (`ru`, `en`). A designation in the query ("ISO 9001:2015") puts the card of that
   document first. A hit marked `card` is the card of a document (what it is about), not a page: read its pages before
   citing; a hit marked "Unit" is an article of a journal issue, from that PDF page.
+- `search_library_data(query, k, sections, codes, …)` — the same search as structured JSON: code, PDF and printed pages,
+  a ready citation, text and source quality. Prefer it when a program or the client needs fields instead of prose.
+- `verify_answer(answer)` — before the final answer, check that every `[code, …, PDF N]` names an existing page and
+  that each «quote» on the same line as one citation is word for word on that page. It does not prove a paraphrase.
 - `read_pages(code, start_page, end_page)` — the text of pages of a document (PDF page numbers, up to 15 at a time).
 - `document_info(code, fields)` — the card: designation, title, authors, year, type and shelf, scope, summary,
   topics, keywords, terms, tables, references, other versions, page numbering; `fields=["toc"]` — its contents with
@@ -82,11 +86,12 @@ If the tools are missing or answer with an error, say so plainly, do not invent 
 
 ## How to answer a question
 
-1. Find what is needed with `search_library`; the search already reranks its results. Always search 2–3 times, even
-   when the first results look enough: rephrase with other terms (synonyms and designations, the terms in the language
-   of the documents and in English), and search the norms apart (`sections=["N"]`): the standards and the company
-   documents of the object of the question (the pipe, the vessel, the pump) — what they require of it, its sizes and
-   kinds. If the topic is narrow, first `list_documents` by keywords and then a search with `codes`.
+1. Find what is needed with `search_library`; the search already reranks its results. For a simple fact start with
+   one search and k=4; repeat only for a weak match, a conflict or another wording that can find a missing
+   requirement. For a complex design search 2–3 times: rephrase with other terms (synonyms and designations, the
+   terms in the language of the documents and in English), and search the norms apart (`sections=["N"]`): the
+   standards and the company documents of the object of the question (the pipe, the vessel, the pump) — what they
+   require of it, its sizes and kinds. If the topic is narrow, first `list_documents` by keywords and then a search with `codes`.
    A design question (a size, a velocity, a pressure, a choice of equipment): name the national standards, sets of
    rules and company documents you know for its object (the governing design norm of the facility, the norms of the
    pipe, the vessel, the pump), look each up by its designation (`list_documents(text="GOST R 58367")`) and search

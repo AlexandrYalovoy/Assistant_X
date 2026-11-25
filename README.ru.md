@@ -34,7 +34,7 @@ DeepSeek Harness, LM Studio и любому другому MCP-клиенту. �
 - **Простая установка.** Попросите агента установить, дважды щёлкните [`Setup.bat`](Setup.bat) или используйте
   офлайн-носитель; права администратора не нужны.
 
-Версия 0.6.1 (прототип) · Windows и Linux · GNU AGPL-3.0-or-later, папки с данными также CC-BY-4.0 (см.
+Версия 0.7.0 (прототип) · Windows и Linux · GNU AGPL-3.0-or-later, папки с данными также CC-BY-4.0 (см.
 [Лицензия](#лицензия)) · Автор: Александр Яловой. Что дальше: [`ROADMAP.ru.md`](ROADMAP.ru.md).
 
 ## Возможности подробно
@@ -63,6 +63,11 @@ DeepSeek Harness, LM Studio и любому другому MCP-клиенту. �
 - Чтение страниц подряд (`read_pages`), карточка документа (`document_info`), список документов
   (`list_documents`).
 - Журнал запросов: что спрашивали приложения и что нашлось, чтобы оценивать качество.
+- **Ограниченная стоимость ответа:** режимы `fast`, `balanced` и `deep` выбираются командами `AX: быстро`, обычным
+  `AX:` и `AX: глубоко`; если MCP недоступен, одна команда выдаёт JSON-контекст. Режимы, измерения и команды:
+  [`COST.md`](docs/COST.ru.md).
+- Структурированные результаты (`search_library_data`) и проверка готового ответа (`verify_answer`) дополняют
+  текстовый поиск и `verify_quote`; для простого факта полная проверка ответа не обязательна.
 
 ### Приём документов
 
@@ -93,7 +98,10 @@ DeepSeek Harness, LM Studio и любому другому MCP-клиенту. �
   LM Studio, Gemini CLI, Antigravity, Cursor, Cline и Kimi и прописывает библиотеку в каждое.
 - Одна локальная служба на ПК: модели загружаются один раз и обслуживают все приложения одновременно.
 - Видеокарта NVIDIA (CUDA), AMD или Intel (DirectML) либо процессор.
-- Режим для малых локальных моделей (`--compact`) и набор читающих инструментов (`--tools reader`: в библиотеке он ничего не меняет).
+- Режим для малых локальных моделей (`--compact`), читающие инструменты (`--tools reader`) и `one_reader`: одна
+  схема `library` только с чтением и экспортом, по умолчанию у Kimi.
+- Kimi CLI / Kimi Code подключаются командой `assistant-x connect kimi`; тот же локальный мост можно установить как
+  персональный плагин Kimi Work. Его команда и путь к рабочей папке относятся к конкретному ПК.
 - MCP по HTTP для других клиентов, с токеном доступа.
 - Навык (skill) каждого приложения пишет программа и обновляет его с новой версией.
 
@@ -153,13 +161,13 @@ Claude Code: `/plugin marketplace add AlexandrYalovoy/Assistant_X`.
 | [`assistant_x/`](assistant_x) | Python-пакет: `core` (рабочая папка, настройки, языковые пакеты, блокировки, форматы файлов, вспомогательные функции для текстов и базы), `search` (сборка базы, эмбеддинги, поиск, отчёты), `intake` (разбор новых документов и его инструменты), `server` (MCP-сервер `assistant-x`), `setup` (установщик, отладочный отчёт, носитель), `cli` (команда `assistant-x`), `lang` (языковые пакеты: данные), `profiles` (профили предметных областей: данные), `templates` |
 | [`pyproject.toml`](pyproject.toml) | пакет `assistant-x`: зависимости и дополнения (extras) `dense`, `intake`, `dml`, `export`, `dev` |
 | [`Setup.bat`](Setup.bat), [`intake.bat`](intake.bat), [`assistant-x.bat`](assistant-x.bat) | запуск двойным щелчком: установка; разбор папки `inbox`; любая команда (`assistant-x.bat help`) |
-| [`scripts/`](scripts) | тонкие .bat-файлы: отладочный отчёт, отчёт о библиотеке, журнал запросов, установка программ для разбора, носитель |
+| [`scripts/`](scripts) | тонкие .bat-файлы: отладочный отчёт, отчёт о библиотеке, журнал запросов, установка программ для разбора, носитель; `release_check.py` проверяет релиз |
 | [`assistant_x/templates/skill/`](assistant_x/templates/skill) | навык `assistant-x` (включается ключом «AX:») из одного ядра: SKILL.md для Claude и для агентов (Codex, DeepSeek Harness), краткие правила инструмента `library_guide`; `assistant-x skill` записывает его для профиля рабочей папки |
 | [`assistant_x/clients/`](assistant_x/clients) | приложения, которые знает `assistant-x connect`: где каждое из них хранит свои MCP-серверы и навыки |
 | [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.ru.md), [`AGENTS.md`](AGENTS.md), [`plugins/`](plugins) | инструкции для агента, который устанавливает Assistant X, заметки для агентов, плагин Codex и Claude Code (вместе с [`.agents/plugins`](.agents/plugins) и [`.claude-plugin`](.claude-plugin)): создаются командой `assistant-x gen-docs` из [`assistant_x/templates/docs/`](assistant_x/templates/docs) |
 | [`assistant_x/schemas/`](assistant_x/schemas) | JSON Schema карточек документов (`card-1.json`) |
 | [`tests/`](tests) | тесты ([`tests/base`](tests/base), [`tests/search`](tests/search), [`tests/intake`](tests/intake), [`tests/corpus`](tests/corpus) и верхний уровень `tests`: см. «Тесты») |
-| [`docs/`](docs) | руководства: поиск ([`SEARCH.md`](docs/SEARCH.ru.md)), разбор ([`INTAKE.md`](docs/INTAKE.ru.md)), базовые пакеты ([`PACKAGES.md`](docs/PACKAGES.ru.md)), приложения ([`CLIENTS.md`](docs/CLIENTS.ru.md)), библиотека из своей программы ([`API.md`](docs/API.ru.md)), глоссарий ([`GLOSSARY.md`](docs/GLOSSARY.ru.md)) |
+| [`docs/`](docs) | руководства: поиск ([`SEARCH.md`](docs/SEARCH.ru.md)), разбор ([`INTAKE.md`](docs/INTAKE.ru.md)), базовые пакеты ([`PACKAGES.md`](docs/PACKAGES.ru.md)), приложения ([`CLIENTS.md`](docs/CLIENTS.ru.md)), библиотека из своей программы ([`API.md`](docs/API.ru.md)), режимы и стоимость ответов ([`COST.md`](docs/COST.ru.md)), глоссарий ([`GLOSSARY.md`](docs/GLOSSARY.ru.md)) |
 | [`ROADMAP.md`](ROADMAP.ru.md), [`CHANGELOG.md`](CHANGELOG.ru.md) | что будет дальше, что изменилось |
 | [`LICENSE`](LICENSE), [`LICENSES/`](LICENSES), [`NOTICE`](NOTICE), [`CLA.md`](CLA.md), [`CONTRIBUTING.md`](CONTRIBUTING.ru.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.ru.md) | лицензии, уведомления автора и сторонних компонентов, соглашение с участником, как внести вклад, кодекс поведения |
 | [`SECURITY.md`](SECURITY.ru.md) | как сообщить об уязвимости конфиденциально и что продукт гарантирует в отношении недоверенных документов и пакетов |
@@ -291,6 +299,7 @@ oil-gas-ru`).
 | `remove CODE [--why TEXT] [--dry-run]` | убрать документ из библиотеки в сторону (`inbox\_to_delete`), его шифр остаётся зарезервированным ([docs/INTAKE.md](docs/INTAKE.ru.md)) |
 | `build [--full]`, `embed [--cpu]` | поисковая база из карточек и текстов; смысловые векторы новых фрагментов |
 | `search "question"` | запрос из командной строки |
+| `context "question" [--mode fast\|balanced\|deep]` | один компактный JSON для ответа: поиск, лучшие полные страницы, ссылки и качество источников |
 | `base export`, `base inspect`, `base install`, `base update`, `base remove` | базовые пакеты: библиотека, которую передают другим людям ([docs/PACKAGES.md](docs/PACKAGES.ru.md)) |
 | `connect APP\|auto`, `connect --list`, `connect --check`, `disconnect APP` | подключить приложения этого ПК ([docs/CLIENTS.md](docs/CLIENTS.ru.md)) |
 | `update` | заново подключить все подключённые приложения (после новой версии: их запись и их навык) |
@@ -387,7 +396,7 @@ connect APP` — в одно приложение (`claude_desktop`, `claude_cod
 при первом запуске (навык, отредактированный вручную, сохраняется), а Claude Desktop один раз сообщит, что загруженный в
 него навык устарел.
 
-`--tools reader` даёт 8 инструментов для чтения (поиск, страницы, оглавление, изображение страницы, проверка цитаты,
+`--tools reader` даёт 10 инструментов для чтения (текстовый и JSON-поиск, страницы, оглавление, изображение страницы, проверка цитаты и ответа,
 карточка, список, руководство) и `export_references`, который пишет копии отсылок только в папку, названную
 пользователем; без этого ключа доступны все инструменты (разбор, базовые пакеты). `--compact`
 сокращает описания и ответы для небольших локальных моделей. Приложения и их файлы: [docs/CLIENTS.md](docs/CLIENTS.ru.md).
@@ -408,7 +417,9 @@ bearer-токен из `mcp_http_token.txt` в служебной папке П�
 [`scripts\check.ps1`](scripts/check.ps1) запускает ruff и все тесты (`-Fast`: без медленных). Медленные тесты (полный
 разбор с LibreOffice и OCR, корпус) помечены `@pytest.mark.slow`: `pytest -m slow tests`.
 [`hooks/pre-commit`](hooks/pre-commit) запускает ruff и `pytest -m "not slow" tests` перед коммитом (скопируйте его в
-`.git/hooks/`).
+`.git/hooks/`). Перед релизом `python scripts/release_check.py` также проверяет версию в документах, созданные файлы и
+версии зависимостей; `tests/golden/context_cost.py` измеряет качество и размер контекстов balanced и deep на настоящих
+инженерных вопросах.
 
 ## Лицензия
 
@@ -442,3 +453,6 @@ bearer-токен из `mcp_http_token.txt` в служебной папке П�
 ## Разработка с помощью ИИ
 
 Assistant X разработан с помощью Claude Desktop и Claude Code на моделях Claude Opus 5.5 и Claude Fable 5.1.
+Дальнейшая доработка и существенные улучшения выполнены с помощью Kimi в Kimi Work на модели K3: подключение к Kimi,
+структурированные MCP-инструменты, проверка ответов, ограниченные режимы fast / balanced / deep и измерения их
+стоимости и качества.
