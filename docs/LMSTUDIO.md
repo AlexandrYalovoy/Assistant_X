@@ -14,10 +14,10 @@ library: it searches, reads the pages and cites the document and the page.
 - Memory for the model: about 8 GB of RAM or video memory for a model of 8 billion parameters in 4 bits, more for a
   larger one, besides the memory of the search of the library.
 
-**Said plainly.** A small local model is much weaker than Claude or ChatGPT: the quality of the assistant in LM
-Studio is much lower and not guaranteed. It works as a narrow reference desk (quotes of the library with their
-references); the engineering answer, a page shown with its quote marked and the intake of documents are for Claude
-or ChatGPT (Codex).
+**Said plainly.** A small local model is much weaker than Kimi Work, Claude or ChatGPT: the quality of the assistant
+in LM Studio is much lower and not guaranteed. It works as a narrow reference desk (quotes of the library with their
+references); the engineering answer, a page shown with its quote marked and the intake of documents are for Kimi Work,
+Claude or ChatGPT (Codex).
 
 ## Install without a command line
 
@@ -59,7 +59,7 @@ AX: what is the design pressure of a three-phase separator by GOST R 58367?
 The model works as a reference desk: it calls `library_guide` once, searches with `search_library` and answers
 with the lines of the library about the question, up to 15, each a verbatim quote with its reference
 `[code, cl. N, table N, p. N, PDF N]`, then the sources; no analysis or calculation of its own (that is the work of
-Claude or ChatGPT). Every quote line comes from the search itself, so it is the text of the page. "Copy the
+Kimi Work, Claude or ChatGPT). Every quote line comes from the search itself, so it is the text of the page. "Copy the
 references to D:\Project": the model calls `export_references`, which puts there the files of the documents cited and
 one PDF of the pages cited with the quotes marked. Nothing else is written: the intake of new documents and the base
 packages are done with `Setup.bat`, `intake.bat` or an app with all the tools (Claude, Codex).

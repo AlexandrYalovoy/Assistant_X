@@ -25,18 +25,26 @@ matches, the best full pages, ready citations, source quality and notes:
 assistant-x context "question" --mode balanced
 ```
 
+This is context for an answer, not the finished engineering answer: the model reads it and answers the user from it alone.
 Use `--mode fast`, `--mode balanced`, `--mode deep`, or narrow the request with `--code`, `--section`, `--k`,
 `--pages` and `--max-chars`. A full page's text is not repeated in its match. A successful run keeps technical model
 logs out of the JSON.
 
 ## One safe MCP tool
 
-Kimi uses `one_reader`: one `library` schema, with reading and reference export only. The bridge and the in-process
-server reject changes. `library_guide(detail="reader")` leaves out intake and base-package administration.
+Every cloud agent defaults to `one_reader`: one `library` schema, with reading and reference export only. The bridge
+and the in-process server reject changes. `library_guide(detail="reader")` leaves out intake and base-package
+administration. For library changes, the user or agent explicitly selects full `one`: `assistant-x connect APP --tools
+one`; switch back with `--tools one_reader`. The full guide is loaded only in full mode, so an ordinary answer does not
+carry its cost. Qwen in LM Studio stays in the compact reference mode.
+
+Fast and deep answers in Kimi Work were live-tested on 25 November 2026; this does not separately confirm Kimi CLI /
+Kimi Code or Kimi Chat.
 
 `search_library_data` returns JSON fields of the document, pages, citation and source quality. `verify_answer` checks
 page references in a finished answer and quotes it can associate with one citation; `verify_quote` is enough for a
-simple fact. Page images are for a user request, a critical number, a complex table or weak OCR, not a default.
+simple fact. It does not prove that an unquoted paraphrase is correct or complete. Page images are for a user request,
+a critical number, a complex table or weak OCR, not a default.
 
 ## Measurements
 
@@ -53,8 +61,8 @@ fallback command was enough.
 
 Cache reads and ordinary input have separate tariffs; a reduction of context is not a monetary quotation.
 
-On 19 real engineering questions, balanced found 19/26 expected pages and 11/12 values at about 3 951 tokens a
-context; improved deep found 26/26 and 12/12 at 8 912. Choose deep for a complex calculation.
+On 19 real engineering questions on 25 November 2026, balanced found 19/26 expected pages and 11/12 values at about
+4 000 tokens a context; improved deep found 26/26 and 12/12 at about 8 900. Choose deep for a complex calculation.
 
 ## Checks
 

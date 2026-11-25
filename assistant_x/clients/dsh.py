@@ -12,7 +12,7 @@ from pathlib import Path
 from assistant_x import clients as K
 
 NAME, TITLE = "dsh", "DeepSeek Harness"
-TOOLSET, COMPACT = "one", False
+TOOLSET, COMPACT = "one_reader", False
 SETTINGS = (
     "`~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x`"
 )

@@ -59,7 +59,7 @@
 | нумерация страниц | page numbering | `doc.page_offset`: печатная страница = страница PDF − значение |
 | отладочный отчёт | debug report | `assistant-x debug-report` |
 | установка | installation | `install.bat` |
-| базовый пакет | base package | готовая библиотека, добавляемая в рабочую папку ([ROADMAP.ru.md](../ROADMAP.ru.md)) |
+| базовый пакет | base package | готовая библиотека, добавляемая в рабочую папку ([PACKAGES.ru.md](PACKAGES.ru.md)) |
 | рабочая папка | workspace | папка данных пользователя с `assistant_x.toml` (`core/workspace.py`) |
 | профиль (предметной области) | (domain) profile | знания отрасли: синонимы, формулировки навыка ([`assistant_x/profiles`](../assistant_x/profiles)) |
 

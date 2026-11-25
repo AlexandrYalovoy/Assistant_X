@@ -5,7 +5,7 @@ English | [Русский](INSTALL_REFERENCE.ru.md)
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/INSTALL_REFERENCE.md: edit that file. -->
 
 The install itself is [INSTALL_FOR_AI.md](../INSTALL_FOR_AI.md): one command in the background and its status. This
-page is for what goes beyond it (version 0.7.0): the steps one by one, the codes of the checks, the update, the
+page is for what goes beyond it (version 0.7.1): the steps one by one, the codes of the checks, the update, the
 tools of the server. Read only the section you need.
 
 ## The steps one by one
@@ -71,6 +71,21 @@ a release without it; it installs the program into a new environment `venv-<vers
 the old one, connects the apps again with the new python and runs `doctor --json` there. When a step fails it
 connects the apps back to the old version and removes the new environment. The library, the workspace and its
 settings are never touched. Tell the user to restart the apps; the old environment stays for a return.
+
+## Choosing reading or full access
+
+Cloud agents default to `one_reader`: one `library` tool with reading and reference export only and the short guide.
+For an explicitly requested intake or base-package work, select full `one`:
+
+```
+<command> connect APP --tools one_reader
+<command> connect APP --tools one
+```
+
+The first restores safe reading, the second enables every command through the same schema. Changes still need a plan
+and the user's explicit yes. An explicit choice is kept during updates. The legacy `--reader` and `--full` mean `reader`
+(the reading tools apart) and `all` (every tool apart). Local Qwen in LM Studio stays in the compact reference mode,
+without library changes. Cost and measurements: [COST.md](COST.md).
 
 ## What the tools are
 

@@ -19,9 +19,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **Сервис** (`assistant-x service`): один на рабочую папку, модели загружаются один раз (на видеокарту, если она
   есть), каждый запрос — с токеном, принимаются только Host и Origin 127.0.0.1 и localhost; после 30 минут без
   запросов сервис закрывается, и локальная модель снова получает видеопамять.
-- **Наборы инструментов**: `one` (один инструмент `library`, который выполняет любую команду по её имени и
-  аргументам), `one_reader` (та же одна схема, но только чтение и экспорт; короткое руководство; по умолчанию у
-  Kimi), `all` (все инструменты по отдельности: разбор, базовые пакеты) или `reader` (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`).
+- **Наборы инструментов**: `one_reader` (одна схема `library`, только чтение и экспорт, короткое руководство;
+  по умолчанию у всех облачных агентов), `one` (та же схема со всеми командами, явно выбранная для пополнения),
+  `all` (все инструменты по отдельности) или `reader` (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`).
   `--compact`: описания в одно предложение, не больше 4 результатов поиска, ответы обрезаются на 6 000 символов с
   подсказкой, как получить остальное.
 - **Правила для модели**: инструкции сервера при рукопожатии, навык — если у приложения есть папка навыков, и
@@ -30,24 +30,23 @@ app ──stdio──> assistant-x mcp ─────────────�
 
 | Приложение | Имя для `connect` | Что записывается | Набор инструментов | Навык |
 | --- | --- | --- | --- | --- |
-| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (и папка Microsoft Store), `mcpServers` | one | zip-архив, который загружает пользователь (`assistant-x skill`) |
-| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one | `~/.claude/skills/assistant-x` |
-| Codex и приложение ChatGPT для компьютера | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one | `~/.agents/skills/assistant-x` |
-| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): патч `insert` для `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one | `~/.dsh/skills/assistant-x` |
+| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (и папка Microsoft Store), `mcpServers` | one_reader | zip-архив, который загружает пользователь (`assistant-x skill`) |
+| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one_reader | `~/.claude/skills/assistant-x` |
+| Codex и приложение ChatGPT для компьютера | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one_reader | `~/.agents/skills/assistant-x` |
+| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): патч `insert` для `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one_reader | `~/.dsh/skills/assistant-x` |
 | LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | one, компактный | нет: `library_guide`; `assistant-x skill --app guide` пишет системный промпт для пресета |
-| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); правила в `~/.gemini/GEMINI.md` | one | блок кратких правил в `~/.gemini/GEMINI.md` |
-| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one | нет: `library_guide` |
-| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one | нет: `library_guide` |
-| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one | нет: `library_guide` |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); правила в `~/.gemini/GEMINI.md` | one_reader | блок кратких правил в `~/.gemini/GEMINI.md` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one_reader | нет: `library_guide` |
+| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one_reader | нет: `library_guide` |
+| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one_reader | нет: `library_guide` |
 | Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` и `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; правила в `AGENTS.md` | one_reader | блок кратких правил в `AGENTS.md` папки (читает ли Kimi CLI глобальный файл, не проверено; инструкции сервера и `library_guide` передают правила в любом случае) |
 
-`--full` даёт приложению все инструменты по отдельности без компактных ответов, `--reader` — только инструменты
-чтения по отдельности (выбранный набор сохраняется при `assistant-x update`, набор по умолчанию следует версии),
-`--compact` —
-короткие ответы. Перед изменением рядом с файлом настроек сохраняется его копия (`<name>.backup-<date>`, три
-последние), записи и комментарии других программ остаются, повторный `connect` ничего не меняет, а файл, который не
-удаётся прочитать, не трогается: команда печатает запись, которую нужно добавить вручную. `assistant-x disconnect APP`
-убирает запись и навык (навык, изменённый вручную, остаётся).
+`--full` (все инструменты по отдельности) и `--reader` (инструменты чтения по отдельности) сохранены для совместимости.
+Явный выбор `assistant-x connect APP --tools one_reader|one|reader|all` сохраняется при `assistant-x update`; без явного
+выбора используется текущий режим по умолчанию. `--compact` даёт короткие ответы. Перед изменением рядом с файлом
+настроек сохраняется его копия (`<name>.backup-<date>`, три последние), записи и комментарии других программ остаются,
+повторный `connect` ничего не меняет, а файл, который не удаётся прочитать, не трогается: команда печатает запись,
+которую нужно добавить вручную. `assistant-x disconnect APP` убирает запись и навык (навык, изменённый вручную, остаётся).
 
 `assistant-x connect --list` показывает приложения (найдено, подключено, набор инструментов); `assistant-x connect
 --check [APP]` запускает запись каждого подключённого приложения так же, как это делает приложение, проходит
@@ -61,6 +60,24 @@ app ──stdio──> assistant-x mcp ─────────────�
 страницы, карточки, список документов, изображения страниц, а при разборе — черновики карточек с началом текста новых
 файлов. С локальной моделью в LM Studio (или в DeepSeek Harness и Codex, направленных на LM Studio) ничего не покидает
 ПК.
+
+## Kimi Work
+
+Kimi Work может сам установить программу по ссылке на репозиторий: агент следует [`INSTALL_FOR_AI.md`](../INSTALL_FOR_AI.ru.md),
+затем создаёт или обновляет исходник персонального плагина, проверяет его и регистрирует через официальный механизм
+Kimi. Пользователь открывает вкладку **Personal** и нажимает **＋**; перезапуск клиента не нужен. Обновление делается
+только в исходнике с повышением локальной версии и повторной регистрацией, после чего пользователь нажимает **Update**.
+Установленная копия напрямую не редактируется. Личные пути и настройки не публикуются.
+
+Плагин использует один инструмент `library`: обычное чтение — `one_reader`, а для явно запрошенного пополнения в
+исходнике выбирается полный `one`, с планом и подтверждением пользователя. `assistant-x connect kimi` настраивает Kimi
+CLI / Kimi Code, но не устанавливает и не обновляет плагин Work — это отдельное действие.
+
+25 ноября 2026 г. в Kimi Work на настоящей библиотеке проверены быстрый и глубокий ответы. Kimi CLI / Kimi Code и Kimi
+Chat вживую отдельно не проверялись; их нельзя перечислять как проверенные только потому, что работает Work. Если MCP
+недоступен, но агент может выполнить команду, используется одна резервная команда `assistant-x context "вопрос"
+--mode fast|balanced|deep`, без изучения исходного кода и без написания собственного клиента. Режимы и измерения:
+[`COST.md`](COST.ru.md).
 
 ## Codex и ChatGPT
 
@@ -104,7 +121,7 @@ Codex CLI, его расширение для IDE и приложение ChatGP
 
 Сайты chatgpt.com и chat.deepseek.com не могут запустить программу на ПК, поэтому до библиотеки им не добраться.
 
-## Инструменты (0.7.0)
+## Инструменты (0.7.1)
 
 | Инструмент | Что делает | Набор | Меняет библиотеку |
 | --- | --- | --- | --- |

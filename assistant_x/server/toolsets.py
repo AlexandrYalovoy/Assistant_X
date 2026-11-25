@@ -5,8 +5,8 @@ long their answers may be. Light (standard library only): the stdio bridge (serv
 
     reader  the tools that read the library (READER) and export_references (EXPORT, copies into a folder of the user)
     all     every tool, the intake and the base packages too
-    one     one tool, `library`, that carries every command (its action and its arguments): the default of most apps.
-    one_reader  the same one schema, but only READER and EXPORT actions; the short reader guide. Default for Kimi.
+    one     one tool, `library`, with every command (action and arguments): explicitly selected for library changes.
+    one_reader  the same one schema with only READER and EXPORT actions and the short guide: the default for cloud agents.
             The chat of Claude Desktop asks once a tool before the first call, the others keep one rule to allow it, so
             one tool asks once (the author, 2026-11-04). In the compact mode it carries the commands of REFERENCE
 

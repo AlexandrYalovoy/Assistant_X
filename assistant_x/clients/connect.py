@@ -2,20 +2,20 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Connect the apps of this PC to the library.
 
-    assistant-x connect APP|auto [--full | --reader] [--compact] [--dry-run]   write the entry (and the skill)
+    assistant-x connect APP|auto [--tools one_reader|one|reader|all] [--compact] [--dry-run]  write the entry (and skill)
     assistant-x connect --list                                                  the apps, found and connected
     assistant-x connect --check [APP]                                           the handshake and a search, per app
     assistant-x connect lmstudio --link                                         the "Add to LM Studio" link
     assistant-x disconnect APP|all [--dry-run]                                  take the entry out
     assistant-x update                                                          every connected app again
 
-APP: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline; auto: every one found on
-this PC. The tool set of every app is one tool, `library`, that carries every command (an app asks once, or
-keeps one rule to allow it; the author, 2026-11-04) unless --full (every tool apart, no compact answers) or --reader
-(the reading tools apart); LM Studio gets the compact answers by default. Every connection is recorded in
-connections.json of the machine folder: `update` writes them again (a new version of the program, another python),
-with the default of this version unless the tool set was chosen, and the library service refreshes their outdated
-skills when it starts."""
+APP: claude_desktop, claude_code, codex, dsh, lmstudio, gemini, antigravity, cursor, cline, kimi; auto: every one found.
+The default for cloud agents is one_reader: one `library` schema, reading and reference export only, with the short
+reader guide. --tools one explicitly enables every command through the same one schema, including the intake and base
+packages; changes still need a plan and the user's confirmation. --reader selects the reading tools apart and --full
+every tool apart (the legacy options). Only LM Studio keeps the compact reference mode by default. Every connection is
+recorded in connections.json: `update` uses a newly selected default unless the tool set was explicitly chosen, and the
+library service refreshes outdated skills when it starts."""
 
 import argparse, json, os, re, sys, threading, time
 
@@ -55,7 +55,7 @@ def connect(names, toolset=None, compact=None, dry=False, python=None, root=None
 
 def record(name, toolset, e, chosen=False):
     """connections.json: the app connected with the entry e (assistant-x update writes it again with a new python;
-    with the default tool set of its version unless chosen: --full or --reader)."""
+    with the default tool set of its version unless chosen: --tools, --full or --reader)."""
     from assistant_x import __version__
 
     K.remember(
@@ -228,8 +228,9 @@ def main(argv=None, disconnecting=False):
     ap.add_argument("apps", nargs="*", help=f"{', '.join(K.APPS)}, auto or all")
     ap.add_argument("--dry-run", action="store_true")
     if not disconnecting:
-        ap.add_argument("--full", action="store_true", help="every tool, no compact answers")
-        ap.add_argument("--reader", action="store_true", help="only the reading tools")
+        ap.add_argument("--tools", choices=toolsets.TOOLSETS, help="explicit access: one_reader, one, reader or all")
+        ap.add_argument("--full", action="store_true", help="every tool, no compact answers (legacy --tools all)")
+        ap.add_argument("--reader", action="store_true", help="only the reading tools (legacy --tools reader)")
         ap.add_argument("--compact", action="store_true", help="short descriptions and answers (small local models)")
         ap.add_argument("--list", action="store_true", help="the apps: found, connected")
         ap.add_argument("--check", action="store_true", help="the handshake and a search through every entry")
@@ -258,7 +259,9 @@ def main(argv=None, disconnecting=False):
         return 0 if res and all(r["ok"] for r in res.values()) else 1
     if not a.apps:
         ap.error("name the app (or auto)")
-    toolset = "all" if a.full else "reader" if a.reader else None
+    if a.tools and (a.full or a.reader):
+        ap.error("--tools cannot be combined with --full or --reader")
+    toolset = a.tools or ("all" if a.full else "reader" if a.reader else None)
     compact = False if a.full else True if a.compact else None
     if a.link:
         from assistant_x.clients import lmstudio

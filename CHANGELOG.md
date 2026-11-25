@@ -4,6 +4,18 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.7.1 — 2026-11-26
+
+- Cloud agents default to the economical read-only `one_reader`; the full `one` is selected explicitly with
+  `assistant-x connect APP --tools one` for intake and base packages, and that choice survives updates. Local Qwen in
+  LM Studio keeps the compact reference mode without library changes.
+- The English and Russian guides describe the three answer modes, cheap reading and full library changes, Kimi Work
+  installation and updates, actual client-test limits and the fallback command. The unmaintained roadmap is removed.
+- `verify_answer` checks multi-word verbatim quotes without treating one word in quotation marks as a quotation;
+  critical numbers and terms still need `verify_quote`, and an unquoted paraphrase is not certified.
+- Documentation tests cover every one of the 27 application commands in both languages. The personal Kimi Work plugin
+  source is validated; its registration and installation remain a separate action.
+
 ## 0.7.0 — 2026-11-25
 
 - The `COST.md` guide documents the explicit fast / balanced / deep modes, their measured context savings and quality;

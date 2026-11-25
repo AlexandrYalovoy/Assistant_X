@@ -3,7 +3,9 @@
 """Kimi (Moonshot AI): the Kimi CLI (`kimi`, ~/.kimi/mcp.json) and Kimi Code (~/.kimi-code/mcp.json, or the folder of
 KIMI_CODE_HOME), each the mcpServers of the MCP clients (command, args, env); Kimi Code also takes startupTimeoutMs and
 toolTimeoutMs for the long first answer. The rules of the library go into the AGENTS.md of the folder, as a block
-between two marker comments (as for Gemini CLI). Both apps when both are there. Reading and export only: the one_reader set keeps the schema small and carries no intake.
+between two marker comments (as for Gemini CLI). Both apps when both are there. The default is cheap reading through
+one_reader. `assistant-x connect kimi --tools one` explicitly enables the intake and base packages through the same
+one `library` schema; every change still needs the plan and the user's confirmation.
 
 Not verified: whether the Kimi CLI reads this global AGENTS.md at all (its documentation names the AGENTS.md files of
 the project, from its root down to the working folder, .kimi/AGENTS.md among them). The block is written all the same;

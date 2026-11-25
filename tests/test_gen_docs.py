@@ -5,6 +5,8 @@ without `assistant-x gen-docs` fails here (and in CI). The plugin files are vali
 
 import json
 
+import anyio
+
 from assistant_x import __version__
 from assistant_x.setup import gen_docs
 
@@ -40,3 +42,17 @@ def test_the_agent_instructions_point_at_the_latest_release():
     assert "`library_guide`" in text and f"version {__version__}" in text
     agents = (gen_docs.ROOT / "AGENTS.md").read_text(encoding="utf-8")
     assert agents.count(gen_docs.BEGIN) == 1 and "INSTALL_FOR_AI.md" in agents
+
+
+def test_every_application_command_and_the_access_choice_are_documented():
+    """All 27 application commands are in both references; the cheap reader and explicit full mode stay visible."""
+    from assistant_x.server import mcp_server
+
+    tools = anyio.run(mcp_server.mcp.list_tools)
+    commands = {t.name for t in tools if t.name != "library"}
+    assert len(commands) == 27
+    for name in ("API.md", "API.ru.md", "CLIENTS.md", "CLIENTS.ru.md", "INSTALL_REFERENCE.md", "INSTALL_REFERENCE.ru.md"):
+        text = (gen_docs.ROOT / "docs" / name).read_text(encoding="utf-8")
+        missing = sorted(command for command in commands if f"`{command}`" not in text)
+        assert not missing, f"{name}: {missing}"
+        assert "one_reader" in text and "--tools one" in text

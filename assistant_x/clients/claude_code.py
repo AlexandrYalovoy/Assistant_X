@@ -13,7 +13,7 @@ from assistant_x.core import proc
 from assistant_x.server import toolsets
 
 NAME, TITLE = "claude_code", "Claude Code"
-TOOLSET, COMPACT = "one", False
+TOOLSET, COMPACT = "one_reader", False
 SETTINGS = "`claude mcp add-json -s user` (`~/.claude.json`)"
 SKILL = "`~/.claude/skills/assistant-x`"
 

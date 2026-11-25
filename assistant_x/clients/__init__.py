@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """The apps Assistant X connects to, one module each: where the app keeps its MCP servers and its skills, how to add,
 read and remove the entry of the library. Every entry starts the same stdio bridge (assistant-x mcp,
-server/bridge.py) with the workspace in its environment; the reading tools only for DeepSeek Harness and LM Studio
-unless --full.
+server/bridge.py) with the workspace in its environment. Every cloud agent defaults to cheap, read-only `one_reader`;
+`--tools one` explicitly enables the full library. Only the small local model in LM Studio keeps the compact reference
+mode.
 
     claude_desktop  claude_desktop_config.json (mcpServers)          Claude Desktop
     claude_code     `claude mcp add-json -s user` (~/.claude.json)   Claude Code

@@ -206,6 +206,21 @@ def test_gemini_cli_settings_and_rules(home):
     assert (d / "GEMINI.md").read_text(encoding="utf-8") == "# My rules\n\nAnswer briefly.\n"
 
 
+def test_cloud_agents_default_to_cheap_reading_and_allow_full_choice(home, capsys):
+    """Cloud agents use the small reader by default; an explicit --tools one enables the full library."""
+    for name in K.APPS:
+        app = K.app(name)
+        if name == "lmstudio":
+            assert app.TOOLSET == "one" and app.COMPACT
+        else:
+            assert app.TOOLSET == "one_reader" and not app.COMPACT
+    (home / ".gemini").mkdir()
+    assert connect.main(["gemini", "--tools", "one", "--dry-run", "--json"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["gemini"][0][1] == "would write"
+    assert K.connections() == {}  # a dry run records nothing
+
+
 def test_kimi_cli_and_kimi_code_settings_and_rules(home, monkeypatch):
     """Kimi: ~/.kimi/mcp.json and the folder of Kimi Code (KIMI_CODE_HOME), each with the rules in its AGENTS.md;
     Kimi Code takes the timeouts in ms. The formats from the documentation of Moonshot AI, not a running Kimi."""
@@ -283,7 +298,7 @@ def test_auto_takes_the_apps_found_and_the_skills(home, monkeypatch):
     text = skill_file.read_text(encoding="utf-8")
     assert "Claude" not in text and skill.stamped(text) == (skill.stamped(text)[0], True)
     rows = {r["app"]: r for r in connect.listing()}
-    assert rows["dsh"]["connected"] and rows["dsh"]["tools"] == "one" and rows["lmstudio"]["compact"]
+    assert rows["dsh"]["connected"] and rows["dsh"]["tools"] == "one_reader" and rows["lmstudio"]["compact"]
     assert not rows["codex"]["found"] and rows["dsh"]["through_service"]
     skill_file.write_text(text + "\nMy own rule.\n", encoding="utf-8")  # edited by hand: kept
     assert skills.state("dsh") == "edited"
@@ -391,7 +406,7 @@ def test_update_and_the_skills_refreshed_by_the_service(home, tmp_path, monkeypa
     (home / ".codex").mkdir()
     connect.connect(["dsh", "codex"], python=sys.executable, say=lambda s: None)
     rec = K.connections()
-    assert rec["dsh"]["toolset"] == "one" and rec["codex"]["toolset"] == "one" and rec["dsh"]["version"]
+    assert rec["dsh"]["toolset"] == "one_reader" and rec["codex"]["toolset"] == "one_reader" and rec["dsh"]["version"]
     assert not rec["dsh"]["chosen"]
     connect.connect(["codex"], toolset="all", python=sys.executable, say=lambda s: None)  # chosen by the user: kept
     K.remember("dsh", dict(K.connections()["dsh"], toolset="reader", chosen=None))  # a record of an older version
@@ -404,7 +419,7 @@ def test_update_and_the_skills_refreshed_by_the_service(home, tmp_path, monkeypa
     assert out == {str(home / ".dsh" / "skills" / "assistant-x" / "SKILL.md"): "skill updated"}
     assert codex_skill.read_text(encoding="utf-8").endswith("mine\n")
     assert sorted(connect.update(say=lambda s: None)) == ["codex", "dsh"]
-    assert K.connections()["dsh"]["version"] == "9.9" and dsh.read()["args"][-2:] == ["--tools", "one"]
+    assert K.connections()["dsh"]["version"] == "9.9" and dsh.read()["args"][-2:] == ["--tools", "one_reader"]
     assert K.connections()["codex"]["toolset"] == "all" and "--tools" not in codex.read()["args"]
     connect.disconnect(["dsh"], say=lambda s: None)
     assert "dsh" not in K.connections()
@@ -459,8 +474,8 @@ def test_the_installer_records_claude_desktop_and_update_moves_it(home, tmp_path
     old = r"C:\OLD\venv\Scripts\python.exe"
     (home / "AppData" / "Roaming" / "Claude").mkdir(parents=True)
     install.register_desktop(old, False)
-    assert K.connections()["claude_desktop"]["toolset"] == "one"  # the one tool: one question (colleague test 2026-11-04)
-    assert claude_desktop.read()["command"] == old and claude_desktop.read()["args"][-2:] == ["--tools", "one"]
+    assert K.connections()["claude_desktop"]["toolset"] == "one_reader"  # cheap reading by default
+    assert claude_desktop.read()["command"] == old and claude_desktop.read()["args"][-2:] == ["--tools", "one_reader"]
     assert list(connect.update(say=lambda s: None)) == ["claude_desktop"]
     assert claude_desktop.read()["command"] == K.windowless(sys.executable)
     K.remember("claude_desktop", None)  # an install before the record: the entry in the settings alone
@@ -469,7 +484,7 @@ def test_the_installer_records_claude_desktop_and_update_moves_it(home, tmp_path
     e = claude_desktop.read()
     assert e["command"] == K.windowless(sys.executable) and e["env"]["AX_WORKSPACE"] == lib
     assert K.connections()["claude_desktop"]["workspace"] == lib
-    assert e["args"][-2:] == ["--tools", "one"]  # an older install with every tool apart moves to the one tool
+    assert e["args"][-2:] == ["--tools", "one_reader"]  # an older full install moves to cheap reading
 
 
 @pytest.mark.parametrize("app", ["gemini", "kimi"])
@@ -565,7 +580,7 @@ def test_one_tool_for_the_chat_of_claude_desktop():
 
     assert toolsets.allowed("library", "one") and not toolsets.allowed("search_library", "one")
     assert not toolsets.allowed("library", "all") and not toolsets.allowed("library", "reader")
-    assert claude_desktop.TOOLSET == "one" and "--tools" in K.entry(toolset="one")["args"]
+    assert claude_desktop.TOOLSET == "one_reader" and "--tools" in K.entry(toolset="one")["args"]
     assert {"search_library", "page_image", "export_references", "intake_apply"} <= mcp_server.ONE_ACTIONS
     assert "library" not in mcp_server.ONE_ACTIONS
     assert mcp_server.library("nope").startswith("No command 'nope'")

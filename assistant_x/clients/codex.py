@@ -11,7 +11,7 @@ from pathlib import Path
 from assistant_x import clients as K
 
 NAME, TITLE = "codex", "Codex and the ChatGPT desktop app"
-TOOLSET, COMPACT = "one", False
+TOOLSET, COMPACT = "one_reader", False
 SETTINGS = "`~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60`"
 SKILL = "`~/.agents/skills/assistant-x`"
 TABLE = f"mcp_servers.{K.SERVER}"

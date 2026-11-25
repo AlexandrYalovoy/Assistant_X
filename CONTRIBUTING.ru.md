@@ -28,7 +28,7 @@ https://gitflic.ru/project/alexandryalovoy/assistant_x, — копия для ч
 
 - Всё в репозитории пишется на американском английском: код, комментарии, сообщения, документация. Слова, по которым
   распознаются документы (шаблоны, синонимы, стоп-слова языкового пакета или профиля), остаются на языке документов. У
-  каждого документа для людей (README, CHANGELOG, ROADMAP, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, INSTALL_FOR_AI,
+  каждого документа для людей (README, CHANGELOG, SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, INSTALL_FOR_AI,
   docs/) есть русский двойник `name.ru.md`: меняйте оба в одном коммите; `tests/test_docs_pairs.py` проверяет, что их
   заголовки, блоки кода, ссылки и версии совпадают. Создаваемые программой берутся из `assistant_x/templates/docs`
   (`*.ru.md` и `ru.json`) через `assistant-x gen-docs`.

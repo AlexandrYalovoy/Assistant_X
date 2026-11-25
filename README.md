@@ -6,10 +6,10 @@ English | [Русский](README.ru.md)
 
 Assistant X turns a folder of your documents (from a few files to tens of thousands of books, standards, papers,
 reports and scans) into a private library that your AI assistant understands by meaning, not just by words. Ask in
-your own words, and in under a second it finds the right passage among thousands of files, reads the page and
-answers with an exact quote. The library runs on your computer and works with Claude, Codex, the ChatGPT desktop app, DeepSeek
-Harness, LM Studio and any other MCP client. It is made for anyone who works from documents: engineers, researchers,
-students, doctors, lawyers, economists.
+your own words, and it finds the right passage among thousands of files, reads the page and answers with an exact quote.
+The library runs on your computer and works with Kimi Work, Claude, Codex, the ChatGPT desktop app, DeepSeek Harness,
+LM Studio and any other MCP client. Fast and deep answers in Kimi Work are live-tested on the real library. It is made
+for anyone who works from documents: engineers, researchers, students, doctors, lawyers, economists.
 
 ## At a glance
 
@@ -19,7 +19,7 @@ students, doctors, lawyers, economists.
   FB2, DjVu, images, HTML, archives (ZIP, 7z, RAR) and e-mails with attachments. Duplicates and new editions are
   found, every document gets a card and a shelf, every step is journaled.
 - **Search by words and by meaning**, with reranking, tables of contents of books and a warning when a scan is weak.
-  Measured on a real library of 7 208 documents (945 262 fragments), 25 questions: 0.63 s a question (median), 0.89 s
+  A historical measurement of 1 November 2026 on the library as it then was: 7 208 documents (945 262 fragments), 25 questions: 0.63 s a question (median), 0.89 s
   for 95 % of them on a laptop NVIDIA RTX 5080; 2.1 s and 3.7 s on its processor (Intel Core Ultra 9 275HX). The first
   question after a start waits about 20 s for the models; meanwhile the search answers by words.
 - **One library for all your AI apps.** A single local service loads the models once (an NVIDIA, AMD or Intel video
@@ -31,17 +31,35 @@ students, doctors, lawyers, economists.
   already there.
 - **English and Russian** documents out of the box; one card schema and one set of shelves for any field, with domain
   profiles for special vocabularies.
+- **Three answer modes.** `AX: быстро` for a short fact, an unqualified `AX:` for the economical default, and
+  `AX: глубоко` for a calculation or conflicting norms. Every mode keeps references and source checks.
+- **Reading and library changes.** Ordinary questions use cheap, read-only `one_reader`; the intake and base packages
+  use the explicitly selected full `one`, with a plan and your confirmation. Qwen in LM Studio only reads.
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
-Version 0.7.0 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
-[License](#license)) · Author: Alexandr Yalovoy. What comes next: [`ROADMAP.md`](ROADMAP.md).
+Version 0.7.1 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+[License](#license)) · Author: Alexandr Yalovoy.
 
 ## Features in detail
 
+### Fast, ordinary and deep answers
+
+| Request | Mode | What the model receives | When to use it |
+| --- | --- | --- | --- |
+| `AX: быстро <question>` | `fast` | 3 matches, 1 full page, up to 12 000 page characters | a simple fact and the deliberately shortest answer |
+| `AX: <question>` | `balanced` | 4 matches, up to 2 full pages, up to 24 000 characters | the ordinary economical question |
+| `AX: глубоко <question>` | `deep` | 8 matches, up to 5 pages, up to 40 000 characters | design, calculation, conflicting norms |
+
+“Ordinary” is the user-facing name of `balanced`, the default. There is no separate `economical` mode: every mode
+bounds search hits, full pages and repeated reasoning. Deep also reads neighbours of the two leading documents. For
+example: "AX: быстро what is the maximum gas velocity in a flowline?", "AX: what are the pump-reserve requirements?",
+"AX: глубоко select the gas-pipeline diameter for the given flows and velocity". The design, measurements and the
+fallback command: [`COST.md`](docs/COST.md).
+
 ### Answers you can check
 
-- Every answer names the document and the place: `[code, cl. N, table N, p. N, PDF N]` (clause, table, printed page; a part not known is left out), with a code such as `N00012` that stays
+- Every answer names the document and the place: `[code, cl. N, table N, p. N, PDF N]` (clause, table, printed page; a part not known is left out), with a code such as `N-00012` that stays
   with the document for its whole life.
 - A verbatim quote is checked against the text of its page (`verify_quote`); a quote that does not match is caught.
 - The image of the original page (`page_image`): look at a table, a diagram or a formula with your own eyes; the
@@ -99,8 +117,10 @@ Version 0.7.0 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the dat
   LM Studio, Gemini CLI, Antigravity, Cursor, Cline and Kimi and writes the library into each.
 - One local service per PC: the models are loaded once and serve every app at the same time.
 - An NVIDIA video card (CUDA), an AMD or Intel one (DirectML), or the processor.
-- A mode for small local models (`--compact`), reading tools (`--tools reader`) and `one_reader`: one `library`
-  schema with reading and export only, the default for Kimi.
+- **Cheap reading and full library changes are separate.** Cloud agents default to `one_reader`: one `library` schema
+  with reading and export only. Select the full `one` explicitly with `assistant-x connect APP --tools one` for the
+  intake and base packages; switch back with `--tools one_reader`. Only local Qwen in LM Studio keeps the compact
+  reference mode without library changes.
 - Kimi CLI / Kimi Code are connected by `assistant-x connect kimi`; the same local bridge can be installed as a
   personal plugin in Kimi Work. Its command and workspace path are specific to that PC.
 - MCP over HTTP for other clients, with an access token.
@@ -122,7 +142,7 @@ Version 0.7.0 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the dat
 
 ### Installation and support
 
-- Tell your agent (Codex, Claude Code, DeepSeek Harness) "Install Assistant X for me" and it does the rest.
+- Tell your agent (Kimi Work, Codex, Claude Code, DeepSeek Harness) "Install Assistant X for me" and it does the rest.
 - [`Setup.bat`](Setup.bat) by double-click, without administrator rights; an offline medium for a PC without
   internet.
 - Windows 10/11 and Linux; Python 3.11.
@@ -140,11 +160,13 @@ Version 0.7.0 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the dat
 
 ## Get the program
 
-**The shortest way: ask your agent.** Tell Codex, Claude Code or DeepSeek Harness: "Install Assistant X for me:
-https://github.com/AlexandrYalovoy/Assistant_X" — the agent follows [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md) (the
-latest release, the connection of your apps, a check), and you confirm its commands. Codex and the ChatGPT desktop app
-also take the plugin of this repository: `codex plugin marketplace add AlexandrYalovoy/Assistant_X`; Claude Code:
-`/plugin marketplace add AlexandrYalovoy/Assistant_X`.
+**The shortest way: ask your agent.** Tell Kimi Work, Codex, Claude Code or DeepSeek Harness: "Install Assistant X for
+me: https://github.com/AlexandrYalovoy/Assistant_X" — the agent follows [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md) (the
+latest release, the connection of your apps, a check), and you confirm its commands. In Kimi Work, also install or update
+the personal Assistant X plugin through Personal → ＋ or Update: updating the program does not update that plugin itself,
+and no client restart is needed. Codex and
+the ChatGPT desktop app also take the plugin of this repository: `codex plugin marketplace add
+AlexandrYalovoy/Assistant_X`; Claude Code: `/plugin marketplace add AlexandrYalovoy/Assistant_X`.
 
 - **The repository:** https://github.com/AlexandrYalovoy/Assistant_X (issues and pull requests there); a mirror on
   GitFlic: https://gitflic.ru/project/alexandryalovoy/assistant_x. Clone it with
@@ -169,7 +191,7 @@ also take the plugin of this repository: `codex plugin marketplace add AlexandrY
 | [`assistant_x/schemas/`](assistant_x/schemas) | the JSON Schema of the document cards (`card-1.json`) |
 | [`tests/`](tests) | the tests ([`tests/base`](tests/base), [`tests/search`](tests/search), [`tests/intake`](tests/intake), [`tests/corpus`](tests/corpus), and the top of `tests`: see Tests) |
 | [`docs/`](docs) | the guides: the search ([`SEARCH.md`](docs/SEARCH.md)), the intake ([`INTAKE.md`](docs/INTAKE.md)), base packages ([`PACKAGES.md`](docs/PACKAGES.md)), the apps ([`CLIENTS.md`](docs/CLIENTS.md)), the library from a program of your own ([`API.md`](docs/API.md)), answer modes and cost ([`COST.md`](docs/COST.md)), the glossary ([`GLOSSARY.md`](docs/GLOSSARY.md)) |
-| [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md) | what comes next, what changed |
+| [`CHANGELOG.md`](CHANGELOG.md) | what changed in each version; suggestions for the future are accepted through Issues |
 | [`LICENSE`](LICENSE), [`LICENSES/`](LICENSES), [`NOTICE`](NOTICE), [`CLA.md`](CLA.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | the licenses, the notices of the author and of the third-party components, the contributor agreement, how to contribute, the code of conduct |
 | [`SECURITY.md`](SECURITY.md) | how to report a vulnerability privately, and what the product guarantees about untrusted documents and packages |
 
@@ -219,7 +241,8 @@ model; with `0/8192` the answers lose their quotes, see [docs/LMSTUDIO.md](docs/
 Every reference, in every app and mode, has one form: the code, the clause, the table, the printed page and the PDF
 page that are known, e.g. `[N-00001, cl. 6.2.1.9, table 1, PDF 36]` (in Russian `[N-00001, п. 6.2.1.9, табл. 1,
 PDF 36]`); a part that is not known is left out, never made up. The full engineering answer (initial data,
-requirements by level, calculation, checks) comes from Claude or ChatGPT (Codex).
+requirements by level, calculation, checks) comes from Kimi Work, Claude or ChatGPT (Codex). Fast and deep answers in
+Kimi Work are live-tested; Kimi CLI / Kimi Code and Kimi Chat have not been tested separately.
 
 ## Your workspace (not in the repository)
 
@@ -239,9 +262,10 @@ the PC, in `%USERPROFILE%\.assistant_x\models`). Keep your own copy of `library`
 - **Memory:** 8 GB of RAM recommended (the models and the intake of scans take several GB).
 - **Video card:** optional. NVIDIA (CUDA), AMD or Intel with its own memory (DirectML) make the search by meaning
   faster; without one it runs on the processor.
-- **An app with MCP:** Claude Desktop or Claude Code; Codex (CLI, IDE) or the ChatGPT desktop app; DeepSeek
-  Harness; LM Studio with a model that can call tools; or any MCP client (stdio, or streamable HTTP with
-  `assistant-x serve --http`). The library also works from the command line alone ("Without an app" below).
+- **An app with MCP:** Kimi Work with the Assistant X plugin; Claude Desktop or Claude Code; Codex (CLI, IDE) or the
+  ChatGPT desktop app; DeepSeek Harness; LM Studio with a model that can call tools; or any MCP client (stdio, or
+  streamable HTTP with `assistant-x serve --http`). The library also works from the command line alone ("Without an
+  app" below).
 - **Where your text goes:** the search runs on your PC, but what the tools give the model goes to the provider of
   that model (Anthropic, OpenAI, DeepSeek, Google, Moonshot AI for Kimi, the provider set in Cursor or Cline): your
   question, the search hits (fragments, quotes, codes and titles of documents), the pages it reads, cards and the
@@ -384,11 +408,12 @@ gives it too.
 
 After a new version, `assistant-x update` writes the entries again; the skills of the apps are refreshed by the library
 service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
-outdated.
+outdated. In Kimi Work, update the personal Assistant X plugin separately through Personal → Update; no restart is needed.
 
-`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks, card, list, the guide)
-and `export_references`, which writes copies of the references only into a folder the user names; without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
-models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
+`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks,
+card, list, the guide) and `export_references`, which writes copies of the references only into a folder the user names.
+`--tools one` enables every command through one schema, `--tools all` every command apart; `--compact` shortens the
+descriptions and the answers for small local models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
 `assistant-x serve --http [--port 8765]` (every request needs the bearer token of `mcp_http_token.txt` in the PC folder:
 [SECURITY.md](SECURITY.md)).
 
