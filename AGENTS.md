@@ -30,9 +30,9 @@
 - Use the project `.venv`. Run `python scripts/check.py --fast` during development and `python
   scripts/release_check.py` on a release commit. Do not edit generated documents directly: edit
   `assistant_x/templates/docs/`, then run `assistant-x gen-docs` and its `--check`.
-- Keep the user's library outside the repository. Read-only MCP work uses `--tools one_reader` (one schema) or
-  `--tools reader`; `assistant-x context "question" --mode fast|balanced|deep` is the bounded one-command fallback.
-  `AX: быстро` selects fast, `AX: глубоко` selects deep, and an unqualified AX question uses balanced. Changing
-  documents or packages always needs the plan and confirmation flow. Do not bypass a busy machine lock.
+- Keep the user's library outside the repository. Cloud agents default to cheap `one_reader` reading; full library
+  changes require an explicit `--tools one`, a plan and user confirmation. Qwen in LM Studio stays compact and read-only.
+  `assistant-x context "question" --mode fast|balanced|deep` is the bounded one-command fallback. `AX: быстро` selects
+  fast, `AX: глубоко` selects deep, and an unqualified AX question uses balanced. Do not bypass a busy machine lock.
 - Every code change needs a focused test. Human-facing documents have Russian twins; code, comments, tests and commit
   messages use US English. Do not publish, tag, push or update an installed application without the maintainer's word.

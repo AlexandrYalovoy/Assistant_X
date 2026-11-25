@@ -33,6 +33,8 @@ for anyone who works from documents: engineers, researchers, students, doctors, 
   profiles for special vocabularies.
 - **Three answer modes.** `AX: быстро` for a short fact, an unqualified `AX:` for the economical default, and
   `AX: глубоко` for a calculation or conflicting norms. Every mode keeps references and source checks.
+- **Reading and library changes.** Ordinary questions use cheap, read-only `one_reader`; the intake and base packages
+  use the explicitly selected full `one`, with a plan and your confirmation. Qwen in LM Studio only reads.
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
@@ -115,8 +117,10 @@ fallback command: [`COST.md`](docs/COST.md).
   LM Studio, Gemini CLI, Antigravity, Cursor, Cline and Kimi and writes the library into each.
 - One local service per PC: the models are loaded once and serve every app at the same time.
 - An NVIDIA video card (CUDA), an AMD or Intel one (DirectML), or the processor.
-- A mode for small local models (`--compact`), reading tools (`--tools reader`) and `one_reader`: one `library`
-  schema with reading and export only, the default for Kimi.
+- **Cheap reading and full library changes are separate.** Cloud agents default to `one_reader`: one `library` schema
+  with reading and export only. Select the full `one` explicitly with `assistant-x connect APP --tools one` for the
+  intake and base packages; switch back with `--tools one_reader`. Only local Qwen in LM Studio keeps the compact
+  reference mode without library changes.
 - Kimi CLI / Kimi Code are connected by `assistant-x connect kimi`; the same local bridge can be installed as a
   personal plugin in Kimi Work. Its command and workspace path are specific to that PC.
 - MCP over HTTP for other clients, with an access token.
@@ -159,7 +163,8 @@ fallback command: [`COST.md`](docs/COST.md).
 **The shortest way: ask your agent.** Tell Kimi Work, Codex, Claude Code or DeepSeek Harness: "Install Assistant X for
 me: https://github.com/AlexandrYalovoy/Assistant_X" — the agent follows [`INSTALL_FOR_AI.md`](INSTALL_FOR_AI.md) (the
 latest release, the connection of your apps, a check), and you confirm its commands. In Kimi Work, also install or update
-the personal Assistant X plugin and open a new chat: updating the program does not update that plugin itself. Codex and
+the personal Assistant X plugin through Personal → ＋ or Update: updating the program does not update that plugin itself,
+and no client restart is needed. Codex and
 the ChatGPT desktop app also take the plugin of this repository: `codex plugin marketplace add
 AlexandrYalovoy/Assistant_X`; Claude Code: `/plugin marketplace add AlexandrYalovoy/Assistant_X`.
 
@@ -403,11 +408,12 @@ gives it too.
 
 After a new version, `assistant-x update` writes the entries again; the skills of the apps are refreshed by the library
 service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
-outdated. In Kimi Work, update the personal Assistant X plugin separately and open a new chat.
+outdated. In Kimi Work, update the personal Assistant X plugin separately through Personal → Update; no restart is needed.
 
-`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks, card, list, the guide)
-and `export_references`, which writes copies of the references only into a folder the user names; without it every tool (the intake, base packages). `--compact` shortens the descriptions and the answers for small local
-models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
+`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks,
+card, list, the guide) and `export_references`, which writes copies of the references only into a folder the user names.
+`--tools one` enables every command through one schema, `--tools all` every command apart; `--compact` shortens the
+descriptions and the answers for small local models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
 `assistant-x serve --http [--port 8765]` (every request needs the bearer token of `mcp_http_token.txt` in the PC folder:
 [SECURITY.md](SECURITY.md)).
 

@@ -7,7 +7,8 @@ English | [Русский](INSTALL_FOR_AI.ru.md)
 You are an agent (Kimi Work, Codex, Claude Code, DeepSeek Harness or another one that runs commands) and the user asked
 you to install or connect **Assistant X**: a local library of the user's documents with search by words and by meaning,
 served to AI apps over MCP. In Kimi Work, the personal Assistant X plugin is installed and updated separately from the
-program; open a new chat after updating it. These instructions are of version 0.7.0; always install the **latest
+program; after registration the user clicks ＋ or Update on the Personal tab, without a client restart. These instructions
+are of version 0.7.0; always install the **latest
 release**: https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## Token budget: read this first
@@ -90,3 +91,17 @@ icon by the clock → Quit; DeepSeek Harness and LM Studio reload by themselves)
 
 The step-by-step commands, the codes of doctor, the update and the tools of the server:
 [docs/INSTALL_REFERENCE.md](docs/INSTALL_REFERENCE.md).
+
+## 6. When the request came from Kimi Work
+
+The program itself is already installed from the link above. Additionally create or update the **source** of the
+personal Assistant X plugin through the plugin-builder skill; generate a new manifest with `create_plugin.py`, never by
+hand. It must carry the user's actual `assistant_x.server.bridge` command and workspace, with `--tools one_reader` for
+ordinary reading. For an explicitly requested intake or base-package work, use `--tools one`; every change still needs
+a plan and the user's explicit yes.
+
+Validate the source with `validate_plugin.py`, then register it through the official Kimi mechanism. Ask the user to open
+**Personal** and click **＋**: registration alone does not install the plugin, and installation needs no client restart.
+For an update, edit only the source, bump its local version and register it again; the user clicks **Update**. Never edit
+the installed copy. Do not write personal paths or tokens into Git, and do not claim Kimi Chat works without a separate
+live test.

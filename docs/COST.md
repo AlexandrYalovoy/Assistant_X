@@ -32,10 +32,14 @@ logs out of the JSON.
 
 ## One safe MCP tool
 
-Kimi uses `one_reader`: one `library` schema, with reading and reference export only. The bridge and the in-process
-server reject changes. `library_guide(detail="reader")` leaves out intake and base-package administration. Fast and
-deep answers in Kimi Work were live-tested on 25 November 2026; this does not separately confirm Kimi CLI / Kimi Code
-or Kimi Chat.
+Every cloud agent defaults to `one_reader`: one `library` schema, with reading and reference export only. The bridge
+and the in-process server reject changes. `library_guide(detail="reader")` leaves out intake and base-package
+administration. For library changes, the user or agent explicitly selects full `one`: `assistant-x connect APP --tools
+one`; switch back with `--tools one_reader`. The full guide is loaded only in full mode, so an ordinary answer does not
+carry its cost. Qwen in LM Studio stays in the compact reference mode.
+
+Fast and deep answers in Kimi Work were live-tested on 25 November 2026; this does not separately confirm Kimi CLI /
+Kimi Code or Kimi Chat.
 
 `search_library_data` returns JSON fields of the document, pages, citation and source quality. `verify_answer` checks
 page references in a finished answer and quotes it can associate with one citation; `verify_quote` is enough for a

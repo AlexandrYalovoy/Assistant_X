@@ -104,6 +104,8 @@ def test_verify_answer_checks_pages_and_quotes(server):
     assert duplicate["ok"] and len(duplicate["quotes"]) == 1 and len(duplicate["references"]) == 1
     ambiguous = server.verify_answer("«Настоящий стандарт» — [N-00001, PDF 1] [N-00002, PDF 1]")
     assert not ambiguous["ok"] and ambiguous["warnings"]
+    emphasis = server.verify_answer("Обычное «удобное» значение — [N-00001, PDF 1]")
+    assert emphasis["ok"] and not emphasis["quotes"]  # a single quoted word is emphasis, not a verbatim quotation
 
 
 def test_page_image_has_a_text_beside_the_picture(server):

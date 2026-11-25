@@ -18,9 +18,9 @@ app ──stdio──> assistant-x mcp ─────────────�
 - **The service** (`assistant-x service`): one per workspace, the models loaded once (on the video card when there is
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
-- **The tool sets**: `one` (one tool, `library`, that carries every command by its name and arguments),
-  `one_reader` (the same one schema with only reading and export actions; the short reader guide; default for Kimi),
-  `all` (every tool apart: the intake, base packages) or `reader` (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
+- **The tool sets**: `one_reader` (one `library` schema, reading and export only, the short guide; the default of
+  every cloud agent), `one` (the same schema with every command, explicitly selected for library changes), `all`
+  (every tool apart) or `reader` (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). `--compact`: one-sentence
   descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):
@@ -28,23 +28,23 @@ app ──stdio──> assistant-x mcp ─────────────�
 
 | App | `connect` name | Settings written | Tool set | Skill |
 | --- | --- | --- | --- | --- |
-| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers` | one | a zip the user uploads (`assistant-x skill`) |
-| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one | `~/.claude/skills/assistant-x` |
-| Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one | `~/.agents/skills/assistant-x` |
-| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one | `~/.dsh/skills/assistant-x` |
+| Claude Desktop | `claude_desktop` | `%APPDATA%\Claude\claude_desktop_config.json` (and the Microsoft Store folder), `mcpServers` | one_reader | a zip the user uploads (`assistant-x skill`) |
+| Claude Code | `claude_code` | `claude mcp add-json -s user` (`~/.claude.json`) | one_reader | `~/.claude/skills/assistant-x` |
+| Codex and the ChatGPT desktop app | `codex` | `~/.codex/config.toml` (`CODEX_HOME`), `[mcp_servers.assistant-x]`, `startup_timeout_sec = 60` | one_reader | `~/.agents/skills/assistant-x` |
+| DeepSeek Harness | `dsh` | `~/.dsh/cordis.patch.yml` (`DSH_HOME`): an `insert` patch of `@deepseek-ai/dsh-mcp-client`, `serverName: assistant-x` | one_reader | `~/.dsh/skills/assistant-x` |
 | LM Studio | `lmstudio` | `~/.lmstudio/mcp.json`, `mcpServers` | one, compact | the preset `~/.lmstudio/config-presets/Assistant X.preset.json` (the guide as the system prompt) |
-| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | one | a block of the short rules in `~/.gemini/GEMINI.md` |
-| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one | none: `library_guide` |
-| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one | none: `library_guide` |
-| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one | none: `library_guide` |
+| Gemini CLI | `gemini` | `~/.gemini/settings.json`, `mcpServers` (`timeout`); the rules in `~/.gemini/GEMINI.md` | one_reader | a block of the short rules in `~/.gemini/GEMINI.md` |
+| Antigravity | `antigravity` | `~/.gemini/antigravity/mcp_config.json`, `mcpServers` | one_reader | none: `library_guide` |
+| Cursor | `cursor` | `~/.cursor/mcp.json`, `mcpServers` | one_reader | none: `library_guide` |
+| Cline (VS Code) | `cline` | `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`, `mcpServers` (`timeout`, `disabled`, `autoApprove`) | one_reader | none: `library_guide` |
 | Kimi CLI / Kimi Code | `kimi` | `~/.kimi/mcp.json` and `~/.kimi-code/mcp.json` (`KIMI_CODE_HOME`), `mcpServers`; the rules in `AGENTS.md` | one_reader | a block of the short rules in `AGENTS.md` of the folder (whether the Kimi CLI reads the global one is not verified; the instructions of the server and `library_guide` carry the rules regardless) |
 
-`--full` gives an app every tool apart without the compact answers, `--reader` only the reading tools apart (a
-chosen set stays at `assistant-x update`; the default one follows the version), `--compact` the short
-answers. A copy of a settings file is kept beside it before a change (`<name>.backup-<date>`, the newest three), the
-entries and comments of others stay, a second `connect` changes nothing, and a file that cannot be read is left alone:
-the command prints the entry to add by hand. `assistant-x disconnect APP` takes the entry and the skill out (a skill
-edited by hand stays).
+The legacy `--full` (every tool apart) and `--reader` (the reading tools apart) remain. An explicit
+`assistant-x connect APP --tools one_reader|one|reader|all` is kept by `assistant-x update`; without an explicit choice,
+the current default applies. `--compact` gives short answers. A copy of a settings file is kept beside it before a change
+(`<name>.backup-<date>`, the newest three), the entries and comments of others stay, a second `connect` changes nothing,
+and a file that cannot be read is left alone: the command prints the entry to add by hand. `assistant-x disconnect APP`
+takes the entry and the skill out (a skill edited by hand stays).
 
 `assistant-x connect --list` shows the apps (found, connected, tool set); `assistant-x connect --check [APP]` starts
 the entry of every connected app as the app does, makes the handshake, lists the tools and searches once.
@@ -60,9 +60,15 @@ DeepSeek Harness and Codex pointed at LM Studio).
 
 ## Kimi Work
 
-Kimi Work connects through a separate personal Assistant X plugin using the same local bridge and the `one_reader` set:
-one `library` tool, reading and reference export only. `assistant-x connect kimi` configures Kimi CLI / Kimi Code; it
-does not install or update the Work plugin, which is a separate action. Open a new chat after updating the plugin.
+Kimi Work can install the program itself from a repository link: the agent follows
+[`INSTALL_FOR_AI.md`](../INSTALL_FOR_AI.md), then creates or updates the personal-plugin source, validates it and
+registers it through the official Kimi mechanism. The user opens **Personal** and clicks **＋**; no client restart is
+needed. Updates edit only the source, bump its local version and register it again, after which the user clicks
+**Update**. The installed copy is never edited directly. Personal paths and settings are never published.
+
+The plugin uses one `library` tool: `one_reader` for ordinary reading, or full `one` in the plugin source for an
+explicitly requested library change, with a plan and the user's confirmation. `assistant-x connect kimi` configures Kimi
+CLI / Kimi Code; it does not install or update the Work plugin, which is a separate action.
 
 On 25 November 2026, fast and deep answers in Kimi Work were live-tested on the real library. Kimi CLI / Kimi Code and
 Kimi Chat have not been live-tested separately; they must not be called tested merely because Work works. When MCP is

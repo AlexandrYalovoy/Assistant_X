@@ -516,7 +516,8 @@ def search_library_data(
 @logged
 def verify_answer(answer: str) -> dict:
     """Check citations and verbatim quotes in a finished answer. Every [code, …, PDF N] is checked against an existing
-    document and page. A «quote» or “quote” on the same line as one citation is checked against that page. The tool
+    document and page. A multi-word «quote» or “quote” on the same line as one citation is checked against that page;
+    a single quoted word is ordinary emphasis (check a critical word or number separately with verify_quote). The tool
     does not prove that an unquoted paraphrase is complete or correct. Fix every failed item before giving the answer."""
     import re
 
@@ -551,7 +552,7 @@ def verify_answer(answer: str) -> dict:
                     "status": "ok" if text is not None else "no_such_document_or_page",
                 }
             )
-        found_quotes = [a or b for a, b in rx_quote.findall(line)]
+        found_quotes = [a or b for a, b in rx_quote.findall(line) if len((a or b).split()) > 1]
         if found_quotes and len(line_refs) != 1:
             unverified_quote = True
             warnings.append("A quote needs exactly one citation on its line to be checked automatically.")

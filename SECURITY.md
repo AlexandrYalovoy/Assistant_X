@@ -58,10 +58,10 @@ format, archives in the inbox, base packages received from other people. These a
   `%USERPROFILE%\.assistant_x\mcp_http_token.txt` (the bridge reads it itself: no app setting holds it; on Windows
   the file takes the access list of the user's profile folder, which only the user, SYSTEM and the administrators may
   read; the mode 0600 it is written with counts on Linux), and a Host or Origin other than 127.0.0.1 or localhost is
-  refused. Every tool carries its annotations (read only, destructive), so
-  an app asks the user before a change; DeepSeek Harness and LM Studio get the reading tools only by default. Kimi uses
-  `one_reader`: one schema with reading and export actions only, rejected changes being enforced by the bridge and the
-  in-process server.
+  refused. Every tool carries its annotations (read only, destructive), so an app asks the user before a change. Cloud
+  agents default to `one_reader`: one schema with reading and export actions only, with every other action rejected by
+  both the bridge and the in-process server. The full `one` is selected explicitly (`assistant-x connect APP --tools one`)
+  for the intake and base packages. Local Qwen in LM Studio stays in the compact reference mode without library changes.
   The commands that change the library (`base_install`, `base_update`, `base_remove`, `intake_apply`) need two steps:
   the plan, then a confirmation that echoes the token of that plan. The token is random, valid 30 minutes, used once,
   and bound to the action, its target, the workspace and what the plan was made of (the package file by its manifest

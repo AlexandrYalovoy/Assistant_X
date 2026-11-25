@@ -72,6 +72,21 @@ the old one, connects the apps again with the new python and runs `doctor --json
 connects the apps back to the old version and removes the new environment. The library, the workspace and its
 settings are never touched. Tell the user to restart the apps; the old environment stays for a return.
 
+## Choosing reading or full access
+
+Cloud agents default to `one_reader`: one `library` tool with reading and reference export only and the short guide.
+For an explicitly requested intake or base-package work, select full `one`:
+
+```
+<command> connect APP --tools one_reader
+<command> connect APP --tools one
+```
+
+The first restores safe reading, the second enables every command through the same schema. Changes still need a plan
+and the user's explicit yes. An explicit choice is kept during updates. The legacy `--reader` and `--full` mean `reader`
+(the reading tools apart) and `all` (every tool apart). Local Qwen in LM Studio stays in the compact reference mode,
+without library changes. Cost and measurements: [COST.md](COST.md).
+
 ## What the tools are
 
 | Tool | What it does | Set | Changes the library |
