@@ -170,7 +170,7 @@ def test_a_second_run_installs_no_package_that_is_there(monkeypatch):
     assert install.installed("py", "cpu") and not install.installed("py", "cuda")
     out["v"] = f"torch=2.9.1+cu128\nax=0.1|{here}"
     assert not install.installed("py", "cuda")
-    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|C:\elsewhere"
+    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|C:\\elsewhere"
     assert not install.installed("py", "cuda")
     runs = []
     monkeypatch.setattr(install, "run", lambda cmd, dry, **kw: runs.append(cmd) or 0)

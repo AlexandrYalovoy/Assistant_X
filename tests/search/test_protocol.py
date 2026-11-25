@@ -100,6 +100,10 @@ def test_verify_answer_checks_pages_and_quotes(server):
     assert not bad_page["ok"] and bad_page["references"][0]["status"] == "no_such_document_or_page"
     wrong_page = server.verify_answer("«Дебит скважины определяют по табл. 1» — [N-00001, PDF 1]")
     assert not wrong_page["ok"] and wrong_page["quotes"][0]["status"] == "different_page"
+    duplicate = server.verify_answer(good + " [N-00001, PDF 1]")
+    assert duplicate["ok"] and len(duplicate["quotes"]) == 1 and len(duplicate["references"]) == 1
+    ambiguous = server.verify_answer("«Настоящий стандарт» — [N-00001, PDF 1] [N-00002, PDF 1]")
+    assert not ambiguous["ok"] and ambiguous["warnings"]
 
 
 def test_page_image_has_a_text_beside_the_picture(server):
@@ -315,6 +319,7 @@ def test_one_reader_has_one_schema_and_blocks_changes(server, monkeypatch):
     monkeypatch.setattr(server, "ACTIVE_TOOLSET", "one_reader")
     refused = server.library("intake_run")
     assert "No command 'intake_run' in one_reader" in refused
+    assert "one_reader" in server.library("intake_run", args="{}")
     guide = server.library("library_guide")
     assert "How to answer" in guide and "How to sort the user's documents" not in guide
 

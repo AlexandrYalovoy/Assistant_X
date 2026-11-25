@@ -66,7 +66,15 @@ def flags(kw, hidden=None):
     return cf
 
 
+def _text_errors(kw):
+    """A text pipe must not lose its reader thread on a localized tool's output in another code page."""
+    if kw.get("text") or kw.get("universal_newlines") or kw.get("encoding"):
+        kw.setdefault("errors", "replace")
+    return kw
+
+
 def _kw(kw, hidden):
+    _text_errors(kw)
     if _nt:
         kw["creationflags"] = flags(kw, hidden)
     return kw
@@ -85,6 +93,7 @@ def call(cmd, *, hidden=None, **kw):
 def popen(cmd, *, hidden=None, detach=False, **kw):
     """subprocess.Popen with no window. detach=True: the child outlives this process (see the module); the process
     gets .broke_away — False when the job object of the client refused the breakaway (the child ends with the job)."""
+    _text_errors(kw)
     if not detach:
         return subprocess.Popen(cmd, **_kw(kw, hidden))
     if not _nt:

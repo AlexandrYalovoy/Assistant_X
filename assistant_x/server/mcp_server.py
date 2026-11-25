@@ -527,6 +527,7 @@ def verify_answer(answer: str) -> dict:
     rx_page = re.compile(r"\bPDF\s+(\d+)\b")
     rx_quote = re.compile(r"«([^»\n]+)»|“([^”\n]+)”")
     refs, quotes, warnings = [], [], []
+    unverified_quote = False
     seen = set()
     for line in answer.splitlines():
         line_refs = []
@@ -536,7 +537,8 @@ def verify_answer(answer: str) -> dict:
             if not code or not page:
                 continue
             key = (code.group(1), int(page.group(1)))
-            line_refs.append(key)
+            if key not in line_refs:
+                line_refs.append(key)
             if key in seen:
                 continue
             seen.add(key)
@@ -551,6 +553,7 @@ def verify_answer(answer: str) -> dict:
             )
         found_quotes = [a or b for a, b in rx_quote.findall(line)]
         if found_quotes and len(line_refs) != 1:
+            unverified_quote = True
             warnings.append("A quote needs exactly one citation on its line to be checked automatically.")
         elif found_quotes:
             code, page = line_refs[0]
@@ -573,7 +576,7 @@ def verify_answer(answer: str) -> dict:
                 )
     if not refs:
         warnings.append("No [code, …, PDF N] references were found in the answer.")
-    ok = bool(refs) and all(r["ok"] for r in refs) and all(r["ok"] for r in quotes)
+    ok = bool(refs) and not unverified_quote and all(r["ok"] for r in refs) and all(r["ok"] for r in quotes)
     return {
         "status": "ok" if ok else "failed",
         "ok": ok,
