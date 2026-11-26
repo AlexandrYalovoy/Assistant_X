@@ -167,11 +167,15 @@ def test_whole_pipeline(tmp_path):
     soffice = intake_cfg.find_soffice()
     path = make_project(tmp_path / "Проект", soffice)
     cfg = intake_cfg.load(path)
-    assert intake.main(["--config", str(path), "run"]) == 0
+    if soffice:
+        from tests.intake.test_intake_formats import xlsx
+
+        xlsx(cfg.inbox / "register.xlsx", {"Equipment": [["Equipment", "Velocity"], ["SeparatorXZ", 12.5]]})
+    assert intake.main(["--config", str(path), "run", "--spreadsheets", "include"]) == 0
     work = sorted(cfg.work.glob("20??-??-??"))[-1]
     state = State(work / "state.sqlite")
     rows = {r["rel"]: r for r in state.all()}
-    n_docs = 4 if soffice else 3
+    n_docs = 5 if soffice else 3
     assert sum(r["status"] == "done" for r in rows.values()) == n_docs, {
         k: (r["status"], r.get("why")) for k, r in rows.items()
     }
@@ -198,6 +202,16 @@ def test_whole_pipeline(tmp_path):
     assert f"Documents: {1 + n_docs}." in cat
     assert sorted(os.listdir(cfg.inbox)) == sorted(["_README.md", "_duplicates", "_to_delete", "_rejected"])
     assert journal.is_current(cfg.index)[0]
+    if soffice:
+        from assistant_x.core.common import load_config
+        from assistant_x.search.retrieval import Library
+        from tests.search.conftest import build
+
+        build(str(path))
+        library = Library(load_config(str(path)))
+        hits = library.search("SeparatorXZ", k=5, dense=False, rerank=False)
+        assert any("12.5" in (library.page_text(h["code"], h["page"]) or "") for h in hits if h.get("page"))
+        library.con.close()
     from assistant_x.intake.tools import ocr_score  # the scores of the new texts reach index/ocr_quality.tsv
 
     scores = ocr_score.read_tsv(cfg.index / ocr_score.TSV_NAME)

@@ -6,7 +6,7 @@ English | [Русский](SECURITY.ru.md)
 
 | Version | Supported |
 | --- | --- |
-| 0.7.1 (the current one) | yes |
+| 0.7.2 (the current one) | yes |
 
 Only the latest released version gets security fixes. Assistant X is a prototype: a fix comes as a new version, not
 as a patch of an old one.
@@ -58,11 +58,11 @@ format, archives in the inbox, base packages received from other people. These a
   `%USERPROFILE%\.assistant_x\mcp_http_token.txt` (the bridge reads it itself: no app setting holds it; on Windows
   the file takes the access list of the user's profile folder, which only the user, SYSTEM and the administrators may
   read; the mode 0600 it is written with counts on Linux), and a Host or Origin other than 127.0.0.1 or localhost is
-  refused. Every tool carries its annotations (read only, destructive), so an app asks the user before a change. Cloud
+  refused. Every tool carries its annotations (read only, destructive), so a client can identify changes and request confirmation. Cloud
   agents default to `one_reader`: one schema with reading and export actions only, with every other action rejected by
   both the bridge and the in-process server. The full `one` is selected explicitly (`assistant-x connect APP --tools one`)
   for the intake and base packages. Local Qwen in LM Studio stays in the compact reference mode without library changes.
-  The commands that change the library (`base_install`, `base_update`, `base_remove`, `intake_apply`) need two steps:
+  By default `base_install`, `base_update`, `base_remove`, `library_remove` and `intake_apply` use two steps:
   the plan, then a confirmation that echoes the token of that plan. The token is random, valid 30 minutes, used once,
   and bound to the action, its target, the workspace and what the plan was made of (the package file by its manifest
   and checksums, the registry entry of the package to remove, the `meta.jsonl` of the batch): a single call written
@@ -72,12 +72,14 @@ format, archives in the inbox, base packages received from other people. These a
   instructions tell Claude that document text is data, and a fragment with words addressed to an AI assistant is
   marked "Suspect text".
 
+The `one_intake` profile also permits inbox intake. An explicit local `auto_apply` setting can apply clean batches automatically. Replacements and flagged batches still require review. Plan tokens bind the workspace, action, target and inputs. They do not authenticate a chat session.
+
 ### What it does not guarantee
 
 - **Content.** The texts and cards of a document or a package are what Claude reads. A document may contain wrong
   facts or text written to steer Claude ("prompt injection"); the marking of suspect text is a simple heuristic and
   misses what it does not know. Claude cites the page so the user can check it.
-- **The user's yes.** The token proves that a plan was made in this conversation, not that the user agreed to it: a
+- **The user's yes.** The token proves that a plan was made for the bound operation, not that the user agreed to it: a
   text that makes Claude call the plan and then the confirmation in two steps gets a valid token. Where the client
   cannot ask the user itself (no MCP elicitation), the user's own attention is the last guard: read the plan Claude
   shows, and say yes only to a change you asked for.

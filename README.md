@@ -33,12 +33,13 @@ for anyone who works from documents: engineers, researchers, students, doctors, 
   profiles for special vocabularies.
 - **Three answer modes.** `AX: быстро` for a short fact, an unqualified `AX:` for the economical default, and
   `AX: глубоко` for a calculation or conflicting norms. Every mode keeps references and source checks.
-- **Reading and library changes.** Ordinary questions use cheap, read-only `one_reader`; the intake and base packages
+- **Inbox intake in Codex.** `assistant-x connect codex --tools one_intake` enables intake and reading without package administration. Put documents in the local inbox; `intake_list` previews optional formats.
+- **Reading and library changes.** Ordinary questions use cheap, read-only `one_reader`; base packages
   use the explicitly selected full `one`, with a plan and your confirmation. Qwen in LM Studio only reads.
 - **Easy to install.** Ask your agent to install it, double-click [`Setup.bat`](Setup.bat), or use an offline medium;
   no administrator rights needed.
 
-Version 0.7.1 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
+Version 0.7.2 (prototype) · Windows and Linux · GNU AGPL-3.0-or-later, the data folders also CC-BY-4.0 (see
 [License](#license)) · Author: Alexandr Yalovoy.
 
 ## Features in detail
@@ -410,7 +411,7 @@ After a new version, `assistant-x update` writes the entries again; the skills o
 service at its first start (a skill edited by hand is kept), and Claude Desktop says once that its uploaded skill is
 outdated. In Kimi Work, update the personal Assistant X plugin separately through Personal → Update; no restart is needed.
 
-`--tools reader` gives the 10 reading tools (text and JSON search, pages, contents, page image, quote and answer checks,
+`--tools reader` gives the 11 reading tools (text and JSON search, pages, contents, page image, quote and answer checks,
 card, list, the guide) and `export_references`, which writes copies of the references only into a folder the user names.
 `--tools one` enables every command through one schema, `--tools all` every command apart; `--compact` shortens the
 descriptions and the answers for small local models. The apps and their files: [docs/CLIENTS.md](docs/CLIENTS.md). Clients that speak MCP over HTTP only:
@@ -460,9 +461,14 @@ The author is not responsible for the documents and libraries that users load in
 documents belong to their right holders; users are responsible for checking that they may load and use what they load.
 This is in addition to the no-warranty clause of the GNU AGPL.
 
+The [engineering audit](docs/AUDIT-0.7.2.md) records the release checks, dependency findings and remaining qualification work.
+
 ## AI-assisted development
 
-Assistant X was developed with Claude Desktop and Claude Code using Claude Opus 5.5 and Claude Fable 5.1.
-Further development and substantial improvements were made with Kimi in Kimi Work using the K3 model: the Kimi
-integration, structured MCP tools, answer verification, the bounded fast / balanced / deep modes and their measured
-cost and quality checks.
+Alexandr Yalovoy developed Assistant X with the following AI tools over three release periods.
+
+| Versions | Development tool | Main contribution |
+| --- | --- | --- |
+| 0.1 through 0.6.1 | Claude Desktop and Claude Code (Claude Opus 5.5 and Claude Fable 5.1) | Document intake, local search, source citations, base packages and client connections. |
+| 0.7.0 and 0.7.1 | Kimi Work (K3) | Structured search, answer verification, bounded reading modes and cost measurements. |
+| 0.7.2 | OpenAI Codex | Single-call evidence retrieval, scoped inbox intake, citation and OCR fixes, project-country settings, and regression checks for answer cost and quality. |

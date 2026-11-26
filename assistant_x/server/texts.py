@@ -11,7 +11,7 @@ every command named below goes through it: library(action="search_library", args
 with the library starts, call library_guide once: it gives the rules of the answers and the shelves of this library.
 If library (or library_guide) and the other tools of this server are not in your list of tools (some apps keep the
 tools of a server behind a search of tools), search the tools for "assistant-x library library_guide search_library"
-first; the server has no resources: never look for the library there. Search with search_library (it
+first; the server has no resources: never look for the library there. Start ordinary questions with answer_context when available. If more evidence is needed, search with search_library (it
 already reranks the results): balanced starts with one query and k=4, repeating only for a weak match or a conflict;
 a complex design takes 2–3 rephrased searches, including the norms apart (sections=["N"]). Read the best one or two
 pages with read_pages; read more only for a continuing thought or a needed reference;

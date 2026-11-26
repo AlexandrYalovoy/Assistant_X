@@ -60,6 +60,7 @@
     "designation": {"$ref": "#/$defs/text_map"},
     "authors": {"$ref": "#/$defs/authors"},
     "edition": {"type": "string"},
+    "applicability_source": {"type": "string", "minLength": 1, "maxLength": 500, "description": "Source supplied for the applicability of this edition to the project, such as an approval reference with a date and clause."},
     "publisher": {"type": "string"},
     "year": {"type": ["integer", "null"], "minimum": 1000, "maximum": 2999},
     "lang": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/lang"}, "description": "the languages of the text of the document"},

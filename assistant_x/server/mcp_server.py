@@ -237,6 +237,12 @@ def needs_base(fn):
 
 def _head(r, query="", lang="en"):
     flags = [r.get("doc_type") or "", r["section"], str(r["year"] or "")]
+    if r.get("applicability_source"):
+        flags.append(f"applicability source: {r['applicability_source']}")
+    if r.get("edition"):
+        flags.append(f"edition {r['edition']}")
+    if r.get("jurisdiction_basis") and r["section"] in ("N", "R"):
+        flags.append(f"jurisdiction {r['jurisdiction']} ({r['jurisdiction_basis']})")
     if r.get("level") is not None and r.get("kind") != "card":
         flags.append(f"level {r['level']:g}")  # the hierarchy of documents: the answer lists the highest first
     if r.get("supplement"):
@@ -315,8 +321,17 @@ def library_guide(
     notes = setup_notes()  # first: the compact cut keeps the top
     stale = skill_note(skill, client_name(ctx), ctx)
     reference = COMPACT if reference is None else reference
-    reader = detail == "reader" or (detail is None and ACTIVE_TOOLSET in ("reader", "one_reader"))
+    intake = detail == "intake" or ACTIVE_TOOLSET == "one_intake"
+    reader = intake or detail == "reader" or ACTIVE_TOOLSET in ("reader", "one_reader")
     rules = sk.reference_guide() if reference else sk.guide() if reader else sk.rules()
+    if intake:
+        rules += (
+            "\n\nAccess: reading and inbox intake. Call intake_list for folder, optional formats and auto_apply. "
+            "Use intake_run, poll intake_status, review intake_card, then intake_save_meta. Show the intake_apply "
+            "plan and request confirmation before applying. Package management and removal are unavailable."
+        )
+    elif reader:
+        rules += "\n\nAccess: reading and reference export."
     text = (notes + "\n\n" if notes else "") + (stale + "\n\n" if stale else "") + rules + "\n\n" + hierarchy_note()
     return toolsets.fit(text) if COMPACT else text
 
@@ -447,7 +462,7 @@ def structured_hit(r, query, lang):
         "suspect_text": addressed_to_ai(r.get("text") or ""),
         "references": [list(x) for x in r.get("refs") or []],
     }
-    for key in ("doc_type", "jurisdiction", "supplement"):
+    for key in ("doc_type", "jurisdiction", "jurisdiction_basis", "edition", "applicability_source", "supplement"):
         if r.get(key):
             out[key] = r[key]
     for key in ("personal", "named"):
@@ -512,6 +527,23 @@ def search_library_data(
     }
 
 
+@tool("Read evidence for one question")
+@logged
+def answer_context(
+    query: str, mode: str = "balanced", sections: list[str] | None = None, codes: list[str] | None = None
+) -> dict:
+    """Get ranked evidence, cited page bodies and quality warnings in one call. Modes: fast, balanced, deep."""
+    from assistant_x.search import context
+
+    if mode not in context.MODES:
+        raise ValueError("mode must be fast, balanced or deep")
+    light = not empty_library() and not full_mode()
+    if light:
+        cpu_mode()
+    result = context.build(query, *context.MODES[mode], sections=sections, codes=codes, light=light)
+    return context.for_agent(result)
+
+
 @tool("Check an answer against the library")
 @logged
 def verify_answer(answer: str) -> dict:
@@ -525,33 +557,47 @@ def verify_answer(answer: str) -> dict:
     if missing:
         return {"status": "empty", "ok": False, "references": [], "quotes": [], "warnings": [missing]}
     rx_code = re.compile(r"^([A-Z]-\d{5}(?:-\d{2})?)\b")
-    rx_page = re.compile(r"\bPDF\s+(\d+)\b")
+    rx_page = re.compile(r"\bPDF\s+(\d{1,7})(?:\s*[-–—]\s*(\d{1,7}))?\s*\)?\s*$")
     rx_quote = re.compile(r"«([^»\n]+)»|“([^”\n]+)”")
     refs, quotes, warnings = [], [], []
     unverified_quote = False
     seen = set()
     for line in answer.splitlines():
         line_refs = []
-        for bracket in re.findall(r"\[([^\]\n]+)\]", line):
+        for match in re.finditer(r"\[([^\[\]\n]+)(\]|(?=\[|$))", line):
+            bracket = match[1]
             code = rx_code.match(bracket.strip())
             page = rx_page.search(bracket)
-            if not code or not page:
+            if not code and not re.search(r"\bPDF\b|^[A-Z]-\d", bracket.strip()):
                 continue
-            key = (code.group(1), int(page.group(1)))
-            if key not in line_refs:
-                line_refs.append(key)
-            if key in seen:
+            start = int(page[1]) if page else 0
+            end = int(page[2] or page[1]) if page else 0
+            if (
+                not match[2]
+                or not code
+                or len(re.findall(r"\bPDF\b", bracket)) != 1
+                or not 1 <= start <= end
+                or end - start >= 1000
+            ):
+                refs.append({"citation": bracket, "ok": False, "status": "invalid_reference"})
+                warnings.append("Use a document code and a PDF page or a range of up to 1000 pages.")
                 continue
-            seen.add(key)
-            text = lib().page_text(*key)
-            refs.append(
-                {
-                    "code": key[0],
-                    "pdf_page": key[1],
-                    "ok": text is not None,
-                    "status": "ok" if text is not None else "no_such_document_or_page",
-                }
-            )
+            for number in range(start, end + 1):
+                key = (code[1], number)
+                if key not in line_refs:
+                    line_refs.append(key)
+                if key in seen:
+                    continue
+                seen.add(key)
+                exists = lib().page_text(*key) is not None
+                refs.append(
+                    {
+                        "code": code[1],
+                        "pdf_page": number,
+                        "ok": exists,
+                        "status": "ok" if exists else "no_such_document_or_page",
+                    }
+                )
         found_quotes = [a or b for a, b in rx_quote.findall(line) if len((a or b).split()) > 1]
         if found_quotes and len(line_refs) != 1:
             unverified_quote = True
@@ -707,10 +753,11 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
 
     kw = dict(flt, scope=None if scope == "all" else scope, **({"rerank": False} if light else {}))
     jur = jurisdiction.load(lib().cfg.get("profile"))  # the home documents answer, the supplements come after them
+    project_country = str(lib().cfg.get("project_country") or "").strip().upper()
     room = jur.room() if jur and not codes else 0
     res = lib().search(query, k=min(k + room, 25), sections=sections, codes=codes, stats=stats, **kw)
     if jur and not codes:
-        res = jur.arrange(res, query, k)
+        res = jur.arrange(res, query, k, project_country)
     if norms and not sections and not codes:  # the norms of the object as well (a small model seldom asks for them)
         seen = {(r["code"], r.get("page")) for r in res}
         extra = lib().search(query, k=min(norms, 10), sections=["N"], **kw)
@@ -725,10 +772,19 @@ def find_fragments(query, k, stats, light=False, sections=None, codes=None, norm
             first = [r for r in first if jur and jur.of(r) in wanted]
         seen = {(r["code"], r["page"]) for r in first}
         res = first + [r for r in res if (r["code"], r.get("page")) not in seen]
-    if jur and not codes and jur.asked(query):  # "by ASME", "Kazakh norms": its documents before the key norms too
-        res = jur.arrange(res, query, len(res))
+    if (
+        jur and not codes and (jur.asked(query) or project_country)
+    ):  # "by ASME", "Kazakh norms": its documents before the key norms too
+        res = jur.arrange(res, query, len(res), project_country)
     elif jur and jur.extra and not codes and not narrowed and not wanted:  # the foreign norms in parallel, after it
         res = res + supplement(query, jur, res, sections, kw)
+    if jur:
+        for hit in res:
+            recorded = hit.get("jurisdiction")
+            hit["jurisdiction"] = jur.of(hit) or "unknown"
+            hit["jurisdiction_basis"] = (
+                "card" if recorded else "designation or title" if hit["jurisdiction"] != "unknown" else "undetermined"
+            )
     return res
 
 
@@ -772,8 +828,9 @@ def key_hits(query):
         row = (
             lib()
             .con.execute(
-                "SELECT p.text, p.label, d.title, d.section, d.year, d.doc_type, d.designation, d.quality, d.issue, "
-                "d.page_offset, d.personal, json_extract(d.card, '$.doc.jurisdiction') AS jurisdiction "
+                "SELECT p.text, p.label, p.ocr_score, p.flags, d.title, d.section, d.year, d.doc_type, d.designation, d.quality, d.issue, "
+                "json_extract(d.card, '$.doc.applicability_source') AS applicability_source, "
+                "d.page_offset, d.personal, json_extract(d.card, '$.doc.edition') AS edition, json_extract(d.card, '$.doc.jurisdiction') AS jurisdiction "
                 "FROM pages p JOIN docs d ON d.code=p.code WHERE p.code=? AND p.page=?",
                 (e["code"], e["pdf_page"]),
             )
@@ -799,9 +856,11 @@ def key_hits(query):
                 personal=bool(row["personal"]),
                 named=False,
                 label=row["label"],
-                page_note="",
+                page_note=page_note(row["ocr_score"], row["flags"]),
                 level=e.get("level"),
                 designation=row["designation"] or "",
+                applicability_source=row["applicability_source"] or "",
+                edition=row["edition"] or "",
                 jurisdiction=row["jurisdiction"] or "",
                 evidence=e["quote"],  # why the page is a key norm of the topic; the quote is picked for the question
                 key=True,
@@ -1346,11 +1405,12 @@ def intake_list(ctx: Context | None = None) -> str:
 
 @tool("Start the intake", read=False)
 @logged
-def intake_run(night: bool = False, resume: bool = False) -> str:
+def intake_run(night: bool = False, resume: bool = False, include: list[str] | None = None) -> str:
     """Start the intake of inbox in the background: unpacking, DOC/DOCX to PDF, OCR of scans, texts, card drafts.
+    include selects spreadsheets, pictures or web_pages for this batch only.
     night=True — the user is away, more of the processor may be used; resume — continue the previous batch.
     The answer comes at once; the progress — intake_status."""
-    return intake_tools.run(night=night, resume=resume)
+    return intake_tools.run(night=night, resume=resume, include=include)
 
 
 @tool("Intake status")
@@ -1469,8 +1529,8 @@ def library(action: str, args: dict | str | None = None, ctx: Context | None = N
     fn = globals().get(name)
     if name == toolsets.ONE or name not in ONE_ACTIONS or not callable(fn):
         return f"No command {name!r}. The commands: {', '.join(sorted(ONE_ACTIONS))}."
-    if ACTIVE_TOOLSET == "one_reader" and name not in toolsets.READER + toolsets.EXPORT:
-        return f"No command {name!r} in one_reader. The commands: {', '.join(toolsets.READER + toolsets.EXPORT)}."
+    if ACTIVE_TOOLSET in toolsets.RESTRICTED and name not in toolsets.RESTRICTED[ACTIVE_TOOLSET]:
+        return f"No command {name!r} in {ACTIVE_TOOLSET}. The commands: {', '.join(toolsets.RESTRICTED[ACTIVE_TOOLSET])}."
     args, params = dict(args), inspect.signature(fn).parameters
     takes = [p for p in params if p != "ctx"]
     wrong = [a for a in args if a not in takes]

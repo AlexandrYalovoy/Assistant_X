@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Connect the apps of this PC to the library.
 
-    assistant-x connect APP|auto [--tools one_reader|one|reader|all] [--compact] [--dry-run]  write the entry (and skill)
+    assistant-x connect APP|auto [--tools one_reader|one_intake|one|reader|all] [--compact] [--dry-run]  write the entry (and skill)
     assistant-x connect --list                                                  the apps, found and connected
     assistant-x connect --check [APP]                                           the handshake and a search, per app
     assistant-x connect lmstudio --link                                         the "Add to LM Studio" link
@@ -228,7 +228,9 @@ def main(argv=None, disconnecting=False):
     ap.add_argument("apps", nargs="*", help=f"{', '.join(K.APPS)}, auto or all")
     ap.add_argument("--dry-run", action="store_true")
     if not disconnecting:
-        ap.add_argument("--tools", choices=toolsets.TOOLSETS, help="explicit access: one_reader, one, reader or all")
+        ap.add_argument(
+            "--tools", choices=toolsets.TOOLSETS, help="explicit access: one_reader, one_intake, one, reader or all"
+        )
         ap.add_argument("--full", action="store_true", help="every tool, no compact answers (legacy --tools all)")
         ap.add_argument("--reader", action="store_true", help="only the reading tools (legacy --tools reader)")
         ap.add_argument("--compact", action="store_true", help="short descriptions and answers (small local models)")

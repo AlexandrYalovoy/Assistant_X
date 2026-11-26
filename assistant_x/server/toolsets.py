@@ -19,6 +19,7 @@ READER = (
     "library_guide",
     "search_library",
     "search_library_data",
+    "answer_context",
     "verify_answer",
     "read_pages",
     "book_map",
@@ -29,7 +30,10 @@ READER = (
 )
 # what a reading app may write, besides: copies of the files and pages cited, into a folder the user names
 EXPORT = ("export_references",)
-TOOLSETS = ("reader", "all", "one", "one_reader")
+INTAKE = ("intake_list", "intake_run", "intake_status", "intake_card", "intake_save_meta", "intake_apply", "intake_reindex")
+RESTRICTED = {"one_reader": READER + EXPORT, "one_intake": READER + EXPORT + INTAKE}
+SINGLE = ("one", *RESTRICTED)
+TOOLSETS = ("reader", "all", *SINGLE)
 ONE = "library"  # the one tool of the set "one"
 # the compact mode is the reference mode of a small local model (LM Studio): it finds and quotes, nothing else; the
 # other tools are hidden, their descriptions would only take its context
@@ -46,8 +50,8 @@ CUT_NOTE = (
 def allowed(name, toolset, compact=False):
     """Is the tool name in the set, and in the compact mode one of the reference mode? one_reader is one schema
     with only the reading actions; the bridge and the in-process server enforce that action boundary."""
-    if name == ONE or toolset in ("one", "one_reader"):
-        return name == ONE and toolset in ("one", "one_reader")
+    if name == ONE or toolset in SINGLE:
+        return name == ONE and toolset in SINGLE
     return (toolset == "all" or name in READER + EXPORT) and (not compact or name in REFERENCE)
 
 

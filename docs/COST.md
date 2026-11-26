@@ -34,7 +34,7 @@ logs out of the JSON.
 
 Every cloud agent defaults to `one_reader`: one `library` schema, with reading and reference export only. The bridge
 and the in-process server reject changes. `library_guide(detail="reader")` leaves out intake and base-package
-administration. For library changes, the user or agent explicitly selects full `one`: `assistant-x connect APP --tools
+administration. For inbox intake select `one_intake`. For package administration, the user or agent explicitly selects full `one`: `assistant-x connect APP --tools
 one`; switch back with `--tools one_reader`. The full guide is loaded only in full mode, so an ordinary answer does not
 carry its cost. Qwen in LM Studio stays in the compact reference mode.
 
@@ -63,6 +63,31 @@ Cache reads and ordinary input have separate tariffs; a reduction of context is 
 
 On 19 real engineering questions on 25 November 2026, balanced found 19/26 expected pages and 11/12 values at about
 4 000 tokens a context; improved deep found 26/26 and 12/12 at about 8 900. Choose deep for a complex calculation.
+
+## Measure the completed answer
+
+Use `answer_context` through MCP for a bounded first call. The page character limit covers the sum of page bodies.
+`truncated` marks an excerpt. Metadata and match excerpts add to the total response size. `one_intake` adds inbox intake to reading.
+
+The historical table above used a metadata hit and a value anywhere in JSON. The current benchmark counts reference hits,
+page bodies actually delivered, and values in expected page bodies separately. For an isolated comparison run
+`python -m tests.golden.fixture_routes`. This measures local calls and serialized characters. The fixture includes
+a wrong unit, a misleading table row, a superseded source, a scan and a question with no answer.
+On the five fixture prompts in November 2026, balanced required 5 single calls (11,103 serialized response characters)
+or 14 individual search/read calls (13,620 characters). Each route delivered all five expected source-page groups and
+both marked numbers. One prompt requires abstention and is graded at the final-answer stage. These figures exclude
+model prompts, reasoning, final answers and service billing.
+
+Use the same version of the library and model for each live comparison. Run both routes and all modes in fresh chats,
+grade the final answers against the review notes, and include failed attempts. Review the citation, source edition,
+units, table row and applicability. An unsupported number or failure to abstain fails the attempt.
+
+Record one JSON object per attempt in a JSONL file with id, client, model, library_version, route, mode,
+correct (boolean), calls and seconds. Set optional uncached_input, cached_input, output and cost_usd from the client's
+actual usage. Omit unavailable fields. Use `python -m tests.golden.context_cost --trials trials.jsonl`
+to aggregate by configuration and report total usage per correct answer. A subscription has no assumed dollar tariff.
+For private library evidence use `--set engineering|blind|blind2` and absolute count thresholds `--min-read` and
+`--min-values` established on the same corpus. Failure to reach either threshold exits with status 1.
 
 ## Checks
 

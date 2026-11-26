@@ -5,6 +5,8 @@ to switch the language at the top of both, the same headings by level and order,
 links (a link to a document that has a twin leads to the twin in the Russian one) and the same versions."""
 
 import os, re
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
@@ -25,6 +27,7 @@ DOCS = [
     "docs/LMSTUDIO.md",
     "docs/API.md",
     "docs/COST.md",
+    "docs/AUDIT-0.7.2.md",
 ]
 FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 LINK = re.compile(r"\]\(([^)\s]+)\)")
@@ -76,6 +79,15 @@ def test_the_russian_twin_holds_to_the_english_document(doc):
     assert FENCE.findall(ru) == FENCE.findall(en), "the code blocks"
     assert links(ru, True) == links(en, False), "the links"
     assert versions(ru) == versions(en), "the versions named"
+
+
+@pytest.mark.parametrize("doc", DOCS + [twin(d) for d in DOCS])
+def test_local_links_resolve(doc):
+    for target in LINK.findall(FENCE.sub("", read(doc))):
+        link = urlsplit(target)
+        if link.scheme or link.netloc or not link.path:
+            continue
+        assert (Path(ROOT, doc).parent / unquote(link.path)).exists(), f"{doc}: {target}"
 
 
 @pytest.mark.parametrize("doc", DOCS + [twin(d) for d in DOCS])

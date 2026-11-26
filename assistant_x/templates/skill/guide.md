@@ -28,6 +28,8 @@ Balanced: at most 2 searches and 2 page-reading calls for a simple fact. Deep: a
 calls for a complex design. If after 2 searches no fragment is about the subject itself, stop and say "The library
 has no documents on this question".
 
+For a factual question, start with `answer_context(query, mode="balanced")` when available. Use fast or deep when requested. Read its evidence before answering. For a norm, state the project country, edition and the basis for applicability when available. A country label alone does not establish applicability. Follow up when a table, scan or conflicting edition needs verification.
+
 ## How to answer
 
 1. `search_library(query, k=4)` — fragments by words and by meaning, already reranked. Balanced: start with one

@@ -86,7 +86,10 @@ CLOSEST_CHARS = 400  # verify_quote: the longest closest place shown
 PUNCT = ".,;:!?()[]\"'"  # the punctuation around a word word_diff does not count
 
 
-DOC_SQL = "d.doc_type, d.personal, d.designation, json_extract(d.card, '$.doc.jurisdiction') AS jurisdiction"
+DOC_SQL = (
+    "d.doc_type, d.personal, d.designation, json_extract(d.card, '$.doc.jurisdiction') AS jurisdiction, "
+    "json_extract(d.card, '$.doc.edition') AS edition, json_extract(d.card, '$.doc.applicability_source') AS applicability_source"
+)
 QUALITY_SQL = "d.quality, d.issue"  # warnings about the source: scan, lost symbols, a row of sources_to_update
 PAGE_SQL = "p.label, p.ocr_score AS page_score, p.flags AS page_flags"
 
@@ -670,6 +673,8 @@ class Library:
                     named=r["code"] in named,
                     level=self.level(r),
                     designation=r.get("designation") or "",
+                    applicability_source=r.get("applicability_source") or "",
+                    edition=r.get("edition") or "",
                     jurisdiction=r.get("jurisdiction") or "",
                     sure=(stats.get("sure") or {}).get(r["id"]),
                     label=None if card else r["label"] or self.printed(r["code"]).get(r["page"]),

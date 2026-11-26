@@ -8,7 +8,7 @@ JSON-RPC messages over HTTP to `127.0.0.1` and gets the same answers the apps ge
 built, how to reach it, every command with its parameters, and three examples run against a real library.
 
 Prefer the API to reading the files of the workspace: the API checks the arguments, keeps the references in one
-form, waits for the models and never changes the library without a plan and its token.
+form and reports model readiness. Package changes and document removal require a confirmed plan. Inbox intake normally requires one too. The local `auto_apply` setting permits automatic application of clean batches.
 
 ## How it is built
 
@@ -68,9 +68,8 @@ Through `library` a command goes as `{"action": "search_library", "args": {"quer
 
 ## The commands
 
-Made from the schemas of the server ({{version}}). A parameter in **bold** is required; a command that changes the
-library first answers with a plan and a token, and changes it only when called again with `confirm=true` and that
-token, after the user's yes.
+Generated from the server schemas ({{version}}). Bold parameters are required. Commands accepting a confirmation
+token describe their plan and confirmation steps in the command help. Check the local intake policy before applying a batch.
 
 {{api_table}}
 

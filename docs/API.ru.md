@@ -2,14 +2,14 @@
 
 # Библиотека из своей программы (API)
 
-Версия 0.7.1. Каждое приложение Assistant X (Claude, Codex, LM Studio и другие) обращается к библиотеке через
+Версия 0.7.2. Каждое приложение Assistant X (Claude, Codex, LM Studio и другие) обращается к библиотеке через
 один локальный сервис по протоколу Model Context Protocol (MCP). Своя программа может делать то же самое без всякого
 ИИ: она отправляет сообщения JSON-RPC по HTTP на `127.0.0.1` и получает те же ответы, что и приложения. Здесь —
 как устроен сервис, как к нему обратиться, все команды с параметрами и три примера, проверенные на настоящей
 библиотеке.
 
 Пользуйтесь API, а не чтением файлов рабочей папки: API проверяет аргументы, даёт ссылки в одной форме, ждёт
-загрузки моделей и никогда не меняет библиотеку без плана и его токена.
+загрузки моделей. Для изменений пакетов и удаления документов требуется подтверждённый план. Приём из inbox обычно также требует подтверждения. Локальная настройка `auto_apply` разрешает автоматическое применение чистых партий.
 
 ## Как устроено
 
@@ -70,14 +70,14 @@ LM Studio ──────stdio─ bridge ──┘          one per workspace
 
 ## Команды
 
-Сделано из схем сервера (0.7.1). Параметр **жирным** обязателен; команда, которая меняет библиотеку, сначала
-отвечает планом и токеном и меняет её, только когда её вызывают снова с `confirm=true` и этим токеном — после «да»
-пользователя.
+Справочник сформирован из схем сервера (0.7.2). Обязательные параметры выделены жирным. Для команд с токеном
+порядок просмотра и подтверждения плана указан в справке команды. Перед применением партии проверьте локальную настройку приёма.
 
 | Команда | Параметры | Что делает | Меняет библиотеку |
 | --- | --- | --- | --- |
 | `library_guide` | reference: bool \| null = null<br>detail: str \| null = null<br>skill: str \| null = null | Вызывается первым, когда пользователь хочет работать с библиотекой (подключиться к библиотеке или базе знаний, ключ «AX:»): правила ответов (искать, читать, ссылаться на шифр и страницу, проверять цитаты) и полки этой библиотеки. | нет |
 | `search_library_data` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>context: str \| null = null | Найти фрагменты и вернуть структурированный JSON: шифр, страницы PDF и печатная, готовая ссылка, текст, качество источника и перекрёстные ссылки. | нет |
+| `answer_context` | **query**: str<br>mode: str = "balanced"<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null | Получить фрагменты, страницы, ссылки и предупреждения одним вызовом в выбранном режиме. | нет |
 | `verify_answer` | **answer**: str | Проверить готовый ответ: существуют ли документы и страницы из ссылок и подтверждены ли дословные цитаты на указанных страницах. | нет |
 | `search_library` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>quotes: bool \| null = null<br>context: str \| null = null | Найти фрагменты библиотеки по вопросу (по словам и по смыслу). | нет |
 | `read_pages` | **code**: str<br>**start_page**: int<br>**end_page**: int | Текст страниц документа или его части (шифр E-00006-02; номера страниц PDF), не больше 15 страниц за раз: ровно так, как он лежит в библиотеке. | нет |
@@ -88,7 +88,7 @@ LM Studio ──────stdio─ bridge ──┘          one per workspace
 | `document_info` | **code**: str<br>fields: list[str] \| null = null | Карточка документа: обозначение, название, авторы, год, тип и полка, область применения, аннотация, темы, ключевые слова, термины, таблицы, ссылки, другие редакции, нумерация страниц. | нет |
 | `list_documents` | text: str \| null = null<br>sections: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>jurisdictions: list[str] \| null = null | Список документов библиотеки с фильтрами; текст ищется в названиях, обозначениях и темах. | нет |
 | `intake_list` | — | Что лежит в inbox (собственные документы пользователя для разбора) и идёт ли сейчас разбор. | нет |
-| `intake_run` | night: bool = false<br>resume: bool = false | Запустить разбор inbox в фоне: распаковка, DOC/DOCX в PDF, распознавание сканов, тексты, черновики карточек. | пишет только свои рабочие файлы |
+| `intake_run` | night: bool = false<br>resume: bool = false<br>include: list[str] \| null = null | Запустить разбор inbox в фоне: распаковка, DOC/DOCX в PDF, распознавание сканов, тексты, черновики карточек. | пишет только свои рабочие файлы |
 | `intake_status` | full: bool = false | Ход разбора, переноса в библиотеку и пересчёта базы и следующий шаг — коротким ответом. | нет |
 | `intake_card` | tids: list[str] \| null = null | Черновики карточек обработанных файлов (T0001…): страницы, оценка распознавания, полка, обозначение, название; с tids — ещё заголовки и начало текста. | нет |
 | `intake_save_meta` | lines: list[dict] \| null = null<br>path: str \| null = null<br>check_only: bool = false | Сохранить строки meta.jsonl пакета разбора (карточки, части, дубликаты, отклонённые) и проверить их. | пишет только свои рабочие файлы |

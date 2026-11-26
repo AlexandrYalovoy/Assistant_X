@@ -327,7 +327,7 @@ def inbox_list():
             size += os.path.getsize(os.path.join(dp, fn))
             ext = os.path.splitext(fn)[1].lower() or "no extension"
             exts[ext] = exts.get(ext, 0) + 1
-    out = [f"Folder for the intake: {P.INBOX}"]
+    out = [f"Folder for the intake: {P.INBOX}", f"Automatic application: {auto_apply_on()}"]
     if not files:
         out.append("Empty: ask the user to put documents into this folder.")
     else:
@@ -340,6 +340,18 @@ def inbox_list():
             "Time estimate: a page of a text PDF 0.2–1 s, a scan 2.5–9 s. Hundreds of files are better sorted "
             "overnight: intake_run(night=True)."
         )
+        from assistant_x.intake.ledger import request_group
+
+        groups = {}
+        for ext, count in exts.items():
+            group = request_group(ext.lstrip("."))
+            if group:
+                groups[group] = groups.get(group, 0) + count
+        if groups:
+            out.append(
+                "Optional formats (intake_run include, this batch): "
+                + ", ".join(f"{k}: {v}" for k, v in sorted(groups.items()))
+            )
         hint = profile_hint(names)
         if hint:
             out.append(hint)
@@ -384,11 +396,15 @@ def profile_hint(names):
     return ""
 
 
-def run(night=False, resume=False):
+def run(night=False, resume=False, include=None):
     job = _job("run")
     if _alive(job):
         return f"An intake is already running ({_ago(job)}). Progress: intake_status."
     cmd = [*INTAKE, "run"] + (["--resume"] if resume else [])
+    for kind in dict.fromkeys(include or []):
+        if kind not in ("spreadsheets", "pictures", "web_pages"):
+            return "include accepts spreadsheets, pictures and web_pages."
+        cmd.extend(["--" + kind.replace("_", "-"), "include"])
     started, text = _start("run", cmd, **({"AX_PROFILE": "night"} if night else {}))
     if not started:
         return text

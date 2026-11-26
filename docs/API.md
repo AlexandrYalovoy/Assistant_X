@@ -2,13 +2,13 @@ English | [Русский](API.ru.md)
 
 # The library from your own program (API)
 
-Version 0.7.1. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
+Version 0.7.2. Every app of Assistant X (Claude, Codex, LM Studio and the others) reaches the library through
 one local service, by the Model Context Protocol (MCP). Your own program can do the same, with no AI at all: it sends
 JSON-RPC messages over HTTP to `127.0.0.1` and gets the same answers the apps get. This page says how the service is
 built, how to reach it, every command with its parameters, and three examples run against a real library.
 
 Prefer the API to reading the files of the workspace: the API checks the arguments, keeps the references in one
-form, waits for the models and never changes the library without a plan and its token.
+form and reports model readiness. Package changes and document removal require a confirmed plan. Inbox intake normally requires one too. The local `auto_apply` setting permits automatic application of clean batches.
 
 ## How it is built
 
@@ -68,14 +68,14 @@ Through `library` a command goes as `{"action": "search_library", "args": {"quer
 
 ## The commands
 
-Made from the schemas of the server (0.7.1). A parameter in **bold** is required; a command that changes the
-library first answers with a plan and a token, and changes it only when called again with `confirm=true` and that
-token, after the user's yes.
+Generated from the server schemas (0.7.2). Bold parameters are required. Commands accepting a confirmation
+token describe their plan and confirmation steps in the command help. Check the local intake policy before applying a batch.
 
 | Command | Parameters | What it does | Changes the library |
 | --- | --- | --- | --- |
 | `library_guide` | reference: bool \| null = null<br>detail: str \| null = null<br>skill: str \| null = null | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | no |
 | `search_library_data` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>context: str \| null = null | Search fragments and return JSON data beside the text search: code, PDF and printed pages, citation, text, source quality and references. | no |
+| `answer_context` | **query**: str<br>mode: str = "balanced"<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null | Get ranked evidence, cited page bodies and quality warnings in one call. | no |
 | `verify_answer` | **answer**: str | Check citations and verbatim quotes in a finished answer. | no |
 | `search_library` | **query**: str<br>k: int = 8<br>sections: list[str] \| null = null<br>codes: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>norms: int = 0<br>jurisdictions: list[str] \| null = null<br>quotes: bool \| null = null<br>context: str \| null = null | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | no |
 | `read_pages` | **code**: str<br>**start_page**: int<br>**end_page**: int | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | no |
@@ -86,7 +86,7 @@ token, after the user's yes.
 | `document_info` | **code**: str<br>fields: list[str] \| null = null | The card of a document: designation, title, authors, year, type and shelf, scope, summary, topics, keywords, terms, tables, references, other versions, page numbering. | no |
 | `list_documents` | text: str \| null = null<br>sections: list[str] \| null = null<br>doc_types: list[str] \| null = null<br>langs: list[str] \| null = null<br>year_from: int \| null = null<br>year_to: int \| null = null<br>scope: str = "all"<br>jurisdictions: list[str] \| null = null | List of the documents of the library with filters; text searches the titles, designations and topics. | no |
 | `intake_list` | — | What lies in inbox (the user's own documents to sort) and whether an intake is running now. | no |
-| `intake_run` | night: bool = false<br>resume: bool = false | Start the intake of inbox in the background: unpacking, DOC/DOCX to PDF, OCR of scans, texts, card drafts. | writes its own work files |
+| `intake_run` | night: bool = false<br>resume: bool = false<br>include: list[str] \| null = null | Start the intake of inbox in the background: unpacking, DOC/DOCX to PDF, OCR of scans, texts, card drafts. | writes its own work files |
 | `intake_status` | full: bool = false | Progress of the intake, of the transfer into the library and of the base recalculation, and the next step, in a short answer. | no |
 | `intake_card` | tids: list[str] \| null = null | Card drafts of the processed files (T0001…): pages, OCR score, section, designation, title; with tids — also the headings and the start of the text. | no |
 | `intake_save_meta` | lines: list[dict] \| null = null<br>path: str \| null = null<br>check_only: bool = false | Save lines of the meta.jsonl of the batch (cards, parts, duplicates, rejected) and check them. | writes its own work files |

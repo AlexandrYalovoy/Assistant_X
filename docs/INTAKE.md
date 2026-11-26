@@ -2,6 +2,8 @@ English | [Русский](INTAKE.ru.md)
 
 # The intake of new documents
 
+For standards, record `edition`, `jurisdiction` and optional `applicability_source` in the document metadata. Supply the approval reference, date and clause when known. A country inferred from a title is a search hint. Check the basis for applying that edition to the particular project. Omit the source when it is unknown.
+
 Documents from `inbox` become originals in `library` (under codes), JSON cards and texts in `index`.
 The intake runs on this PC with the pipeline `assistant_x.intake.pipeline` (`assistant-x intake …`).
 How Claude works with it is in the skill (`assistant-x skill`), the section "How to sort new documents".

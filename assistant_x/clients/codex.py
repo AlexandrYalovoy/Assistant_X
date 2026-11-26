@@ -100,7 +100,9 @@ def block(e):
     ]
     if "--tools" in e["args"][:-1]:  # the tools the set shows: Codex hides any other
         ts = e["args"][e["args"].index("--tools") + 1]
-        shown = [toolsets.ONE] if ts == "one" else list(toolsets.READER + toolsets.EXPORT) if ts == "reader" else None
+        shown = (
+            [toolsets.ONE] if ts in toolsets.SINGLE else list(toolsets.READER + toolsets.EXPORT) if ts == "reader" else None
+        )
         if shown:
             lines.append(f"enabled_tools = {value(shown)}\n")
     lines.append(f"\n[{TABLE}.env]\n")

@@ -49,10 +49,10 @@ class Jurisdictions:
         """The places the supplements may take after the k answers."""
         return sum(self.extra.values())
 
-    def arrange(self, res, query, k):
+    def arrange(self, res, query, k, project_country=""):
         """The hits in the order of the jurisdictions: a named one first (the order of the search within it); else the
         home ones, k at most, then the supplements, each in its places, after them."""
-        named = self.asked(query)
+        named = self.asked(query) or ([project_country] if project_country else [])
         if named:
             first = [r for r in res if self.of(r) in named]
             return first + [r for r in res if self.of(r) not in named]

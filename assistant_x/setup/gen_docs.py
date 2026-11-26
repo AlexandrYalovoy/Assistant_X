@@ -194,6 +194,9 @@ def values(lang="en"):
         "commands_table": commands_table(lang),
         "api_table": api_table(lang),
         "troubleshooting": problems_table(lang),
+        "compact_k": str(toolsets.COMPACT_K),
+        "compact_norms": str(toolsets.COMPACT_NORMS),
+        "compact_chars": str(toolsets.COMPACT_CHARS),
         "reader_tools": ", ".join(f"`{t}`" for t in toolsets.READER + toolsets.EXPORT),
         "apps": ", ".join(f"`{n}`" for n in __import__("assistant_x.clients", fromlist=["APPS"]).APPS),
     }

@@ -4,6 +4,12 @@ English | [Русский](CHANGELOG.ru.md)
 
 New entries go under the version being prepared. The version number is `assistant_x.__version__` (pyproject.toml reads it).
 
+## 0.7.2 — 2026-11-26
+
+- Codex development: `answer_context` combines ranked evidence and page reads within one character budget. Citation checks cover ranges and malformed references. Expanded and priority pages keep OCR warnings.
+- `one_intake` enables inbox intake without package administration. Optional file types can be selected for one batch. Project country, edition and applicability evidence travel with supported search results.
+- Added isolated comparisons across all three reading modes, graded session accounting, and checks of the release documentation.
+
 ## 0.7.1 — 2026-11-26
 
 - Cloud agents default to the economical read-only `one_reader`; the full `one` is selected explicitly with

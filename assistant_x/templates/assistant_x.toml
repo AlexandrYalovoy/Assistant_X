@@ -19,6 +19,7 @@ profile = "general"
 # models = ""                     # the models; default: .assistant_x/models when it exists, else those of the PC
 
 [search]
+# project_country = "KZ"           # prefer this jurisdiction unless the question names another
 # embed_model = "bge-m3"           # a folder of the models (see models above), or a HuggingFace name (BAAI/bge-m3)
 # rerank_model = "bge-reranker-v2-m3"
 # rerank = "auto"                  # true | false | "auto": all candidates on a video card, rerank_cpu_top on a processor

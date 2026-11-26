@@ -8,7 +8,7 @@ You are an agent (Kimi Work, Codex, Claude Code, DeepSeek Harness or another one
 you to install or connect **Assistant X**: a local library of the user's documents with search by words and by meaning,
 served to AI apps over MCP. In Kimi Work, the personal Assistant X plugin is installed and updated separately from the
 program; after registration the user clicks ＋ or Update on the Personal tab, without a client restart. These instructions
-are of version 0.7.1; always install the **latest
+are of version 0.7.2; always install the **latest
 release**: https://github.com/AlexandrYalovoy/Assistant_X/releases/latest.
 
 ## Token budget: read this first

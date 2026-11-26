@@ -91,6 +91,23 @@ def test_without_auto_apply_the_plan_and_a_token(batch):
     assert 'token="' in plan and (root / "inbox" / "text.pdf").exists()
 
 
+def test_scoped_intake_declining_the_plan_keeps_the_source(batch, monkeypatch):
+    import re
+    from assistant_x.server import mcp_server as m
+
+    root, _, tid = batch
+    monkeypatch.setattr(m, "ACTIVE_TOOLSET", "one_intake")
+    monkeypatch.setattr(m, "_asker", lambda ctx: lambda question: False)
+    source = root / "inbox" / "text.pdf"
+    before = source.read_bytes()
+    cards = sorted((root / "index" / "cards").glob("*.json"))
+    assert "errors 0" in m.library("intake_save_meta", {"lines": [doc_line(tid, "L", "Book", "Book")]})
+    plan = m.library("intake_apply")
+    token = re.search(r'token="(\w+)"', plan)[1]
+    assert m.library("intake_apply", {"confirm": True, "token": token}) == confirm.DECLINED
+    assert source.read_bytes() == before and sorted((root / "index" / "cards").glob("*.json")) == cards
+
+
 def test_auto_apply_only_from_the_local_settings(batch):
     root, work, t = batch
     _auto(root, where="assistant_x.toml")  # the shared file (a copied workspace, a package) chooses nothing

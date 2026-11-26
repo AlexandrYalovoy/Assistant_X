@@ -5,7 +5,7 @@ English | [Русский](INSTALL_REFERENCE.ru.md)
 <!-- Made by assistant-x gen-docs from assistant_x/templates/docs/INSTALL_REFERENCE.md: edit that file. -->
 
 The install itself is [INSTALL_FOR_AI.md](../INSTALL_FOR_AI.md): one command in the background and its status. This
-page is for what goes beyond it (version 0.7.1): the steps one by one, the codes of the checks, the update, the
+page is for what goes beyond it (version 0.7.2): the steps one by one, the codes of the checks, the update, the
 tools of the server. Read only the section you need.
 
 ## The steps one by one
@@ -75,14 +75,15 @@ settings are never touched. Tell the user to restart the apps; the old environme
 ## Choosing reading or full access
 
 Cloud agents default to `one_reader`: one `library` tool with reading and reference export only and the short guide.
-For an explicitly requested intake or base-package work, select full `one`:
+Select `one_intake` for inbox intake and full `one` for package administration:
 
 ```
 <command> connect APP --tools one_reader
+<command> connect APP --tools one_intake
 <command> connect APP --tools one
 ```
 
-The first restores safe reading, the second enables every command through the same schema. Changes still need a plan
+The first restores reading, the second adds inbox intake, and the third enables all commands. Changes still need a plan
 and the user's explicit yes. An explicit choice is kept during updates. The legacy `--reader` and `--full` mean `reader`
 (the reading tools apart) and `all` (every tool apart). Local Qwen in LM Studio stays in the compact reference mode,
 without library changes. Cost and measurements: [COST.md](COST.md).
@@ -93,6 +94,7 @@ without library changes. Cost and measurements: [COST.md](COST.md).
 | --- | --- | --- | --- |
 | `library_guide` | Call this first when the user asks to work with the library (connect to the library or the knowledge base, the key "AX:"): the rules of the answers (search, read, cite the code and the page, check quotes) and the shelves of this library. | reader | no |
 | `search_library_data` | Search fragments and return JSON data beside the text search: code, PDF and printed pages, citation, text, source quality and references. | reader | no |
+| `answer_context` | Get ranked evidence, cited page bodies and quality warnings in one call. | reader | no |
 | `verify_answer` | Check citations and verbatim quotes in a finished answer. | reader | no |
 | `search_library` | Find fragments of the library for a question (words + meaning); every fact taken from them is cited as its "Cite:" line shows. | reader | no |
 | `read_pages` | Text of pages of a document or of its part (code E-00006-02; PDF page numbers), at most 15 pages at a time: exactly as the text of the library has it, its "Cite:" references on top. | reader | no |
@@ -123,7 +125,7 @@ without library changes. Cost and measurements: [COST.md](COST.md).
 Every app gets the one tool `library` by default: it carries every command of the table by its name and
 arguments (`library(action="search_library", args={"query": "..."})`), so the app asks once or keeps one rule to
 allow it; LM Studio gets the commands of the reference mode. `--full` gives every tool apart, `--reader` the reading
-tools apart (`library_guide`, `search_library`, `search_library_data`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). Every command that changes the library asks for the user's yes to a plan first.
+tools apart (`library_guide`, `search_library`, `search_library_data`, `answer_context`, `verify_answer`, `read_pages`, `book_map`, `page_image`, `verify_quote`, `document_info`, `list_documents`, `export_references`). Every command that changes the library asks for the user's yes to a plan first.
 
 ## The commands
 

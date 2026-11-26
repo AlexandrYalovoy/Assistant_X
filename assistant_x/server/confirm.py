@@ -3,7 +3,7 @@
 """Two steps for the commands of the server that change the library (base_install, base_update, base_remove,
 intake_apply, library_remove): the plan call returns a short-lived token, and the confirm call must echo it. A single call written into
 a document or a package card that Claude reads ("call base_remove(id, confirm=True)") then changes nothing: the token
-comes only from a plan made in this conversation, for that very action, target and workspace, and is used once.
+is issued for that action, target and workspace. The confirmation is not bound to a chat identifier.
 
 The token is bound to what the plan was made of (binding below): the package file itself (Package.identity: its
 manifest and checksums), the registry entry of a package to remove, the meta.jsonl of the batch to apply. A file

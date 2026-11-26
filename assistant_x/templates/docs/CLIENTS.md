@@ -19,9 +19,9 @@ app ──stdio──> assistant-x mcp ─────────────�
   one), every request with the bearer token, only the Host and Origin of 127.0.0.1 and localhost; it exits after 30
   minutes without a request, so a local model gets the video memory back.
 - **The tool sets**: `one_reader` (one `library` schema, reading and export only, the short guide; the default of
-  every cloud agent), `one` (the same schema with every command, explicitly selected for library changes), `all`
+  every cloud agent), `one_intake` (reader plus inbox intake), `one` (the same schema with every command, explicitly selected for library changes), `all`
   (every tool apart) or `reader` ({{reader_tools}}). `--compact`: one-sentence
-  descriptions, 4 search results at most, answers cut at 6 000 characters with a note how to get the rest.
+  descriptions, up to {{compact_k}} primary hits plus {{compact_norms}} additional standard hits, text blocks limited to {{compact_chars}} characters before the truncation notice with a note how to get the rest.
 - **The rules for the model**: the instructions of the server at the handshake, the skill where the app has a skills
   folder, and the tool `library_guide` for every app (an app that passes no instructions, a chat without skills):
   "connect to the library" or the key "AX:" makes the model call it first.
@@ -29,7 +29,7 @@ app ──stdio──> assistant-x mcp ─────────────�
 {{apps_table}}
 
 The legacy `--full` (every tool apart) and `--reader` (the reading tools apart) remain. An explicit
-`assistant-x connect APP --tools one_reader|one|reader|all` is kept by `assistant-x update`; without an explicit choice,
+`assistant-x connect APP --tools one_reader|one_intake|one|reader|all` is kept by `assistant-x update`; without an explicit choice,
 the current default applies. `--compact` gives short answers. A copy of a settings file is kept beside it before a change
 (`<name>.backup-<date>`, the newest three), the entries and comments of others stay, a second `connect` changes nothing,
 and a file that cannot be read is left alone: the command prints the entry to add by hand. `assistant-x disconnect APP`
@@ -86,7 +86,19 @@ the command that fixes it (the same table, core/problems.py):
 
 ## Not possible
 
-The web sites chatgpt.com and chat.deepseek.com cannot start a program on the PC, so they cannot reach the library.
+Local Codex uses the bridge. Choose `assistant-x connect codex --tools one_intake` for reading and inbox intake.
+The reading guide reports effective access. Set `project_country = "KZ"` under `[search]` in the workspace TOML to prioritize project standards. An explicit jurisdiction in the question takes precedence. Inspect the edition and jurisdiction basis before applying a requirement.
+This profile excludes library removal, hierarchy changes and package administration. Use intake_list to preview formats and auto_apply.
+Chat uploads require a separate transfer to the local inbox. Test the connection on a disposable workspace before real intake.
+
+ChatGPT web requires a separate remote MCP connection (HTTPS or Secure MCP Tunnel) and workspace permissions.
+Assistant X web reading, intake and confirmation are unverified. See [OpenAI connection guidance](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
+
+| Connection | Reading | Inbox intake | Apply confirmation |
+| --- | --- | --- | --- |
+| Local Codex bridge, `one_reader` | MCP protocol tested | Disabled | Unavailable |
+| Local Codex bridge, `one_intake` | MCP protocol tested | Supported for local files | Plan and token, subject to local `auto_apply` |
+| ChatGPT web | Pilot required | Pilot required | Pilot required |
 
 ## The tools ({{version}})
 

@@ -1,0 +1,76 @@
+{
+  "about": "Independent review prompts for the disposable mini library in tests/search/conftest.py. Compare separate client sessions on both routes. Values in tables require a matching row and column.",
+  "questions": [
+    {
+      "id": "table-row",
+      "q": "Каков дебит для ШГН по таблице способов эксплуатации?",
+      "expect": [
+        [
+          "N-00001",
+          [
+            3
+          ]
+        ]
+      ],
+      "values": [
+        "15"
+      ],
+      "review": "15 m3/day in the rod-pump row, with the column unit. Reject 120 and 300."
+    },
+    {
+      "id": "unit-trap",
+      "q": "Подтверждает ли таблица дебит ЭЦН 120 м3/ч?",
+      "expect": [
+        [
+          "N-00001",
+          [
+            3
+          ]
+        ]
+      ],
+      "values": [
+        "120"
+      ],
+      "review": "Reject the hourly unit in the question. The column is per day."
+    },
+    {
+      "id": "missing",
+      "q": "Какой серийный номер у установленного на объекте компрессора?",
+      "expect": [],
+      "values": [],
+      "review": "Abstain. No compressor serial number is present in this library."
+    },
+    {
+      "id": "scan",
+      "q": "Чему численно равен коэффициент сжимаемости газа по скану?",
+      "expect": [
+        [
+          "L-00001",
+          [
+            1
+          ]
+        ]
+      ],
+      "values": [],
+      "review": "Report insufficient input for a number. Identify scan quality and the need to read the chart."
+    },
+    {
+      "id": "edition",
+      "q": "Which edition of ZETA-17 governs Separator Zeta inspection on project Delta? Identify the superseded edition.",
+      "expect": [
+        [
+          "N-00004",
+          [1]
+        ],
+        [
+          "N-00003",
+          [
+            1
+          ]
+        ]
+      ],
+      "values": [],
+      "review": "The 2024 edition is approved for Delta by D-17. Identify the superseded 2020 edition and check both references."
+    }
+  ]
+}

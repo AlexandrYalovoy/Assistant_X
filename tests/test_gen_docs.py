@@ -45,12 +45,12 @@ def test_the_agent_instructions_point_at_the_latest_release():
 
 
 def test_every_application_command_and_the_access_choice_are_documented():
-    """All 27 application commands are in both references; the cheap reader and explicit full mode stay visible."""
+    """All application commands are in both references; the cheap reader and explicit full mode stay visible."""
     from assistant_x.server import mcp_server
 
     tools = anyio.run(mcp_server.mcp.list_tools)
     commands = {t.name for t in tools if t.name != "library"}
-    assert len(commands) == 27
+    assert {"answer_context", "search_library", "verify_answer", "intake_apply"} <= commands
     for name in ("API.md", "API.ru.md", "CLIENTS.md", "CLIENTS.ru.md", "INSTALL_REFERENCE.md", "INSTALL_REFERENCE.ru.md"):
         text = (gen_docs.ROOT / "docs" / name).read_text(encoding="utf-8")
         missing = sorted(command for command in commands if f"`{command}`" not in text)

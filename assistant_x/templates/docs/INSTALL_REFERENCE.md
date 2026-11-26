@@ -57,14 +57,15 @@ settings are never touched. Tell the user to restart the apps; the old environme
 ## Choosing reading or full access
 
 Cloud agents default to `one_reader`: one `library` tool with reading and reference export only and the short guide.
-For an explicitly requested intake or base-package work, select full `one`:
+Select `one_intake` for inbox intake and full `one` for package administration:
 
 ```
 <command> connect APP --tools one_reader
+<command> connect APP --tools one_intake
 <command> connect APP --tools one
 ```
 
-The first restores safe reading, the second enables every command through the same schema. Changes still need a plan
+The first restores reading, the second adds inbox intake, and the third enables all commands. Changes still need a plan
 and the user's explicit yes. An explicit choice is kept during updates. The legacy `--reader` and `--full` mean `reader`
 (the reading tools apart) and `all` (every tool apart). Local Qwen in LM Studio stays in the compact reference mode,
 without library changes. Cost and measurements: [COST.md](COST.md).
