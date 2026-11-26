@@ -90,7 +90,7 @@ def test_the_key_pages_come_first_in_search_library(server):
         os.remove(K.path_of(server.lib().cfg))
 
 
-def test_a_package_carries_the_key_norms_with_its_codes_renamed(tmp_path):
+def test_a_package_carries_the_key_norms_with_its_codes_renamed(tmp_path, monkeypatch):
     a = make_library(str(tmp_path / "A"))
     build(a)
     cfg = load_config(a)
@@ -98,10 +98,19 @@ def test_a_package_carries_the_key_norms_with_its_codes_renamed(tmp_path):
     K.write(K.path_of(cfg), {"topics": [dict(TOPIC, entries=[e, dict(e, code="N-07777")])]})
     pkg = str(tmp_path / "a.axbase")
     X.export(cfg, settings.load(a)[1], pkg, "test-a", "1.0", say=lambda _: None)
-    carried = json.loads(P.Package(pkg).read(K.FILE).decode("utf-8"))
+    with P.Package(pkg) as package:
+        carried = json.loads(package.read(K.FILE).decode("utf-8"))
     assert [x["code"] for x in carried["topics"][0]["entries"]] == ["N-00001"]  # only documents of the package
     b = libraries.make_b(str(tmp_path / "B"))  # its N-00001 keeps its code: the package's becomes N-00003
-    assert B.install(pkg, confirm=True, config=b, say=lambda _: None, keep="own") == 0
+    prepare = B.prepare_package
+
+    def add_staging_artifact(folder, *args):
+        prepare(folder, *args)
+        (folder / "library" / "staging.tmp").write_bytes(b"temporary file outside the package")
+
+    monkeypatch.setattr(B, "prepare_package", add_staging_artifact)
+    assert B.install(pkg, confirm=True, config=b, say=print, keep="own") == 0
+    assert not (tmp_path / "B" / "library" / "staging.tmp").exists()
     got = K.read(os.path.join(str(tmp_path / "B"), "index", K.FILE))
     assert [x["code"] for x in got["topics"][0]["entries"]] == ["N-00003"]
 

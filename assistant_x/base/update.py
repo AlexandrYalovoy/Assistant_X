@@ -25,7 +25,7 @@ import argparse, datetime, hashlib, json, os, re, shutil, sys
 from assistant_x.base import install as B, package as P, registry
 from assistant_x.core import card as C
 from assistant_x.core import config as settings
-from assistant_x.core.txn import Journal, exists, lp
+from assistant_x.core.txn import Journal, exists
 
 
 def _comparable(card, mapping=None):
@@ -291,15 +291,7 @@ def run_update(w, cfg, path, jr, stage, date, say):
         B.prepare_package(pkg_dir, pcards, plan["mapping"], set(plan["skip"]), ident, version)
         jr.mark("package")
     if step("place") and "placed" not in jr.data:  # a resume keeps the list: its indexes are the moves done
-        placed, src_rel = [], B._rel(pkg_dir, root)
-        for dp, _, fns in os.walk(lp(pkg_dir)):
-            for f in fns:
-                rel = os.path.relpath(os.path.join(dp, f), lp(pkg_dir)).replace(os.sep, "/")
-                if rel.startswith(("cards/", "texts/")):
-                    placed.append((f"{src_rel}/{rel}", f"{idx_rel}/{rel}"))
-                elif rel.startswith("library/"):
-                    placed.append((f"{src_rel}/{rel}", lib_rel + rel[len("library") :]))
-        jr.data["placed"] = sorted(placed)
+        jr.data["placed"] = B.placement(path, B._rel(pkg_dir, root), idx_rel, lib_rel, plan["mapping"], plan["skip"])
         jr.save()
     if step("place"):
         B.run_moves(jr, "placed_done", [tuple(m) for m in jr.data["placed"]], root)

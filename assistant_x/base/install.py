@@ -609,15 +609,9 @@ def run(w, cfg, raw, path, jr, stage, answers, own_apart, date, say):
         prepare_package(pkg_dir, pcards, plan.get("package_mapping") or {}, set(plan["skip"]), ident, version)
         jr.mark("package")
     if step("place") and "placed" not in jr.data:  # a resume keeps the list: its indexes are the moves done
-        placed, src_rel = [], _rel(pkg_dir, root)
-        for dp, _, fns in os.walk(lp(pkg_dir)):
-            for f in fns:
-                rel = os.path.relpath(os.path.join(dp, f), lp(pkg_dir)).replace(os.sep, "/")
-                if rel.startswith(("cards/", "texts/")):
-                    placed.append((f"{src_rel}/{rel}", f"{idx_rel}/{rel}"))
-                elif rel.startswith("library/"):
-                    placed.append((f"{src_rel}/{rel}", lib_rel + rel[len("library") :]))
-        jr.data["placed"] = sorted(placed)
+        jr.data["placed"] = placement(
+            path, _rel(pkg_dir, root), idx_rel, lib_rel, plan.get("package_mapping") or {}, plan["skip"]
+        )
         jr.save()
     if step("place"):
         run_moves(jr, "placed_done", [tuple(m) for m in jr.data["placed"]], root)
@@ -728,6 +722,29 @@ def renumber_tables(w, mapping, date):
         os.remove(f)
     journal.append_events(w.index / "intake_events.tsv", R.events(date, mapping))
     C.raise_high_water(w.index, mapping.values())
+
+
+def placement(path, stage, index, library, mapping, skip):
+    """Plan moves from the verified package inventory. A temporary staging file is never part of the payload."""
+    skip = set(skip)
+    with P.Package(path) as pkg:
+        names = {n for n in pkg.checksums() if n.startswith(("cards/", "texts/", "library/"))}
+        renamed, omitted = {}, set()
+        for name in sorted(n for n in names if n.startswith("cards/") and n.endswith(".json")):
+            if not mapping and name[6:-5] not in skip:
+                continue
+            card = json.loads(pkg.read(name).decode("utf-8-sig"))
+            if card["code"] in skip:
+                omitted.add(name)
+                omitted.update(p.removeprefix("index/") for _, entry in _entries(card) for p in _files(entry))
+            elif mapping:
+                renamed.update((a.removeprefix("index/"), b.removeprefix("index/")) for a, b in C.renames(card, mapping))
+    moves = []
+    for name in names - omitted:
+        rel = renamed.get(name, name)
+        target = library + rel[len("library") :] if rel.startswith("library/") else f"{index}/{rel}"
+        moves.append((f"{stage}/{rel}", target))
+    return sorted(moves)
 
 
 def prepare_package(pkg_dir, pcards, mapping, skip, ident, version):
