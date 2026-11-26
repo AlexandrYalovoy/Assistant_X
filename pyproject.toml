@@ -45,7 +45,7 @@ Mirror = "https://gitflic.ru/project/alexandryalovoy/assistant_x"
 
 [project.optional-dependencies]
 # the search by meaning and the reranking (torch is large: the installer takes the CPU or CUDA build)
-dense = ["sentence-transformers>=6.1", "faiss-cpu>=1.15", "torch>=2.11", "onnxruntime>=1.31"]
+dense = ["sentence-transformers>=6.1", "faiss-cpu>=1.15", "torch>=2.13", "onnxruntime>=1.31"]
 # the intake of your own documents; pymupdf4llm and pymupdf_layout 2.x are empty packages (their modules are in PyMuPDF
 # 2.x), kept as their makers ask: they keep pip from breaking an upgrade from PyMuPDF 1.x (NOTICE)
 intake = ["pymupdf4llm>=2.0", "pymupdf_layout>=2.0", "psutil>=7.2"]

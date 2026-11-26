@@ -15,7 +15,7 @@ The review covers the repository and its release pipeline, using synthetic docum
 
 ## Dependency findings and remaining work
 
-The OSV review identified advisories for the pinned versions of filelock, opentelemetry-api and torch. A version match alone does not establish reachability in this application. Assistant X does not directly import filelock or invoke TorchScript compilation in its Python source. Transitive calls and external document converters remain within the review scope for future qualification.
+OSV matched the previous pins for filelock, opentelemetry-api and torch. After upgrading them to 4.3.1, 1.45.2 and 2.13.0 respectively, a second OSV query on 2026-11-26 returned no advisory matches across the 76 release pins. A clean Python 3.11 environment also exposed an offline build failure with setuptools 65.5.0. The installer now requests the project build minimum of 77. A version match alone does not establish reachability in this application. Assistant X does not directly import filelock or invoke TorchScript compilation in its Python source. Transitive calls and external document converters remain within the review scope for future qualification.
 
 | Priority | Next check | Acceptance evidence |
 | --- | --- | --- |

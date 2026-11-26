@@ -13,7 +13,7 @@ on the build PC and used by every installation:
     python -m assistant_x.setup.constraints --check     exit code 1 when the installed versions differ from the file
 
 Reading it (read, pin) needs the standard library only: the installer runs before the environment exists. torch is
-listed without its local build ("2.11.0", the CPU and CUDA builds take "+cpu" and "+cu128" of it). The file is package
+listed without its local build ("2.13.0", the CPU and CUDA builds take "+cpu" and "+cu130" of it). The file is package
 data, so the installer of a medium and an installed program read the same one."""
 
 import argparse, os, re, sys
@@ -117,7 +117,7 @@ def write(path=None):
     lines = [
         "# The exact versions of the packages of Assistant X: python -m assistant_x.setup.constraints --write on the",
         "# build PC at a release (assistant_x/setup/constraints.py). Used by the online install (pip -c) and by",
-        "# prepare-media (the packages of a medium); torch without its local build (+cpu, +cu128).",
+        "# prepare-media (the packages of a medium); torch without its local build (+cpu, +cu130).",
     ]
     lines += [f"{name}=={ver}" for _, (name, ver) in sorted(pins.items())]
     with open(path or PATH, "w", encoding="utf-8", newline="\n") as f:

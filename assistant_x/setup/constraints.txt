@@ -1,6 +1,6 @@
 # The exact versions of the packages of Assistant X: python -m assistant_x.setup.constraints --write on the
 # build PC at a release (assistant_x/setup/constraints.py). Used by the online install (pip -c) and by
-# prepare-media (the packages of a medium); torch without its local build (+cpu, +cu128).
+# prepare-media (the packages of a medium); torch without its local build (+cpu, +cu130).
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
@@ -12,7 +12,7 @@ cloudpickle==3.1.2
 colorama==0.4.6
 cryptography==50.0.2
 faiss-cpu==1.15.1
-filelock==3.32.3
+filelock==4.3.1
 flatbuffers==25.12.19
 fsspec==2026.7.0
 h11==0.16.0
@@ -38,7 +38,7 @@ networkx==3.6.1
 numpy==2.4.6
 onnxruntime==1.31.0
 onnxruntime-directml==1.24.4
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 packaging==26.3
 protobuf==7.36.2
 psutil==7.2.2
@@ -69,7 +69,7 @@ sympy==1.14.0
 tabulate==0.10.0
 threadpoolctl==3.7.0
 tokenizers==0.23.3
-torch==2.11.0
+torch==2.13.0
 tqdm==4.70.1
 transformers==5.20.2
 truststore==0.10.5

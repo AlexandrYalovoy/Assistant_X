@@ -6,6 +6,8 @@ New entries go under the version being prepared. The version number is `assistan
 
 ## 0.7.2 — 2026-11-26
 
+- Updated filelock to 4.3.1, opentelemetry-api to 1.45.2 and PyTorch to 2.13.0. The NVIDIA installer selects the CUDA 13.0 build for driver series 580 and newer, tests a GPU computation and falls back to the CPU build if it fails.
+
 - Codex development: `answer_context` combines ranked evidence and page reads within one character budget. Citation checks cover ranges and malformed references. Expanded and priority pages keep OCR warnings.
 - `one_intake` enables inbox intake without package administration. Optional file types can be selected for one batch. Project country, edition and applicability evidence travel with supported search results.
 - Added isolated comparisons across all three reading modes, graded session accounting, and checks of the release documentation.

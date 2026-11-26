@@ -47,7 +47,7 @@ TORCH_CPU = "https://download.pytorch.org/whl/cpu"
 
 
 def torch_cuda_index():
-    """The index of the CUDA build install.GPU_TORCH names ("torch==2.11.0+cu128" -> .../whl/cu128)."""
+    """The index of the CUDA build install.GPU_TORCH names ("torch==2.13.0+cu130" -> .../whl/cu130)."""
     from assistant_x.setup import install
 
     return f"https://download.pytorch.org/whl/{install.GPU_TORCH.split('+', 1)[1]}"

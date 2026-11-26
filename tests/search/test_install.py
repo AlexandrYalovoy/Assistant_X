@@ -109,10 +109,10 @@ def test_missing_reranker_is_a_finding_only_when_switched_on(kit, rerank):
     "nv, cpu, wheel, want",
     [
         (None, False, True, "cpu"),
-        ({"name": "RTX 4060", "driver": "566.36", "vram_gb": 8}, False, True, "cpu"),  # driver older than 570
-        ({"name": "RTX 4060", "driver": "576.02", "vram_gb": 8}, False, False, "cpu"),  # no wheel on the media
-        ({"name": "RTX 4060", "driver": "576.02", "vram_gb": 8}, True, True, "cpu"),  # --cpu
-        ({"name": "RTX 4060", "driver": "576.02", "vram_gb": 8}, False, True, "cuda"),
+        ({"name": "RTX 4060", "driver": "579.99", "vram_gb": 8}, False, True, "cpu"),  # driver older than 580
+        ({"name": "RTX 4060", "driver": "581.00", "vram_gb": 8}, False, False, "cpu"),  # no wheel on the media
+        ({"name": "RTX 4060", "driver": "581.00", "vram_gb": 8}, True, True, "cpu"),  # --cpu
+        ({"name": "RTX 4060", "driver": "581.00", "vram_gb": 8}, False, True, "cuda"),
     ],
 )
 def test_choose_device(monkeypatch, tmp_path, capsys, nv, cpu, wheel, want):
@@ -123,7 +123,7 @@ def test_choose_device(monkeypatch, tmp_path, capsys, nv, cpu, wheel, want):
     monkeypatch.setattr(install, "video_cards", lambda: ["Intel(R) Graphics"] + ([nv["name"]] if nv else []))
     monkeypatch.setattr(install.P, "WHEELS_GPU", str(tmp_path))
     if wheel:
-        (tmp_path / "torch-2.11.0+cu128-cp311-cp311-win_amd64.whl").write_bytes(b"")
+        (tmp_path / "torch-2.13.0+cu130-cp311-cp311-win_amd64.whl").write_bytes(b"")
     assert install.choose_device(cpu, offline=True) == want
     out = capsys.readouterr().out
     assert "Intel(R) Graphics" in out and ("chosen: video card" in out) == (want == "cuda")
@@ -136,8 +136,25 @@ def test_gpu_torch_goes_first_offline(monkeypatch):
     assert install.GPU_TORCH in calls[0] and install.WHEELS_GPU in calls[0] and "-r" in calls[1]
     calls.clear()
     install.install_packages("py", offline=True, dry=True, device="cpu")
-    assert len(calls) == 3 and install.GPU_TORCH not in calls[0] and calls[1][-2:] == ["setuptools", "wheel"]
+    assert len(calls) == 3 and install.GPU_TORCH not in calls[0] and calls[1][-2:] == ["setuptools>=77", "wheel"]
     assert calls[2][-2:] == ["-e", install.CODE] and "--no-build-isolation" in calls[2]  # offline: the media's build tools
+
+
+def test_failed_cuda_kernel_installs_cpu_from_online_index(monkeypatch):
+    commands = []
+    monkeypatch.setattr(install, "installed", lambda *_: False)
+    monkeypatch.setattr(install, "run", lambda cmd, dry: commands.append(cmd) or 0)
+
+    def check(py, code, timeout=0):
+        if "torch.ones" in code:
+            return False, "CUDA kernel failed"
+        return ("directml" not in code, "")
+
+    monkeypatch.setattr(install, "check", check)
+    assert install.install_packages("py", offline=False, dry=False, device="cuda") == "cpu"
+    assert install.GPU_TORCH in commands[0]
+    assert install.CPU_TORCH in commands[-1] and "--no-index" not in commands[-1]
+    assert "https://download.pytorch.org/whl/cpu" in commands[-1]
 
 
 def test_check_intake_on_a_project_copy(kit, monkeypatch):

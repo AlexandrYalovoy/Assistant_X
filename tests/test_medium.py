@@ -165,7 +165,7 @@ def test_one_list_of_versions(tmp_path, monkeypatch):
     assert {"torch", "onnxruntime", "onnxruntime-directml", "numpy", "mcp", "pymupdf"} <= set(pins)
     assert not {"assistant-x", "setuptools", "wheel", "pip", "pytest", "ruff"} & set(pins)
     assert "+" not in pins["torch"][1]
-    assert install.GPU_TORCH == f"torch=={pins['torch'][1]}+cu128" and install.CPU_TORCH.endswith("+cpu")
+    assert install.GPU_TORCH == f"torch=={pins['torch'][1]}+cu130" and install.CPU_TORCH.endswith("+cpu")
     assert install.DML_ORT == f"onnxruntime-directml=={pins['onnxruntime-directml'][1]}"
     lock, torch = M.lock_file()
     assert torch == pins["torch"][1] and f"numpy=={pins['numpy'][1]}" in lock

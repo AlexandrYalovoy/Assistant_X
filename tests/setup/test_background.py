@@ -163,17 +163,21 @@ def test_a_second_run_installs_no_package_that_is_there(monkeypatch):
     from assistant_x import __version__
 
     here = os.path.abspath(install.CODE)
-    out = {"v": f"torch=2.9.1+cu128\nax={__version__}|{here}"}
+    gpu = install.GPU_TORCH.split("==")[1]
+    cpu = install.CPU_TORCH.split("==")[1]
+    out = {"v": f"torch={gpu}\nax={__version__}|{here}"}
     monkeypatch.setattr(install, "check", lambda py, code="", timeout=0: (True, out["v"]))
-    assert install.installed("py", "cuda") and install.installed("py", "cpu")
-    out["v"] = f"torch=2.9.1+cpu\nax={__version__}|{here}"
-    assert install.installed("py", "cpu") and not install.installed("py", "cuda")
-    out["v"] = f"torch=2.9.1+cu128\nax=0.1|{here}"
+    assert install.installed("py", "cuda") and not install.installed("py", "cpu")
+    out["v"] = f"torch=2.11.0+cu128\nax={__version__}|{here}"
     assert not install.installed("py", "cuda")
-    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|C:\\elsewhere"
+    out["v"] = f"torch={cpu}\nax={__version__}|{here}"
+    assert install.installed("py", "cpu") and not install.installed("py", "cuda")
+    out["v"] = f"torch={gpu}\nax=0.1|{here}"
+    assert not install.installed("py", "cuda")
+    out["v"] = f"torch={gpu}\nax={__version__}|C:\\elsewhere"
     assert not install.installed("py", "cuda")
     runs = []
     monkeypatch.setattr(install, "run", lambda cmd, dry, **kw: runs.append(cmd) or 0)
-    out["v"] = f"torch=2.9.1+cu128\nax={__version__}|{here}"
+    out["v"] = f"torch={gpu}\nax={__version__}|{here}"
     monkeypatch.setattr(install, "check", lambda py, code="", timeout=0: ("directml" not in code, out["v"] + "\ncuda=True"))
     assert install.install_packages("py", offline=False, dry=False, device="cuda") == "cuda" and runs == []

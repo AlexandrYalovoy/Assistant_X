@@ -44,8 +44,8 @@ the cards are [`assistant_x/core/card.py`](../assistant_x/core/card.py) and the 
 [`Setup.bat`](../Setup.bat) does steps 1 and 2 ([`docs/INTAKE.md`](INTAKE.md) for the intake itself); the apply of an intake offers the rest.
 
 1. Python 3.11+ and the package with the search by meaning: `pip install -e ".[dense,intake]"` in the code folder.
-   An RTX 50xx needs a PyTorch build with CUDA 12.8+, installed first:
-   `pip install torch --index-url https://download.pytorch.org/whl/cu128`. Without the extra `dense` the search works by
+   An RTX 50xx needs a PyTorch build with CUDA 13.0 (driver 580+), installed first:
+   `pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130`. Without the extra `dense` the search works by
    words only.
 2. `assistant-x download-models` — the models into `.assistant_x\models` of the workspace (≈ 4.5 GB, once).
 3. `assistant-x build` — the base and the word index, and `CATALOG.md` and `sources_to_update.md` made again from the

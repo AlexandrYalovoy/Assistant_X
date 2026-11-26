@@ -3,7 +3,7 @@
 r"""Installation of the search on the user's PC: the Python environment, the packages (from the media, without
 internet), the connection to Claude Desktop and Claude Code, a quick self-test. Started by Setup.bat; standard
 library only; a second run repeats nothing that is done already.
-Video card: NVIDIA with driver 570 or newer — torch for CUDA from packages\\wheels_gpu of the medium (search and
+Video card: NVIDIA with driver 580 or newer — torch for CUDA from packages\\wheels_gpu of the medium (search and
 reranking on it); an AMD or Intel card with its own memory — onnxruntime-directml from packages\\wheels_dml with the
 ONNX models (models\\onnx of the medium or of the PC); otherwise torch for the processor. The device is chosen after
 the models are copied; the installer says what it found and what it chose. Intake of the user's own
@@ -56,10 +56,10 @@ IMPORTS = (
 # the versions are those of setup/constraints.txt, the one list of a release (the online and the offline install)
 TORCH = f"torch=={K.pin('torch')}"
 CPU_TORCH = f"{TORCH}+cpu"
-GPU_TORCH = f"{TORCH}+cu128"  # CUDA 12.8: RTX 50xx (Blackwell) and older cards; needs driver 570+
+GPU_TORCH = f"{TORCH}+cu130"  # CUDA 13.0: Turing and newer cards; needs driver 580+
 ORT = f"onnxruntime=={K.pin('onnxruntime')}"
 DML_ORT = f"onnxruntime-directml=={K.pin('onnxruntime-directml')}"  # AMD and Intel cards through DirectML
-MIN_DRIVER = 570
+MIN_DRIVER = 580
 NAMES = ("WS", "ROOT", "SKILL", "PACKS", "MODELS", "WHEELS", "LOCK", "PYVER", "WHEELS_GPU", "WHEELS_DML", "INBOX", "MEDIUM")
 
 
@@ -257,7 +257,7 @@ def video_cards():
 
 
 def choose_device(cpu_asked, offline):
-    """ "cuda" when torch for the video card goes in (NVIDIA, driver 570+, the wheel on the media or internet), else "cpu";
+    """ "cuda" when torch for the video card goes in (NVIDIA, driver 580+, the wheel on the media or internet), else "cpu";
     the message says what was found and why."""
     cards = video_cards()
     say(f"   video cards: {', '.join(cards) if cards else 'none found'}")
@@ -354,7 +354,10 @@ def installed(py, device):
 
     ok, out = check(
         py,
-        IMPORTS + "; import assistant_x, os; print('ax=' + assistant_x.__version__ + '|' + "
+        IMPORTS
+        + "; import assistant_x, os; from importlib.metadata import version; "
+        + f"assert version('filelock') == {K.pin('filelock')!r} and version('opentelemetry-api') == {K.pin('opentelemetry-api')!r}; "
+        + "print('ax=' + assistant_x.__version__ + '|' + "
         "os.path.dirname(os.path.dirname(os.path.abspath(assistant_x.__file__))))",
         timeout=600,
     )
@@ -362,7 +365,8 @@ def installed(py, device):
     torch = next((l.split("=", 1)[1] for l in out.splitlines() if l.startswith("torch=")), "")
     here = f"{__version__}|{os.path.normcase(os.path.abspath(CODE))}"
     same = ax.rsplit("|", 1)[0] + "|" + os.path.normcase(ax.rsplit("|", 1)[-1]) == here if "|" in ax else False
-    return ok and same and (device != "cuda" or "+cu" in torch)
+    expected = GPU_TORCH if device == "cuda" else CPU_TORCH
+    return ok and same and torch == expected.split("==", 1)[1]
 
 
 def install_packages(py, offline, dry, device="cpu"):
@@ -371,7 +375,7 @@ def install_packages(py, offline, dry, device="cpu"):
         say("   installed already: the packages load, the program is this version (nothing downloaded)")
     elif offline:
         say(f"   without internet, from {P.WHEELS}")
-        if device == "cuda":  # first: the lock then finds torch of TORCH (+cu128 matches its ==) and keeps it
+        if device == "cuda":  # first: the lock then finds torch of TORCH (+cu130 matches its ==) and keeps it
             rc = run(
                 [
                     py,
@@ -405,20 +409,19 @@ def install_packages(py, offline, dry, device="cpu"):
         )
     else:
         say("   from the internet (no packages folder): pypi.org and download.pytorch.org")
-        if dry or device == "cuda" or not check(py, "import torch")[0]:  # CPU build: ten times smaller
-            rc = run(
-                [
-                    py,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--disable-pip-version-check",
-                    TORCH,
-                    "--index-url",
-                    f"https://download.pytorch.org/whl/{'cu128' if device == 'cuda' else 'cpu'}",
-                ],
-                dry,
-            )
+        rc = run(
+            [
+                py,
+                "-m",
+                "pip",
+                "install",
+                "--disable-pip-version-check",
+                GPU_TORCH if device == "cuda" else CPU_TORCH,
+                "--index-url",
+                f"https://download.pytorch.org/whl/{'cu130' if device == 'cuda' else 'cpu'}",
+            ],
+            dry,
+        )
         # the dependencies of pyproject.toml with the package itself (an editable install), at the versions of the
         # release (constraints.txt: the same as on a medium)
         rc = rc or run(
@@ -477,11 +480,11 @@ def install_packages(py, offline, dry, device="cpu"):
             dry,
         )
     if device == "cuda":
-        ok, out = check(py, "import torch; print('cuda=' + str(torch.cuda.is_available()))", timeout=300)
-        if "cuda=True" not in out:
-            say(
-                "   torch for the video card did not see it (the driver?): installing the processor build, the search runs on it"
-            )
+        ok, out = check(
+            py, "import torch; print('cuda=' + str(torch.ones(1, device='cuda').sum().item() == 1))", timeout=300
+        )
+        if not ok or "cuda=True" not in out:
+            say("   CUDA computation failed: installing the processor build for search")
             if run(
                 [
                     py,
@@ -489,9 +492,11 @@ def install_packages(py, offline, dry, device="cpu"):
                     "pip",
                     "install",
                     "--disable-pip-version-check",
-                    "--no-index",
-                    "--find-links",
-                    P.WHEELS,
+                    *(
+                        ["--no-index", "--find-links", P.WHEELS]
+                        if offline
+                        else ["--index-url", "https://download.pytorch.org/whl/cpu"]
+                    ),
                     "--force-reinstall",
                     "--no-deps",
                     CPU_TORCH,
@@ -561,7 +566,7 @@ def install_self(py, offline, dry):
                 "--no-index",
                 "--find-links",
                 P.WHEELS,
-                "setuptools",
+                "setuptools>=77",
                 "wheel",
             ],
             dry,

@@ -44,8 +44,8 @@ Claude подключается к нему как к MCP-серверу `assist
 [`Setup.bat`](../Setup.bat) выполняет шаги 1 и 2 (сам разбор описан в [`docs/INTAKE.md`](INTAKE.ru.md)); остальное предлагает применение разбора.
 
 1. Python 3.11+ и пакет с поиском по смыслу: `pip install -e ".[dense,intake]"` в папке с кодом.
-   Для RTX 50xx нужна сборка PyTorch с CUDA 12.8+, установленная заранее:
-   `pip install torch --index-url https://download.pytorch.org/whl/cu128`. Без дополнения `dense` поиск работает только
+   Для RTX 50xx нужна сборка PyTorch с CUDA 13.0 (драйвер 580+), установленная заранее:
+   `pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130`. Без дополнения `dense` поиск работает только
    по словам.
 2. `assistant-x download-models` — модели в `.assistant_x\models` рабочей папки (≈ 4.5 ГБ, один раз).
 3. `assistant-x build` — поисковая база и индекс слов, а также заново созданные из карточек `CATALOG.md` и

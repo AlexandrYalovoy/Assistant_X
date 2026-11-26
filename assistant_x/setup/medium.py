@@ -29,7 +29,7 @@ WHEELS, WHEELS_GPU, WHEELS_DML = "wheels", "wheels_gpu", "wheels_dml"  # in pack
 LOCK_FILE, PYVER_FILE, THIRD_PARTY = "requirements-lock.txt", "python_version.txt", "THIRD_PARTY_LICENSES.txt"
 ONNX_DIR, SOURCES_DIR = "onnx", "sources"  # in models, in programs
 HASHED_REQ = "requirements.txt"  # in wheels_gpu and wheels_dml: their wheel with its sha256 (pip --require-hashes)
-TORCH_GPU_GLOB, DML_GLOB = "torch-*cu128*.whl", "onnxruntime_directml-*.whl"  # the wheels the installer looks for
+TORCH_GPU_GLOB, DML_GLOB = "torch-*cu130*.whl", "onnxruntime_directml-*.whl"  # the wheels the installer looks for
 ONNX_EMBEDDER = (ONNX_DIR, "bge-m3", "model.onnx")  # what DirectML needs, under a models folder
 
 SOURCES = {
