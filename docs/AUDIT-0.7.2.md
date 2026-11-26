@@ -17,9 +17,13 @@ The review covers the repository and its release pipeline, using synthetic docum
 
 OSV matched the previous pins for filelock, opentelemetry-api and torch. After upgrading them to 4.3.1, 1.45.2 and 2.13.0 respectively, a second OSV query on 2026-11-26 returned no advisory matches across the 76 release pins. A clean Python 3.11 environment also exposed an offline build failure with setuptools 65.5.0. The installer now requests the project build minimum of 77. A version match alone does not establish reachability in this application. Assistant X does not directly import filelock or invoke TorchScript compilation in its Python source. Transitive calls and external document converters remain within the review scope for future qualification.
 
+On Windows with Python 3.11, an RTX 5080 Laptop GPU and driver 621.40, an isolated environment installed the official PyTorch 2.13.0+cu130 wheel offline after SHA-256 verification. Both pip dependency checks and the project pin check passed. BGE-M3 produced finite 1,024-dimensional embeddings in FP16, and BGE-reranker-v2-m3 ranked the relevant passage first. Repeat with `AX_TEST_CUDA_MODELS` set to the local model directory and `python -m pytest -q tests/search/test_cuda_release.py`. The test uses synthetic passages and loads the two model folders locally.
+
+The Windows tests also caught a transient staging file in a base installation journal. Base installation and update now derive the placement list from the package checksum inventory and the code remapping. A regression test adds a staging file and checks that only the package files reach the library.
+
 | Priority | Next check | Acceptance evidence |
 | --- | --- | --- |
-| High | Qualify patched dependencies in a separate environment, including the Windows CUDA wheel and offline installation. | Dependency resolution, advisory recheck, model loading, search quality, GPU use and offline installation on supported platforms. |
+| Medium | Extend offline qualification to a second machine and to the DirectML backend. | Install from a complete medium, search and rerank a known question, then restore an interrupted update. |
 | Medium | Exercise real client intake and browser permissions on a disposable workspace. | Independent confirmation, cancellation and a cited result after indexing. |
 | Medium | Measure cost per correct answer on a representative library. | Fixed model and corpus, human-reviewed conclusions and client-reported usage, including failed attempts. |
 
